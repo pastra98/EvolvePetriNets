@@ -1,0 +1,15 @@
+{
+    "prob_t_p": 0.5,
+    "prob_t_t": 0.5,
+    "prob_p_p": 0.5,
+    "prob_new_place": 0.5,
+    "prob_split_arc": 0.5,
+    "prob_increase_arcs": 0.5,
+    "prob_disable_arc": 0.5,
+    "num_trys_make_conn": 20,
+    "prob_connect_nontask_trans": 0.5,
+    "prob_trans_to_place": 0.5,
+    "prevent_chaining": true,
+    "num_trys_split_arc": 10,
+    "prob_pick_dead_trans": 0
+}

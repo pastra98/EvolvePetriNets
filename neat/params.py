@@ -1,25 +1,58 @@
-# ---------- GENOME MUTATIONS
-prob_t_p = 0.5
-prob_t_t = 0.5
-prob_p_p = 0.5
-prob_new_place = 0.5
-prob_split_arc = 0.5
-prob_increase_arcs = 0.5
-prob_disable_arc = 0.5
+import json
 
-num_trys_make_conn = 20
+name: str
+vars_not_in_config = ["name"]
+
+def read_file(fname: str):
+    """Read in a params json, assign global variables to it
+    """
+    with open(fname) as f:
+        global name
+        name = fname
+        new_params = json.load(f)
+    for k in globals()["__annotations__"]:
+        if k in new_params:
+            globals()[k] = new_params[k]
+        elif k not in vars_not_in_config:
+            print(f"Parameter '{k}' missing in json")
+
+
+def new_param_json(fname: str, save_current=False):
+    """Save list of variables, along with a type hint
+    """
+    vars = globals()["__annotations__"]
+    export_vars = {}
+    for k, v in list(vars.items()):
+        if k not in vars_not_in_config:
+            if save_current:
+                export_vars[k] = globals()[k]
+            else:
+                export_vars[k] = str(v)
+    with open(fname, "w") as f:
+        json.dump(export_vars, f, indent=4)
+
+# ---------- GENOME MUTATIONS
+prob_t_p: float
+prob_t_t: float
+prob_p_p: float
+prob_new_place: float
+prob_split_arc: float
+prob_increase_arcs: float
+prob_disable_arc: float
+
+num_trys_make_conn: int
 
 # -------------------- connect trans to place
-prob_connect_nontask_trans = 0.0
-prob_trans_to_place = 0.5
+prob_connect_nontask_trans: float
+prob_trans_to_place: float
 
 # -------------------- connect trans to trans
 
 # -------------------- split arc
-prevent_chaining = True
-num_trys_split_arc = 10
+prevent_chaining: bool
+num_trys_split_arc: int
 
 # -------------------- connect trans -> new place
-prob_pick_dead_trans = 0
+prob_pick_dead_trans: float
 
 # ------------------------------------------------------------------------------
