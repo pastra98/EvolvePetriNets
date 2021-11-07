@@ -12,8 +12,11 @@ heuristics_miner = pm4py.algo.discovery.heuristics.algorithm
 
 # %%
 ################################################################################
-# log = pm4py.read_xes("./pm_data/bpi2016/GroundTruthLogs/pdc_2016_5.xes")
-log = pm4py.read_xes("./pm_data/m1_log.xes")
+# logpath = "./pm_data/bpi2016/GroundTruthLogs/pdc_2016_5.xes"
+# logpath = "./pm_data/m1_log.xes"
+# logpath = "../pm_data/BPI_Challenge_2012.xes"
+logpath = "../pm_data/pdc_2016_6.xes"
+log = pm4py.read_xes(logpath)
 
 # name, miner =  "alpha", alpha_miner
 # name, miner =  "heuristics", heuristics_miner
@@ -68,14 +71,17 @@ print("Elapsed time during conformance check:",t1_stop-t1_start)
 
 parameters = {visualizer.Variants.WO_DECORATION.value.Parameters.FORMAT: "png"}
 net_gviz = visualizer.apply(net, initial_marking, final_marking, parameters=parameters)
-visualizer.save(net_gviz, "petrinet.png")
+visualizer.save(net_gviz, f"../vis/{name}_{logpath.split('/')[-1].rstrip('.xes')}_petrinet.png")
 
-list_nets = decompose(net, initial_marking, final_marking)
-gviz = []
+# list_nets = decompose(net, initial_marking, final_marking)
+# gviz = []
 
-for index, model in enumerate(list_nets):
-    subnet, s_im, s_fm = model
-    gviz.append(visualizer.apply(subnet, s_im, s_fm))
-    visualizer.save(gviz[-1], str(index)+".png")
+# for index, model in enumerate(list_nets):
+#     subnet, s_im, s_fm = model
+#     gviz.append(visualizer.apply(subnet, s_im, s_fm))
+#     visualizer.save(gviz[-1], str(index)+".png")
 
 # %%
+logpath = "../pm_data/bpi2021/Models/pdc2021_000000.pnml"
+
+def visualize_pnml(logpath, display=True, save=False):

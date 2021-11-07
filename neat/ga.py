@@ -1,4 +1,3 @@
-from os import terminal_size
 import params
 
 class GeneticAlgorithm:
