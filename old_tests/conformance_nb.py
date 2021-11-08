@@ -15,7 +15,8 @@ heuristics_miner = pm4py.algo.discovery.heuristics.algorithm
 # logpath = "./pm_data/bpi2016/GroundTruthLogs/pdc_2016_5.xes"
 # logpath = "./pm_data/m1_log.xes"
 # logpath = "../pm_data/BPI_Challenge_2012.xes"
-logpath = "../pm_data/pdc_2016_6.xes"
+# logpath = "../pm_data/pdc_2016_6.xes"
+logpath = "../pm_data/running_example.xes"
 log = pm4py.read_xes(logpath)
 
 # name, miner =  "alpha", alpha_miner
@@ -28,7 +29,7 @@ net, initial_marking, final_marking = miner.apply(log)
 # process_model = pm4py.convert.convert_to_bpmn(net, initial_marking, final_marking)
 # pm4py.view_bpmn(process_model)
 
-# pm4py.view_petri_net(net, initial_marking, final_marking)
+pm4py.view_petri_net(net, initial_marking, final_marking)
 
 print(f"{name}, using alignments: {use_alignments}")
 print("starting to measure")
@@ -69,9 +70,6 @@ print("Elapsed time during conformance check:",t1_stop-t1_start)
 
 # %%
 
-parameters = {visualizer.Variants.WO_DECORATION.value.Parameters.FORMAT: "png"}
-net_gviz = visualizer.apply(net, initial_marking, final_marking, parameters=parameters)
-visualizer.save(net_gviz, f"../vis/{name}_{logpath.split('/')[-1].rstrip('.xes')}_petrinet.png")
 
 # list_nets = decompose(net, initial_marking, final_marking)
 # gviz = []
@@ -82,6 +80,21 @@ visualizer.save(net_gviz, f"../vis/{name}_{logpath.split('/')[-1].rstrip('.xes')
 #     visualizer.save(gviz[-1], str(index)+".png")
 
 # %%
-logpath = "../pm_data/bpi2021/Models/pdc2021_000000.pnml"
 
-def visualize_pnml(logpath, display=True, save=False):
+
+def visualize_pnml(pnet_path, display=True, save=False):
+    from pm4py.visualization.petri_net import visualizer
+    from pm4py.objects.petri_net.importer import importer
+    net, initial_marking, final_marking = importer.apply(modelpath)
+    net_gviz = visualizer.apply(net, initial_marking, final_marking)
+    if save:
+        savepath = f"../vis/{pnet_path.split('/')[-1].rstrip('.pnml')}_petrinet.png"
+        visualizer.save(net_gviz, savepath)
+        print(f"saved under {savepath}")
+    if display:
+        pm4py.view_petri_net(net, initial_marking, final_marking)
+
+
+visualize_pnml(modelpath, display=False, save=True)
+
+# %%
