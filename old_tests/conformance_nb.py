@@ -2,21 +2,22 @@
 import pm4py
 from time import process_time
 from pm4py.objects.petri_net.utils.decomposition import decompose
+from pm4py.objects.log.exporter.xes import exporter as xes_exporter
 from pm4py.visualization.petri_net import visualizer
+from pm4py.algo.simulation.playout.petri_net import algorithm as simulator
 
-# log = pm4py.read_xes("running-example.xes")
 
 alpha_miner = pm4py.algo.discovery.alpha.algorithm
 inductive_miner = pm4py.algo.discovery.inductive.algorithm
 heuristics_miner = pm4py.algo.discovery.heuristics.algorithm
 
-# %%
+# %% load a log, mine it and show conformance
 ################################################################################
-# logpath = "./pm_data/bpi2016/GroundTruthLogs/pdc_2016_5.xes"
-# logpath = "./pm_data/m1_log.xes"
+# logpath = "../pm_data/m1_log.xes"
 # logpath = "../pm_data/BPI_Challenge_2012.xes"
 # logpath = "../pm_data/pdc_2016_6.xes"
 logpath = "../pm_data/running_example.xes"
+# logpath = "../pm_data/simulated_running_example.xes"
 log = pm4py.read_xes(logpath)
 
 # name, miner =  "alpha", alpha_miner
@@ -68,7 +69,44 @@ else:
 t1_stop = process_time()
 print("Elapsed time during conformance check:",t1_stop-t1_start) 
 
-# %%
+# %% get info about current log
+
+def info_about_log_print(l):
+    # get avg length in log
+    for trace in l:
+        print(len(l))
+    # for trace in log:
+    #     print(f"\nTrace {trace._get_attributes()['concept:name']}:")
+    #     tr_events = []
+    #     for event in trace:
+    #         tr_events.append(event["concept:name"])
+    #     print(" -> ".join(tr_events))
+
+
+info_about_log_print(log)
+
+# %% Take a model and generate traces from it, export it
+
+def export_sim_log(net, im, name, n_traces, extensive, maxlength):
+    variant = simulator.Variants.EXTENSIVE if extensive else simulator.Variants.BASIC_PLAYOUT
+    s_params = {variant.value.Parameters.MAX_TRACE_LENGTH: maxlength}
+    if not extensive: s_params[variant.value.Parameters.NO_TRACES] = n_traces
+    simulated_log = simulator.apply(
+        net,
+        im,
+        variant=variant,
+        parameters=s_params
+        )
+    savepath = f"../pm_data/simulated_{name}.xes"
+    xes_exporter.apply(simulated_log, savepath)
+    print(f"exported to:\n{savepath}")
+    return
+
+export_sim_log(net, initial_marking, "running_example",
+                n_traces=1000, extensive=False, maxlength=15)
+
+
+# %% Decompose
 
 
 # list_nets = decompose(net, initial_marking, final_marking)
@@ -79,7 +117,7 @@ print("Elapsed time during conformance check:",t1_stop-t1_start)
 #     gviz.append(visualizer.apply(subnet, s_im, s_fm))
 #     visualizer.save(gviz[-1], str(index)+".png")
 
-# %%
+# %% Visualize a pnml file
 
 
 def visualize_pnml(pnet_path, display=True, save=False):

@@ -1,5 +1,4 @@
 # %%
-from textwrap import indent
 import pandas as pd
 import pm4py
 from pm4py.algo.filtering.log.variants import variants_filter
@@ -32,10 +31,10 @@ class LogInterface:
 
 
 # %%
-# logpath = "../pm_data/running_example.xes"
+logpath = "../pm_data/running_example.xes"
 # logpath = "../pm_data/bpi2016/GroundTruthLogs/pdc_2016_5.xes"
 # logpath = "../pm_data/m1_log.xes"
-logpath = "../pm_data/BPI_Challenge_2012.xes"
+# logpath = "../pm_data/BPI_Challenge_2012.xes"
 # logpath = "../pm_data/pdc_2016_6.xes"
 
 log = pm4py.read_xes(logpath)
