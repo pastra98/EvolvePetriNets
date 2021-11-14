@@ -62,10 +62,23 @@ class GeneticNet:
             self.arcs[arc_id] = new_arc
             return
 
-    # def trans_trans_arc(self):
+    # def new_trans(self):
     #     pass
 
-    # def place_place_arc(self):
+    def trans_trans_conn(self, source_id=None, target_id=None):
+        if not source_id and not target_id:
+            # code this later
+            pass # try to find two transitions that can be connected
+        place_id = innovs.check_trans_to_trans(source_id, target_id)
+        if place_id not in self.places:
+            self.places[place_id] = GPlace(place_id)
+            arc1_id = innovs.check_arc(source_id, place_id)
+            self.arcs[arc1_id] = GArc(arc1_id, source_id, place_id)
+            arc2_id = innovs.check_arc(place_id, target_id)
+            self.arcs[arc2_id] = GArc(arc2_id, place_id, target_id)
+        
+
+    # def place_place_conn(self):
     #     pass
 
     def split_arc(self):

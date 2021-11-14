@@ -6,8 +6,18 @@ nodes = {"start":GPlace, "end":GPlace}
 arcs = {}
 splits = {}
 
+trans = {}
+
 curr_arc_id = 0
 curr_node_id = 0
+
+def check_trans_to_trans(source_id, target_id):
+    if (source_id, target_id) in trans:
+        return trans[(source_id, target_id)]
+    else:
+        new_id = store_new_node(GPlace)
+        trans[(source_id, target_id)] = new_id
+        return new_id
 
 def check_split(source, target):
     check_tasks_set()

@@ -1,11 +1,19 @@
 # %%
+import pprint
+from typing import final
 import pm4py
 from time import process_time
-from pm4py.objects.petri_net.utils.decomposition import decompose
 from pm4py.objects.log.exporter.xes import exporter as xes_exporter
 from pm4py.visualization.petri_net import visualizer
-from pm4py.algo.simulation.playout.petri_net import algorithm as simulator
 
+from pm4py.algo.simulation.playout.petri_net import algorithm as simulator
+from pm4py.algo.evaluation.replay_fitness import algorithm as replay_fitness_evaluator
+
+from pm4py.objects.petri_net.importer import importer
+from pm4py.objects.petri_net.exporter import exporter as pnml_exporter
+
+from pm4py.algo.discovery.footprints import algorithm as footprints_discovery
+from pm4py.visualization.footprints import visualizer as fp_visualizer
 
 alpha_miner = pm4py.algo.discovery.alpha.algorithm
 inductive_miner = pm4py.algo.discovery.inductive.algorithm
@@ -13,12 +21,17 @@ heuristics_miner = pm4py.algo.discovery.heuristics.algorithm
 
 # %% load a log, mine it and show conformance
 ################################################################################
+# logpath = "../pm_data/sepsis/sepsis_log.xes"
+# logpath = "../pm_data/traffic/traffic_fines.xes"
 # logpath = "../pm_data/m1_log.xes"
 # logpath = "../pm_data/BPI_Challenge_2012.xes"
+# logpath = "../pm_data/bpi2021/train/pdc2021_1100000.xes"
 # logpath = "../pm_data/pdc_2016_6.xes"
-logpath = "../pm_data/running_example.xes"
+# logpath = "../pm_data/running_example.xes"
+logpath = "../pm_data/simulated_running_example.xes"
 # logpath = "../pm_data/simulated_running_example.xes"
 log = pm4py.read_xes(logpath)
+# %% load a log, mine it and show conformance
 
 # name, miner =  "alpha", alpha_miner
 # name, miner =  "heuristics", heuristics_miner
@@ -58,32 +71,34 @@ else:
         TbrParams.STOP_IMMEDIATELY_UNFIT : True
         # TbrParams.CLEANING_TOKEN_FLOOD : True
         }
-    tbr_results = Tokener.apply(log, net, initial_marking, final_marking, parameters=parameters_tbr)
-    replayed_traces, place_fitness, trans_fitness, unwanted_activities = tbr_results 
     total_fitness = 0
-    for trace in replayed_traces:
-        total_fitness += trace["trace_fitness"]
-    print(f"total traces: {len(replayed_traces)}")
-    print(f"fitness fraction: {total_fitness/len(replayed_traces)}\n")
+    fitness = replay_fitness_evaluator.apply(
+        log, net, initial_marking, final_marking,
+        variant=replay_fitness_evaluator.Variants.TOKEN_BASED
+        )
+    print(f"fitness:\n{pprint.pformat(fitness, indent=4)}")
+    # tbr_results = Tokener.apply(log, net, initial_marking, final_marking, parameters=parameters_tbr)
+    # replayed_traces, place_fitness, trans_fitness, unwanted_activities = tbr_results 
+    # for trace in replayed_traces:
+    #     total_fitness += trace["trace_fitness"]
+    # print(f"total traces: {len(replayed_traces)}")
+    # print(f"fitness fraction: {total_fitness/len(replayed_traces)}\n")
 
 t1_stop = process_time()
 print("Elapsed time during conformance check:",t1_stop-t1_start) 
 
-# %% get info about current log
+# %% print out all traces of the log
 
-def info_about_log_print(l):
-    # get avg length in log
-    for trace in l:
-        print(len(l))
-    # for trace in log:
-    #     print(f"\nTrace {trace._get_attributes()['concept:name']}:")
-    #     tr_events = []
-    #     for event in trace:
-    #         tr_events.append(event["concept:name"])
-    #     print(" -> ".join(tr_events))
+def print_traces(log):
+    for trace in log:
+        print(f"\nTrace {trace._get_attributes()['concept:name']}:")
+        tr_events = []
+        for event in trace:
+            tr_events.append(event["concept:name"])
+        print(" -> ".join(tr_events))
 
 
-info_about_log_print(log)
+print_traces(log)
 
 # %% Take a model and generate traces from it, export it
 
@@ -103,27 +118,36 @@ def export_sim_log(net, im, name, n_traces, extensive, maxlength):
     return
 
 export_sim_log(net, initial_marking, "running_example",
-                n_traces=1000, extensive=False, maxlength=15)
+                n_traces=1000, extensive=False, maxlength=12)
 
 
-# %% Decompose
+# %% export model to a pnml file
+
+def export_to_pnml(net, im, name):
+    savepath = f"../pm_data/pnml/{name}.pnml"
+    pnml_exporter.apply(net, im, savepath)
+    print(f"saved petri net at:\n{savepath}")
+
+export_to_pnml(net, initial_marking, "running_example")
+
+# %% Visualize log
+
+def visualize_pnet(net, im, fm, name, display=True, save=False):
+    net_gviz = visualizer.apply(net, im, fm)
+    if save:
+        savepath = f"../vis/{name}_petrinet.png"
+        visualizer.save(net_gviz, savepath)
+        print(f"saved under {savepath}")
+    if display:
+        pm4py.view_petri_net(net, initial_marking, final_marking)
 
 
-# list_nets = decompose(net, initial_marking, final_marking)
-# gviz = []
-
-# for index, model in enumerate(list_nets):
-#     subnet, s_im, s_fm = model
-#     gviz.append(visualizer.apply(subnet, s_im, s_fm))
-#     visualizer.save(gviz[-1], str(index)+".png")
+visualize_pnet(net, initial_marking, final_marking, "sepsis", display=True, save=True)
 
 # %% Visualize a pnml file
 
-
 def visualize_pnml(pnet_path, display=True, save=False):
-    from pm4py.visualization.petri_net import visualizer
-    from pm4py.objects.petri_net.importer import importer
-    net, initial_marking, final_marking = importer.apply(modelpath)
+    net, initial_marking, final_marking = importer.apply(pnet_path)
     net_gviz = visualizer.apply(net, initial_marking, final_marking)
     if save:
         savepath = f"../vis/{pnet_path.split('/')[-1].rstrip('.pnml')}_petrinet.png"
@@ -133,6 +157,39 @@ def visualize_pnml(pnet_path, display=True, save=False):
         pm4py.view_petri_net(net, initial_marking, final_marking)
 
 
-visualize_pnml(modelpath, display=False, save=True)
+modelpath = "../pm_data/bpi2021/models/pdc2021_110000.pnml"
+visualize_pnml(modelpath, display=True, save=True)
+# %% Footprint
 
-# %%
+def footprints(log, visualize=True, printit=True):
+    fp_log = footprints_discovery.apply(log, variant=footprints_discovery.Variants.ENTIRE_EVENT_LOG)
+    if visualize:
+        gviz = fp_visualizer.apply(fp_log, parameters={fp_visualizer.Variants.SINGLE.value.Parameters.FORMAT: "png"})
+        fp_visualizer.view(gviz)
+    if printit:
+        for relation in fp_log:
+            print(f"{relation} (# {len(fp_log[relation])})")
+            print(fp_log[relation])
+            print()
+
+
+footprints(log)
+
+
+# %% Unused
+# ###############################################################################
+# ############################# UNUSED FEATURES #################################
+# ###############################################################################
+# # Unused imports
+# from pm4py.objects.petri_net.utils.decomposition import decompose
+
+# # %% Decompose
+
+
+# list_nets = decompose(net, initial_marking, final_marking)
+# gviz = []
+
+# for index, model in enumerate(list_nets):
+#     subnet, s_im, s_fm = model
+#     gviz.append(visualizer.apply(subnet, s_im, s_fm))
+#     visualizer.save(gviz[-1], str(index)+".png")

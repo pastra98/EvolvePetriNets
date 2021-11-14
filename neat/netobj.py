@@ -1,3 +1,7 @@
+import copy
+
+# fuck inheritance
+
 class GArc:
     def __init__(self, id, source_id, target_id, n_arcs=1):
         self.id = id
@@ -6,11 +10,18 @@ class GArc:
         self.n_arcs = n_arcs
         self.pm4py_obj = None
 
+    def get_copy(self):
+        return copy.deepcopy(self)
+
 class GTrans:
     def __init__(self, id, is_task):
         self.id = id
         self.is_task = is_task
         self.pm4py_obj = None
+
+    def get_copy(self):
+        return copy.deepcopy(self)
+
 
 class GPlace:
     def __init__(self, id, is_end=False, is_start=False):
@@ -18,3 +29,6 @@ class GPlace:
         self.is_start = is_start
         self.is_end = is_end
         self.pm4py_obj = None
+
+    def get_copy(self):
+        return copy.deepcopy(self)
