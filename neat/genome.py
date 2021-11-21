@@ -21,7 +21,7 @@ class GeneticNet:
     def mutate(self):
         pass
 
-    def trans_place_arc(self):
+    def trans_place_arc(self, place_id=None, trans_id=None):
         for _try in range(params.num_trys_make_conn):
             place = rd.choice(list(self.places.values()))
             trans = rd.choice(list(self.transitions.values()))
@@ -45,7 +45,7 @@ class GeneticNet:
                 self.arcs[arc_id] = new_arc
                 return
 
-    def new_place(self):
+    def new_place(self, trans_id=None) -> str:
         for _try in range(params.num_trys_make_conn):
             trans = rd.choice(list(self.transitions.values()))
             # this can also be more fancy, e.g. consider number of dead trans
@@ -60,12 +60,13 @@ class GeneticNet:
             new_arc = GArc(arc_id, trans.id, place_id)
             self.places[place_id] = new_place
             self.arcs[arc_id] = new_arc
-            return
+            return place_id
 
-    # def new_trans(self):
-    #     pass
+    def new_empty_trans(self, place_id=None):
+        pass
 
     def trans_trans_conn(self, source_id=None, target_id=None):
+        # this pos function should check if the two are really transitions
         if not source_id and not target_id:
             # code this later
             pass # try to find two transitions that can be connected
@@ -77,11 +78,7 @@ class GeneticNet:
             arc2_id = innovs.check_arc(place_id, target_id)
             self.arcs[arc2_id] = GArc(arc2_id, place_id, target_id)
         
-
-    # def place_place_conn(self):
-    #     pass
-
-    def split_arc(self):
+    def split_arc(self, arc_id=None):
         for _try in range(params.num_trys_split_arc):
             arc_to_split = rd.choice(list(self.arcs.values()))
 ################################################################################
@@ -114,10 +111,13 @@ class GeneticNet:
                 arc_to_split.n_arcs=0
                 return
 
-    def increase_arcs(self, is_t_to_p: bool):
+    def increase_arcs(self, arc_id=None):
         pass
 
-    def disable_arc(self, is_t_to_p: bool):
+    def disable_arc(self, arc_id=None):
+        pass
+
+    def disable_place(self, place_id=None):
         pass
 
     def build_petri(self) -> Tuple:

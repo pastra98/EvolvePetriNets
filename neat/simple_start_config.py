@@ -36,40 +36,64 @@ def generate_n_start_configs(n_genomes, n_arcs, log):
     task_list = list(fp_log["activities"])
     innovs.set_tasks(task_list)
     task_dict = dict()
+    arc_dict = dict()
     for task in task_list:
         task_dict[task] = netobj.GTrans(task, True)
     # generate genomes
-    # for _g in range(n_genomes):
-    #     arc_dict = dict()
-    #     # start connection
-    #     start_task_id = rd.choice(fp_log["start_activities"])
-    #     start_arc_id = innovs.check_new_arc("start", start_task_id)
-    #     arc_dict[start_arc_id] = netobj.GArc(start_arc_id, "start", start_task_id)
-    #     # end connection
-    #     end_task_id = rd.choice(fp_log["end_activities"])
-    #     end_arc_id = innovs.check_new_arc("end", end_task_id)
-    #     arc_dict[end_arc_id] = netobj.GArc(end_arc_id, "end", end_task_id)
-    #     for _a in range(n_arcs):
+    new_genomes = []
+    net_id = 0
     for trace in log:
-        for event in trace:
-            print()
+        net_id += 1
+        gen_net = genome.GeneticNet(net_id, task_dict, dict(), dict())
+        for i, task in enumerate(trace):
+            # hacky shit -------------------------------------------------------
+            is_parallel = False
+            # hacky shit -------------------------------------------------------
+            curr_task = task["concept:name"]
+            if i == 0:
+                start_arc_id = innovs.check_arc("start", curr_task)
+                start_arc = netobj.GArc(start_arc_id, "start", curr_task)
+                gen_net.arcs[start_arc_id] = start_arc
+            elif i == len(trace)-1:
+                gen_net.trans_trans_conn(prev_task, curr_task)
+                end_arc_id = innovs.check_arc(curr_task, "end")
+                end_arc = netobj.GArc(end_arc_id, curr_task, "end")
+                gen_net.arcs[end_arc_id] = end_arc
+            else:
+                # handle concurrency here!
+                next_task = trace[i+1]["concept:name"]
+                if is_parallel:
+                    gen_net.trans_trans_conn(empty_trans, curr_task)
+                    is_parallel = False
+                elif (curr_task, next_task) in fp_log["parallel"]:
+                    is_parallel = True
+                    new_place_id = gen_net.new_place(prev_task)
+                    new_empty_trans_id = gen_net.new_empty_trans(new_place_id)
+                    empty_trans = gen_net.transitions[new_empty_trans_id]
+                    gen_net.trans_trans_conn(empty_trans, curr_task)
+                else:
+                    gen_net.trans_trans_conn(prev_task, curr_task)
+            prev_task = curr_task
+        new_genomes.append(gen_net)
+    return new_genomes
 
-def get_test_net():
-    tasks = ["A", "B", "C", "D", "E"]
-    innovs.set_tasks(tasks)
-    gen_net = get_test_net()
-    a_t = netobj.GTrans("A", True)
-    b_t = netobj.GTrans("B", True)
-    c_t = netobj.GTrans("C", True)
-    d_t = netobj.GTrans("D", True)
-    e_t = netobj.GTrans("E", True)
-    t_d = {"A":a_t, "B":b_t, "C":c_t, "D":d_t, "E":e_t}
-    ##########
-    a1_id = innovs.store_new_arc("start", "A")
-    a1 = netobj.GArc(a1_id, "start", "A")
-    a2_id = innovs.store_new_arc("E", "end")
-    a2 = netobj.GArc(a2_id, "E", "end")
-    a_d = {a1_id:a1, a2_id:a2}
-    ##########
-    gen_net = genome.GeneticNet("test", t_d, dict(), a_d)
-    return gen_net
+new_genomes = generate_n_start_configs(100, 10, log)
+
+# %% 
+for net in new_genomes:
+    print("new net")
+    net, im, fm = net.build_petri()
+    pm4py.view_petri_net(net, im, fm)
+
+# %% currently unused
+# for _g in range(n_genomes):
+#     arc_dict = dict()
+#     # start connection
+#     start_task_id = rd.choice(fp_log["start_activities"])
+#     start_arc_id = innovs.check_new_arc("start", start_task_id)
+#     arc_dict[start_arc_id] = netobj.GArc(start_arc_id, "start", start_task_id)
+#     # end connection
+#     end_task_id = rd.choice(fp_log["end_activities"])
+#     end_arc_id = innovs.check_new_arc("end", end_task_id)
+#     arc_dict[end_arc_id] = netobj.GArc(end_arc_id, "end", end_task_id)
+#     for _a in range(n_arcs):

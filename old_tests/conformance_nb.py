@@ -6,8 +6,13 @@ from time import process_time
 from pm4py.objects.log.exporter.xes import exporter as xes_exporter
 from pm4py.visualization.petri_net import visualizer
 
+# conformance checking stuff
 from pm4py.algo.simulation.playout.petri_net import algorithm as simulator
 from pm4py.algo.evaluation.replay_fitness import algorithm as replay_fitness_evaluator
+from pm4py.algo.analysis.woflan import algorithm as woflan
+from pm4py.algo.evaluation.precision import algorithm as precision_evaluator
+from pm4py.algo.evaluation.generalization import algorithm as generalization_evaluator
+from pm4py.algo.evaluation.simplicity import algorithm as simplicity_evaluator
 
 from pm4py.objects.petri_net.importer import importer
 from pm4py.objects.petri_net.exporter import exporter as pnml_exporter
@@ -27,8 +32,8 @@ heuristics_miner = pm4py.algo.discovery.heuristics.algorithm
 # logpath = "../pm_data/BPI_Challenge_2012.xes"
 # logpath = "../pm_data/bpi2021/train/pdc2021_1100000.xes"
 # logpath = "../pm_data/pdc_2016_6.xes"
-# logpath = "../pm_data/running_example.xes"
-logpath = "../pm_data/simulated_running_example.xes"
+logpath = "../pm_data/running_example.xes"
+# logpath = "../pm_data/simulated_running_example.xes"
 # logpath = "../pm_data/simulated_running_example.xes"
 log = pm4py.read_xes(logpath)
 # %% load a log, mine it and show conformance
@@ -63,26 +68,40 @@ if use_alignments:
     print(f"cost fraction {total_cost / len(alignments)}")
 #token based
 else:
-    Tokener = pm4py.algo.conformance.tokenreplay.algorithm
-    TbrParams = Tokener.Variants.TOKEN_REPLAY.value.Parameters
-    parameters_tbr = {
-        TbrParams.DISABLE_VARIANTS: True,
-        TbrParams.ENABLE_PLTR_FITNESS: True,
-        TbrParams.STOP_IMMEDIATELY_UNFIT : True
-        # TbrParams.CLEANING_TOKEN_FLOOD : True
-        }
-    total_fitness = 0
+    fit_start = process_time() 
+    # fitness eval
     fitness = replay_fitness_evaluator.apply(
         log, net, initial_marking, final_marking,
         variant=replay_fitness_evaluator.Variants.TOKEN_BASED
         )
     print(f"fitness:\n{pprint.pformat(fitness, indent=4)}")
-    # tbr_results = Tokener.apply(log, net, initial_marking, final_marking, parameters=parameters_tbr)
-    # replayed_traces, place_fitness, trans_fitness, unwanted_activities = tbr_results 
-    # for trace in replayed_traces:
-    #     total_fitness += trace["trace_fitness"]
-    # print(f"total traces: {len(replayed_traces)}")
-    # print(f"fitness fraction: {total_fitness/len(replayed_traces)}\n")
+    print(f"fitness check took: {process_time()-fit_start} seconds\n")
+    # soundness check
+    sound_start = process_time()
+    is_sound = woflan.apply(net, initial_marking, final_marking, parameters={woflan.Parameters.RETURN_ASAP_WHEN_NOT_SOUND: True,
+                                                 woflan.Parameters.PRINT_DIAGNOSTICS: False,
+                                                 woflan.Parameters.RETURN_DIAGNOSTICS: False})
+    print(f"is sound: {is_sound}")
+    print(f"sound check took: {process_time()-sound_start} seconds\n")
+    # precision
+    precision_start = process_time()
+    prec = precision_evaluator.apply(log, net, initial_marking, final_marking, variant=precision_evaluator.Variants.ETCONFORMANCE_TOKEN)
+    print(f"precision: {prec}")
+    print(f"precision check took: {process_time()-precision_start} seconds\n")
+    # generealization
+    generalization_start = process_time()
+    gen = generalization_evaluator.apply(log, net, initial_marking, final_marking)
+    print(f"generalization: {gen}")
+    print(f"generalization check took: {process_time()-generalization_start} seconds\n")
+    # simplicity
+    simplicity_start = process_time()
+    simp = simplicity_evaluator.apply(net)
+    print(f"simplicity: {simp}")
+    print(f"simplicity check took: {process_time()-simplicity_start} seconds\n")
+    # some preliminary fitness measure
+    genetic_fitness = .5*fitness["perc_fit_traces"]/100 + .5*int(is_sound) + .3*prec + .3*gen + .3*simp
+    print(f"prelimary genetic fitness: {genetic_fitness}\n")
+
 
 t1_stop = process_time()
 print("Elapsed time during conformance check:",t1_stop-t1_start) 
@@ -168,7 +187,10 @@ def footprints(log, visualize=True, printit=True):
         fp_visualizer.view(gviz)
     if printit:
         for relation in fp_log:
-            print(f"{relation} (# {len(fp_log[relation])})")
+            if relation == "min_trace_length":
+                print(f"{relation})")
+            else:
+                print(f"{relation} (# {len(fp_log[relation])})")
             print(fp_log[relation])
             print()
 
@@ -193,3 +215,21 @@ footprints(log)
 #     subnet, s_im, s_fm = model
 #     gviz.append(visualizer.apply(subnet, s_im, s_fm))
 #     visualizer.save(gviz[-1], str(index)+".png")
+
+
+# # %% Individual traces token replay
+# Tokener = pm4py.algo.conformance.tokenreplay.algorithm
+# TbrParams = Tokener.Variants.TOKEN_REPLAY.value.Parameters
+# parameters_tbr = {
+#     TbrParams.DISABLE_VARIANTS: True,
+#     TbrParams.ENABLE_PLTR_FITNESS: True,
+#     TbrParams.STOP_IMMEDIATELY_UNFIT : True
+#     # TbrParams.CLEANING_TOKEN_FLOOD : True
+#     }
+# total_fitness = 0
+# tbr_results = Tokener.apply(log, net, initial_marking, final_marking, parameters=parameters_tbr)
+# replayed_traces, place_fitness, trans_fitness, unwanted_activities = tbr_results 
+# for trace in replayed_traces:
+#     total_fitness += trace["trace_fitness"]
+# print(f"total traces: {len(replayed_traces)}")
+# print(f"fitness fraction: {total_fitness/len(replayed_traces)}\n")
