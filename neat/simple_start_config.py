@@ -65,7 +65,10 @@ def generate_n_start_configs(n_genomes, n_arcs, log):
                 # check if last round was already parallel
                 if is_parallel:
                     gen_net.trans_trans_conn(empty_trans, curr_task)
-                    is_parallel = False
+                    if (curr_task, next_task) in fp_log["parallel"]:
+                        pass
+                    else:
+                        is_parallel = False
                 # check if this round is parallel
                 if (curr_task, next_task) in fp_log["parallel"]:
                     is_parallel = True
@@ -100,3 +103,5 @@ for net in new_genomes:
 #     end_arc_id = innovs.check_new_arc("end", end_task_id)
 #     arc_dict[end_arc_id] = netobj.GArc(end_arc_id, "end", end_task_id)
 #     for _a in range(n_arcs):
+################################################################################
+                    # if (prev_task, curr_task) in fp_log["parallel"]:
