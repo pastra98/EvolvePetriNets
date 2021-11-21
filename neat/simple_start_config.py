@@ -62,15 +62,18 @@ def generate_n_start_configs(n_genomes, n_arcs, log):
             else:
                 # handle concurrency here!
                 next_task = trace[i+1]["concept:name"]
+                # check if last round was already parallel
                 if is_parallel:
                     gen_net.trans_trans_conn(empty_trans, curr_task)
                     is_parallel = False
-                elif (curr_task, next_task) in fp_log["parallel"]:
+                # check if this round is parallel
+                if (curr_task, next_task) in fp_log["parallel"]:
                     is_parallel = True
                     new_place_id = gen_net.new_place(prev_task)
                     new_empty_trans_id = gen_net.new_empty_trans(new_place_id)
                     empty_trans = gen_net.transitions[new_empty_trans_id]
                     gen_net.trans_trans_conn(empty_trans, curr_task)
+                # else
                 else:
                     gen_net.trans_trans_conn(prev_task, curr_task)
             prev_task = curr_task
