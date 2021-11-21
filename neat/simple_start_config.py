@@ -10,15 +10,15 @@ import innovs
 import genome
 import params
 
-logpath = "./pm_data/m1_log.xes"
+# logpath = "./pm_data/m1_log.xes"
 # logpath = "../pm_data/BPI_Challenge_2012.xes"
 # logpath = "../pm_data/pdc_2016_6.xes"
-# logpath = "../pm_data/running_example.xes"
+logpath = "../pm_data/running_example.xes"
 # logpath = "../pm_data/simulated_running_example.xes"
 log = pm4py.read_xes(logpath)
 
 # parameters
-params.read_file("./neat/param_files/test_params.json")
+params.read_file("../neat/param_files/test_params.json")
 
 # %% footprint vis
 def footprints(log, visualize=True, printit=True):
@@ -50,9 +50,11 @@ def generate_n_start_configs(n_genomes, n_arcs, log):
     for trace in log:
         net_id += 1
         gen_net = genome.GeneticNet(net_id, task_dict, dict(), dict())
+        print()
+        print(get_trace_str(trace))
         # start task loop ------------------------------------------------------
+        parallels = []
         for i, task in enumerate(trace):
-            parallels = []
             curr_task_id = task["concept:name"]
             # first task
             if i == 0:
@@ -78,26 +80,29 @@ def generate_n_start_configs(n_genomes, n_arcs, log):
                 # end of parallel construct, build it
                 elif (prev_task_id, curr_task_id) in fp_log["parallel"]:
                     parallels.append(curr_task_id)
-                    # take first parallel task, build parallel structure
-                    first_para_task_id = parallels.pop()
-                    #  use it to create end trans
-                    start_place_id = gen_net.new_place(task_before_para)
-                    start_trans_id = gen_net.new_empty_trans(start_place_id)
-                    start_trans = gen_net.transitions[start_trans_id]
-                    gen_net.trans_trans_conn(start_trans_id, first_para_task_id)
-                    #  use it to create end trans (it is already conn to first_para_task!)
-                    end_place_id = gen_net.new_place(first_para_task_id)
-                    end_trans_id = gen_net.new_empty_trans(end_place_id)
-                    end_trans = gen_net.transitions[end_trans_id]
+
+                    # # take first parallel task, build parallel structure
+                    # first_para_task_id = parallels.pop()
+                    # #  connect task before para to first parallel
+                    # gen_net.trans_trans_conn(task_before_para, first_para_task_id)
+                    # #  use it to create end trans (it is already conn to first_para_task!)
+                    # end_place_id = gen_net.new_place(first_para_task_id)
+                    # end_trans_id = gen_net.new_empty_trans(end_place_id)
+
                     # build remaining parallels
                     for task_id in parallels:
-                        gen_net.trans_trans_conn(start_trans_id, task_id)
-                        gen_net.trans_trans_conn(task_id, end_trans_id)
+                        print(f"{task_before_para} -> {task_id}")
+                        print(f"{task_id} -> {next_task}")
+                        gen_net.trans_trans_conn(task_before_para, task_id)
+                        gen_net.trans_trans_conn(task_id, next_task)
                     # parallel structure over now
-                # connect to empty trans at end of parallel construct
-                elif parallels:
-                    gen_net.trans_trans_conn(end_trans_id, curr_task_id)
-                    parallels.clear()
+                    print(parallels)
+
+                # # connect to empty trans at end of parallel construct
+                # elif parallels:
+                #     gen_net.trans_trans_conn(end_trans_id, curr_task_id)
+                #     parallels.clear()
+
                 # just normal connect to prev_task
                 else:
                     gen_net.trans_trans_conn(prev_task_id, curr_task_id)
