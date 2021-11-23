@@ -9,7 +9,7 @@ import netobj
 import innovs
 import genome
 import params
-Ö5
+
 # logpath = "../pm_data/m1_log.xes"
 # logpath = "../pm_data/BPI_Challenge_2012.xes"
 # logpath = "../pm_data/pdc_2016_6.xes"
