@@ -31,6 +31,9 @@ def new_param_json(fname: str, save_current=False):
     with open(fname, "w") as f:
         json.dump(export_vars, f, indent=4)
 
+# ---------- Start config
+start_config: str
+
 # ---------- GENOME MUTATIONS
 prob_t_p: float
 prob_t_t: float

@@ -3,6 +3,8 @@ from pm4py.objects.petri_net.obj import PetriNet, Marking
 from pm4py.objects.petri_net.utils import petri_utils
 import random as rd
 
+from traitlets.traitlets import is_trait
+
 import params
 import innovs
 from netobj import GArc, GPlace, GTrans
@@ -46,24 +48,35 @@ class GeneticNet:
                 return
 
     def new_place(self, trans_id=None) -> str:
-        for _try in range(params.num_trys_make_conn):
-            trans = rd.choice(list(self.transitions.values()))
-            # this can also be more fancy, e.g. consider number of dead trans
-            if rd.random() < params.prob_connect_nontask_trans and not trans.is_task:
-                break
-            # !!!!!!!!!!!!!!!!!!!
-            # IMPORTANT WILL HAVE TO CHECK IF TRANS IS ALREADY CONNECTED TO EMPTY PLACE!!!!
-            # !!!!!!!!!!!!!!!!!!!
-            place_id = innovs.store_new_node(GPlace)
-            arc_id = innovs.check_arc(trans.id, place_id)
-            new_place = GPlace(place_id)
-            new_arc = GArc(arc_id, trans.id, place_id)
-            self.places[place_id] = new_place
-            self.arcs[arc_id] = new_arc
-            return place_id
+        if trans_id:
+            trans = self.transitions[trans_id]
+        else:
+            for _try in range(params.num_trys_make_conn):
+                trans = rd.choice(list(self.transitions.values()))
+                # this can also be more fancy, e.g. consider number of dead trans
+                if rd.random() < params.prob_connect_nontask_trans and not trans.is_task:
+                    break
+        # !!!!!!!!!!!!!!!!!!!
+        # IMPORTANT WILL HAVE TO CHECK IF TRANS IS ALREADY CONNECTED TO EMPTY PLACE!!!!
+        # !!!!!!!!!!!!!!!!!!!
+        place_id = innovs.store_new_node(GPlace)
+        arc_id = innovs.check_arc(trans.id, place_id)
+        new_place = GPlace(place_id)
+        new_arc = GArc(arc_id, trans.id, place_id)
+        self.places[place_id] = new_place
+        self.arcs[arc_id] = new_arc
+        return place_id
 
     def new_empty_trans(self, place_id=None):
-        pass
+        # would need to check innovations to prevent creating duplicate empty transitions
+        new_trans_id = innovs.store_new_node(GTrans)
+        new_trans = GTrans(new_trans_id, is_task=False)
+        self.transitions[new_trans_id] = new_trans
+        # kinda pointless because new_trans_id was just generated without check in innovs
+        arc_id = innovs.check_arc(place_id, new_trans_id) 
+        new_arc = GArc(arc_id, place_id, new_trans_id)
+        self.arcs[arc_id] = new_arc
+        return new_trans_id
 
     def trans_trans_conn(self, source_id=None, target_id=None):
         # this pos function should check if the two are really transitions

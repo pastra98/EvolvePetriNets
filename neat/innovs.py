@@ -68,7 +68,7 @@ def store_new_node(node_type: type, *task_name: str)-> str:
         check_tasks_set()
         global curr_node_id
         curr_node_id += 1
-        prefix = "t" if isinstance(GTrans, node_type) else "p"
+        prefix = "t" if node_type == GTrans else "p"
         node_name = prefix + str(curr_node_id)
         is_task = False
     nodes[node_name] = (node_type, is_task)
