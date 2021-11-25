@@ -17,19 +17,21 @@ def read_file(fname: str):
             print(f"Parameter '{k}' missing in json")
 
 
-def new_param_json(fname: str, save_current=False):
+def new_param_json(fname: str, save_current=False, savepath="/param_files"):
     """Save list of variables, along with a type hint
     """
+    savepath = savepath + fname + ".json"
     vars = globals()["__annotations__"]
     export_vars = {}
     for k, v in list(vars.items()):
         if k not in vars_not_in_config:
-            if save_current:
+            if save_current and k in globals():
                 export_vars[k] = globals()[k]
             else:
                 export_vars[k] = str(v)
-    with open(fname, "w") as f:
+    with open(savepath, "w") as f:
         json.dump(export_vars, f, indent=4)
+        print(f"saved params at:\n{savepath}")
 
 # ---------- GENERAL GA SETTINGS
 start_config: str

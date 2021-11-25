@@ -1,11 +1,11 @@
+from copy import deepcopy
 from typing import Tuple
 from pm4py.objects.petri_net.obj import PetriNet, Marking
 from pm4py.objects.petri_net.utils import petri_utils
 import random as rd
 
-import params
-import innovs
-from netobj import GArc, GPlace, GTrans
+from . import params, innovs
+from .netobj import GArc, GPlace, GTrans
 
 class GeneticNet:
     def __init__(self, transitions, places, arcs) -> None:
@@ -166,8 +166,11 @@ class GeneticNet:
         self.final_marking[end] = 1
         return self.net, self.initial_marking, self.final_marking
 
-    def evaluate_fitness():
+    def evaluate_fitness(self):
         pass
 
-    def copy():
-        pass
+    def copy(self):
+        new_transitions = deepcopy(self.transitions)
+        new_places = deepcopy(self.places)
+        new_arcs = deepcopy(self.arcs)
+        return GeneticNet(new_arcs, new_places, new_places)

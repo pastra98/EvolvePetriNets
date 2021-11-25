@@ -1,9 +1,7 @@
 from pm4py.algo.discovery.footprints import algorithm as footprints_discovery
 from pm4py.visualization.footprints import visualizer as fp_visualizer
 
-import netobj
-import innovs
-import genome
+from . import netobj, innovs, genome
 
 def get_trace_str(trace):
     tr_events = []
@@ -29,6 +27,7 @@ def generate_n_traces_with_concurrency(n_genomes, log):
     while len(new_genomes) < n_genomes:
         for new_genome in base_genomes:
             new_genomes.append(new_genome.copy())
+    return new_genomes 
 
 def traces_with_concurrency(log):
     fp_log = footprints(log, visualize=False, printit=False)

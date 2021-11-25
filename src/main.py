@@ -1,20 +1,20 @@
-import ga
 import datetime
 import pickle
 
+from neat import ga
 from pm4py.objects.log.importer.xes import importer as xes_importer
 
 
-log_path = "./pm_data/m1_log.xes"
-log = xes_importer.apply(log_path)
-
-param_path = "./neat/param_files/"
-param_files = [param_path + "test_params.json"] # list of param file(names)
-
-results = {}
-stop_cond = ""
-
 def main():
+    log_path = "pm_data/m1_log.xes"
+    log = xes_importer.apply(log_path)
+
+    param_path = "param_files/"
+    param_files = [param_path + "test.json"] # list of param file(names)
+
+    results = {}
+    stop_cond = ""
+
     for p in param_files:
         # measure time, initialize new ga
         ga_start_time = datetime.datetime.now()

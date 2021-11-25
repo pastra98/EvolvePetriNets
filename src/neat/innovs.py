@@ -1,5 +1,5 @@
 from typing import List
-from netobj import GArc, GTrans, GPlace
+from .netobj import GArc, GTrans, GPlace
 
 tasks = []
 nodes = {"start":GPlace, "end":GPlace}

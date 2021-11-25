@@ -1,9 +1,6 @@
-# from neat import params, main
-# from . import neat
+from src.neat import params
 
-# param_list = main.param_files
-# print(neat.params.num_trys_make_conn)
-print(__name__)
-
-# params.read_file()
-# print(param_list)
+def run():
+    param_path = "param_files/test.json"
+    params.read_file(param_path)
+    print(params.popsize)
