@@ -3,15 +3,13 @@ from pm4py.objects.petri_net.obj import PetriNet, Marking
 from pm4py.objects.petri_net.utils import petri_utils
 import random as rd
 
-from traitlets.traitlets import is_trait
-
 import params
 import innovs
 from netobj import GArc, GPlace, GTrans
 
 class GeneticNet:
-    def __init__(self, id, transitions, places, arcs) -> None:
-        self.id = id
+    def __init__(self, transitions, places, arcs) -> None:
+        self.id = innovs.get_new_genome_id()
         self.net: PetriNet
         self.transitions = transitions
         self.places = places | {"start":GPlace("start", is_start=True),
@@ -19,6 +17,8 @@ class GeneticNet:
         self.arcs = arcs
         self.initial_marking: Marking
         self.final_marking: Marking
+
+    # MUTATIONS ----------------------------------------------------------------
 
     def mutate(self):
         pass
@@ -133,6 +133,8 @@ class GeneticNet:
     def disable_place(self, place_id=None):
         pass
 
+    # OTHER STUFF --------------------------------------------------------------
+
     def build_petri(self) -> Tuple:
         self.net = PetriNet(f"{self.id}-Net")
         merged_nodes = self.places | self.transitions
@@ -165,4 +167,7 @@ class GeneticNet:
         return self.net, self.initial_marking, self.final_marking
 
     def evaluate_fitness():
+        pass
+
+    def copy():
         pass

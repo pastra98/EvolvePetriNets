@@ -8,8 +8,20 @@ splits = {}
 
 trans = {}
 
+curr_genome_id = 0
+
 curr_arc_id = 0
 curr_node_id = 0
+
+def reset():
+    # implement this function, to be called when setting up a new ga
+    print("Reset innovs!")
+    return
+
+def get_new_genome_id():
+    global curr_genome_id
+    curr_genome_id += 1
+    return curr_genome_id
 
 def check_trans_to_trans(source_id, target_id):
     if (source_id, target_id) in trans:

@@ -1,12 +1,18 @@
 import params
+import startconfigs
+import innovs
 
 class GeneticAlgorithm:
-    def __init__(self, params_name:str)-> None:
+    def __init__(self, params_name:str, log)-> None:
         self.history = {}
-        self.population = {}
         self.params_name = params_name
+        self.log = log
 
         params.read_file(params_name)
+        innovs.reset()
+
+        self.population = self.get_initial_pop()
+
     
     def next_generation(self) -> dict:
         """ Makes new generation, evaluates it, and returns info that can be used
@@ -17,4 +23,11 @@ class GeneticAlgorithm:
     def get_evaluation(self) -> dict:
         """ Should only be called at end of this ga instance, returns bunch of info
         """
+        return
+
+    def get_initial_pop() -> list:
+        """
+        """ 
+        if params.start_config == "concurrent_traces":
+            return startconfigs.generate_n_traces_with_concurrency(params.popsize)
         return

@@ -1,23 +1,9 @@
-import random as rd
-
-import pm4py
 from pm4py.algo.discovery.footprints import algorithm as footprints_discovery
 from pm4py.visualization.footprints import visualizer as fp_visualizer
-import params
 
 import netobj
 import innovs
 import genome
-import params
-
-# logpath = "../pm_data/m1_log.xes"
-# logpath = "../pm_data/BPI_Challenge_2012.xes"
-# logpath = "../pm_data/pdc_2016_6.xes"
-# logpath = "../pm_data/running_example.xes"
-# logpath = "../pm_data/simulated_running_example.xes"
-# log = pm4py.read_xes(logpath)
-# # parameters
-# params.read_file("../neat/param_files/test_params.json")
 
 def get_trace_str(trace):
     tr_events = []
@@ -36,7 +22,15 @@ def footprints(log, visualize=True, printit=True):
             print(f"{relation}\n{fp_log[relation]}\n")
     return fp_log
 
-def generate_n_start_configs(n_genomes, n_arcs, log):
+def generate_n_traces_with_concurrency(n_genomes, log):
+    base_genomes = traces_with_concurrency(log)
+    # could also add randos here
+    new_genomes = []
+    while len(new_genomes) < n_genomes:
+        for new_genome in base_genomes:
+            new_genomes.append(new_genome.copy())
+
+def traces_with_concurrency(log):
     fp_log = footprints(log, visualize=False, printit=False)
     task_list = list(fp_log["activities"])
     innovs.set_tasks(task_list)
@@ -45,11 +39,9 @@ def generate_n_start_configs(n_genomes, n_arcs, log):
         task_dict[task] = netobj.GTrans(task, True)
     # generate genomes
     new_genomes = []
-    net_id = 0
     # start traces loop --------------------------------------------------------
     for trace in log:
-        net_id += 1
-        gen_net = genome.GeneticNet(net_id, task_dict, dict(), dict())
+        gen_net = genome.GeneticNet(task_dict, dict(), dict())
         # start task loop ------------------------------------------------------
         parallels = []
         for i, task in enumerate(trace):
@@ -110,3 +102,12 @@ def generate_n_start_configs(n_genomes, n_arcs, log):
         new_genomes.append([gen_net, trace])
     # end traces loop ----------------------------------------------------------
     return new_genomes
+
+# logpath = "../pm_data/m1_log.xes"
+# logpath = "../pm_data/BPI_Challenge_2012.xes"
+# logpath = "../pm_data/pdc_2016_6.xes"
+# logpath = "../pm_data/running_example.xes"
+# logpath = "../pm_data/simulated_running_example.xes"
+# log = pm4py.read_xes(logpath)
+# # parameters
+# params.read_file("../neat/param_files/test_params.json")

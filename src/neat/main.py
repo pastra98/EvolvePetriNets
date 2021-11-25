@@ -2,7 +2,11 @@ import ga
 import datetime
 import pickle
 
+from pm4py.objects.log.importer.xes import importer as xes_importer
+
+
 log_path = "./pm_data/m1_log.xes"
+log = xes_importer.apply(log_path)
 
 param_path = "./neat/param_files/"
 param_files = [param_path + "test_params.json"] # list of param file(names)
@@ -15,7 +19,7 @@ def main():
         # measure time, initialize new ga
         ga_start_time = datetime.datetime.now()
         print(f"\n{80*'-'}\n{ga_start_time}: loading new ga with params {p}\n")
-        new_ga = ga.GeneticAlgorithm(p)
+        new_ga = ga.GeneticAlgorithm(p, log)
 
         # run current ga
         stop_ga = False

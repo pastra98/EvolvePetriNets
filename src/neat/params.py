@@ -31,8 +31,9 @@ def new_param_json(fname: str, save_current=False):
     with open(fname, "w") as f:
         json.dump(export_vars, f, indent=4)
 
-# ---------- Start config
+# ---------- GENERAL GA SETTINGS
 start_config: str
+popsize: int
 
 # ---------- GENOME MUTATIONS
 prob_t_p: float
