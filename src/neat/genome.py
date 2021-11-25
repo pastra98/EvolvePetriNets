@@ -173,4 +173,4 @@ class GeneticNet:
         new_transitions = deepcopy(self.transitions)
         new_places = deepcopy(self.places)
         new_arcs = deepcopy(self.arcs)
-        return GeneticNet(new_arcs, new_places, new_places)
+        return GeneticNet(new_transitions, new_places, new_arcs)

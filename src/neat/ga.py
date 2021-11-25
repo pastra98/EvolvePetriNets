@@ -1,4 +1,3 @@
-from pm4py.visualization.petri_net import visualizer
 from . import params, startconfigs, innovs
 
 class GeneticAlgorithm:
@@ -11,17 +10,6 @@ class GeneticAlgorithm:
         innovs.reset()
 
         self.population = self.get_initial_pop()
-
-        print(self.population)
-        print(len(self.population))
-        for g, l in self.population: # why is dis a nested list? lots of stuff to fix here
-            # implement genome.copy() method
-            print(g.id)
-            net, im, fm = g.build_petri()
-            net_gviz = visualizer.apply(net, im, fm)
-            savepath = f"vis/t1/{g.id}_petrinet.png"
-            visualizer.save(net_gviz, savepath)
-            print(f"saved under {savepath}")
 
     
     def next_generation(self) -> dict:

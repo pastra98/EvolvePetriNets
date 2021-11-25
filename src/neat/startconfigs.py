@@ -98,7 +98,7 @@ def traces_with_concurrency(log):
                     gen_net.trans_trans_conn(prev_task_id, curr_task_id)
             prev_task_id = curr_task_id
         # end task loop --------------------------------------------------------
-        new_genomes.append([gen_net, trace])
+        new_genomes.append(gen_net)
     # end traces loop ----------------------------------------------------------
     return new_genomes
 
