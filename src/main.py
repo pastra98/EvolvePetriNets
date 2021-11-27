@@ -9,8 +9,7 @@ def main():
     log_path = "pm_data/m1_log.xes"
     log = xes_importer.apply(log_path)
 
-    param_path = "param_files/"
-    param_files = [param_path + "test.json"] # list of param file(names)
+    param_files = ["test"] # list of param file(names)
 
     results = {}
     stop_cond = ""
@@ -36,7 +35,7 @@ def main():
                 print(f"GA_{p} reached {stop_cond}: {gen_info['some_condition']}\n\n")
 
                 # save results, incl. time
-                results[f"{p}_ga_params"] = ga.get_evaluation() | {"time_took": ga_total_time}
+                results[f"{p}_ga_params"] = ga.get_ga_info() | {"time_took": ga_total_time}
                 stop_ga = True
 
     # finished with all configurations, stop the process
