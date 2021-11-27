@@ -1,6 +1,12 @@
 {
     "start_config": "concurrent_traces",
     "popsize": 100,
+    "use_speciation": true,
+    "perc_fit_traces_weight": 1.0,
+    "soundness_weight": 0.5,
+    "precision_weight": 0.3,
+    "generalization_weight": 0.3,
+    "simplicity_weight": 0.3,
     "prob_t_p": 0.5,
     "prob_t_t": 0.5,
     "prob_p_p": 0.5,
