@@ -1,24 +1,37 @@
+import random as rd
 from copy import deepcopy
 from typing import Tuple
+
 from pm4py.objects.petri_net.obj import PetriNet, Marking
 from pm4py.objects.petri_net.utils import petri_utils
-import random as rd
+
+from pm4py.algo.conformance.tokenreplay import algorithm as token_based_replay
+from pm4py.algo.evaluation.replay_fitness import algorithm as replay_fitness_evaluator
+from pm4py.algo.analysis.woflan import algorithm as woflan
+from pm4py.algo.evaluation.precision import algorithm as precision_evaluator
+from pm4py.algo.evaluation.generalization import algorithm as generalization_evaluator
+from pm4py.algo.evaluation.simplicity import algorithm as simplicity_evaluator
 
 from . import params, innovs
 from .netobj import GArc, GPlace, GTrans
 
+
 class GeneticNet:
     def __init__(self, transitions, places, arcs) -> None:
         self.id = innovs.get_new_genome_id()
-        self.net: PetriNet
+        self.net: PetriNet = None
+        self.im: Marking = None
+        self.fm: Marking = None
+        self.fitness: float = None
+
         self.transitions = transitions
         self.places = places | {"start":GPlace("start", is_start=True),
                                 "end":GPlace("end", is_end=True)}
         self.arcs = arcs
-        self.initial_marking: Marking
-        self.final_marking: Marking
 
-    # MUTATIONS ----------------------------------------------------------------
+# ------------------------------------------------------------------------------
+# MUTATIONS --------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
     def mutate(self):
         pass
@@ -133,9 +146,89 @@ class GeneticNet:
     def disable_place(self, place_id=None):
         pass
 
-    # OTHER STUFF --------------------------------------------------------------
+# ------------------------------------------------------------------------------
+# REPRODUCTION RELATED STUFF ---------------------------------------------------
+# ------------------------------------------------------------------------------
+    def get_compatibility_score(self, other_genome) -> float:
+        """Calculates how similar this genome is to another genome according to the
+        formula proposed in the original NEAT Paper. See distance variable to see
+        how the formula works. It's parameters can be adjusted.
+        """
+        # numbers needed for compatibility score formula
+        num_matched = 0
+        num_disjoint = 0
+        num_excess = 0
+        arc_count_diff = 0.0
+        # get sorted arrays of both genomes innovation historys 
+        my_innovs = sorted([a_id for a_id in self.arcs if self.arcs[a_id].n_arcs > 0])
+        other_innovs = sorted([a_id for a_id in other_genome.arcs if other_genome.arcs[a_id].n_arcs > 0])
+        # if both genomes don't have enabled links, they are compatible. stop calculations here
+        if not (my_innovs and other_innovs):
+            return params.species_boundary - 1
+        # if either of the two genomes has no innovs, all of the other genes are excess genes
+        # --> the first comparison for excess genes will evaluate true, and a score is calc.
+        if not (my_innovs or other_innovs):
+            older_innovs = [-1]
+        # if both have innovs, find the lower last innovation (genome with older innovs)
+        else:
+            older_innovs = my_innovs if my_innovs[-1] < other_innovs[-1] else other_innovs
+        # get a list of every shared innovation from both genomes, without duplicates
+        all_Innovations = sorted(set(my_innovs + other_innovs))
+        # the compat. score formula uses the num of enabled links in larger genome
+        longest = max(len(my_innovs), len(other_innovs))
+        # analyze every innovation and tally up matching, disjoint and excess scores
+        innov_count = 0
+        for innov in all_Innovations:
+            # match: both genomes have invented this arc, calculate difference in number of links
+            if innov in self.arcs and innov in other_genome.arcs:
+                arc_count_diff += abs(self.arcs[innov].n_arcs - other_genome.arcs[innov].n_arcs)
+                num_matched += 1
+            # excess: elif innov_id exceeds last innov_id of older_Innovations genome, the
+            # remaining Innovations in all_Innovations are excess genes. stop the search.
+            elif innov > older_innovs[-1]:
+                num_excess = len(all_Innovations) - innov_count
+                break
+            # disjoint: if we are sure, that both genomes still have Innovations,
+            # (=not excess), and just one of them has the innov (xor check) -> disjoint
+            elif innov in self.arcs or innov in other_genome.arcs:
+                num_disjoint += 1
+            innov_count += 1
+        # If none match, set to 1 to prevent division by zero if no genes match. The
+        # match score is still gives zero because the weight difference is zero.
+        if num_matched == 0:
+            num_matched = 1
+        # calculate the distance
+        distance = ((params.coeff_matched * arc_count_diff) / num_matched +
+                    (params.coeff_disjoint * num_disjoint) / longest +
+                    (params.coeff_excess * num_excess) / longest)
 
-    def build_petri(self) -> Tuple:
+
+        print(f"num_matched : {num_matched}")
+        print(f"num_disjoint : {num_disjoint}")
+        print(f"num_excess : {num_excess}")
+        print(f"arc_count_diff : {arc_count_diff}")
+
+        return distance
+
+
+    def copy(self):
+        """Make a deepcopy
+        """
+        new_transitions = deepcopy(self.transitions)
+        new_places = deepcopy(self.places)
+        new_arcs = deepcopy(self.arcs)
+        return GeneticNet(new_transitions, new_places, new_arcs)
+
+# ------------------------------------------------------------------------------
+# FITNESS RELATED STUFF --------------------------------------------------------
+# ------------------------------------------------------------------------------
+
+    def build_petri(self) -> None:
+        if self.net:
+            print("Genome already has net, rebuilding it")
+            del self.net
+            del self.im
+            del self.fm
         self.net = PetriNet(f"{self.id}-Net")
         merged_nodes = self.places | self.transitions
         for place_id in self.places:
@@ -157,20 +250,52 @@ class GeneticNet:
                 target_obj = merged_nodes[arc.target_id].pm4py_obj
                 arc.pm4py_obj = petri_utils.add_arc_from_to(source_obj, target_obj, self.net)
         # initial marking
-        self.initial_marking = Marking()
+        self.im = Marking()
         start = self.places["start"].pm4py_obj
-        self.initial_marking[start] = 1
+        self.im[start] = 1
         # final marking
-        self.final_marking = Marking()
+        self.fm = Marking()
         end = self.places["end"].pm4py_obj
-        self.final_marking[end] = 1
-        return self.net, self.initial_marking, self.final_marking
+        self.fm[end] = 1
+        return
 
-    def evaluate_fitness(self):
-        pass
-
-    def copy(self):
-        new_transitions = deepcopy(self.transitions)
-        new_places = deepcopy(self.places)
-        new_arcs = deepcopy(self.arcs)
-        return GeneticNet(new_transitions, new_places, new_arcs)
+    def evaluate_fitness(self, log) -> None:
+        if not self.net:
+            self.build_petri()
+        else:
+            print("net has already been built!!")
+            # breakpoint()
+        # set tbr params
+        tbr = token_based_replay.Variants.TOKEN_REPLAY.value.Parameters
+        tbr_params = {tbr.SHOW_PROGRESS_BAR: False}
+        # fitness eval
+        trace_fitness = replay_fitness_evaluator.apply(
+            log, self.net, self.im, self.fm,
+            parameters=tbr_params,
+            variant=replay_fitness_evaluator.Variants.TOKEN_BASED
+            )
+        # soundness check
+        is_sound = woflan.apply(self.net, self.im, self.fm, parameters={
+            woflan.Parameters.RETURN_ASAP_WHEN_NOT_SOUND: True,
+            woflan.Parameters.PRINT_DIAGNOSTICS: False,
+            woflan.Parameters.RETURN_DIAGNOSTICS: False
+            })
+        # precision
+        prec = precision_evaluator.apply(
+            log, self.net, self.im, self.fm,
+            variant=precision_evaluator.Variants.ETCONFORMANCE_TOKEN
+            )
+        # generealization
+        gen = generalization_evaluator.apply(log, self.net, self.im, self.fm)
+        # simplicity
+        simp = simplicity_evaluator.apply(self.net)
+        # some preliminary fitness measure
+        self.fitness = (
+            + params.perc_fit_traces_weight * (trace_fitness["perc_fit_traces"] / 100)
+            + params.soundness_weight * int(is_sound)
+            + params.precision_weight * prec
+            + params.generalization_weight * gen
+            + params.simplicity_weight * simp
+        )
+        if self.fitness <= 0: breakpoint()
+        return

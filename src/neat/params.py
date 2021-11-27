@@ -3,10 +3,11 @@ import json
 name: str
 vars_not_in_config = ["name"]
 
-def read_file(fname: str):
+def load(fname: str, savepath="param_files/"):
     """Read in a params json, assign global variables to it
     """
-    with open(fname) as f:
+    savepath = savepath + fname + ".json"
+    with open(savepath) as f:
         global name
         name = fname
         new_params = json.load(f)
@@ -16,8 +17,7 @@ def read_file(fname: str):
         elif k not in vars_not_in_config:
             print(f"Parameter '{k}' missing in json")
 
-
-def new_param_json(fname: str, save_current=False, savepath="/param_files"):
+def new_param_json(fname: str, save_current=False, savepath="param_files/"):
     """Save list of variables, along with a type hint
     """
     savepath = savepath + fname + ".json"
@@ -36,6 +36,23 @@ def new_param_json(fname: str, save_current=False, savepath="/param_files"):
 # ---------- GENERAL GA SETTINGS
 start_config: str
 popsize: int
+selection_strategy: str # "speciation" / "roulette" / "truncation"
+
+# -------------------- selection strategy: SPECIATION
+species_boundary: float
+coeff_matched: float
+coeff_disjoint: float
+coeff_excess: float
+
+# -------------------- selection strategy: ROULETTE 
+# -------------------- selection strategy: TRUNCATION
+
+# ---------- GENOME MUTATIONS
+perc_fit_traces_weight: float
+soundness_weight: float
+precision_weight: float
+generalization_weight: float
+simplicity_weight: float
 
 # ---------- GENOME MUTATIONS
 prob_t_p: float
