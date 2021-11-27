@@ -109,4 +109,4 @@ def traces_with_concurrency(log):
 # logpath = "../pm_data/simulated_running_example.xes"
 # log = pm4py.read_xes(logpath)
 # # parameters
-# params.read_file("../neat/param_files/test_params.json")
+# params.load("../neat/param_files/test_params.json")
