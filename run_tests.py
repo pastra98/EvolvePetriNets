@@ -4,10 +4,10 @@ from pm4py.objects.log.importer.xes import importer as xes_importer
 lp = "pm_data/running_example.xes" # "pm_data/m1_log.xes"
 log = xes_importer.apply(lp)
 
-from IPython import get_ipython
-ipython = get_ipython()
-ipython.magic("load_ext autoreload")
-ipython.magic("autoreload 2")
+# from IPython import get_ipython
+# ipython = get_ipython()
+# ipython.magic("load_ext autoreload")
+# ipython.magic("autoreload 2")
 
 # %% ---------------------------------------------------------------------------
 # ---------- TEST STARTCONFIGS ----------
@@ -26,8 +26,8 @@ for g in tg:
 # ---------- TEST COMPAT SCORE ----------
 # ------------------------------------------------------------------------------
 from src.tests import initial_pop_speciation as ips
-from src.neat import genome
 
+tg = ips.run(log)
 mom, dad = tg[0], tg[1] # try wiht more similar ones
 t = mom.get_compatibility_score(dad)
 # TODO

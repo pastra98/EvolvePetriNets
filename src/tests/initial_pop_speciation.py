@@ -1,4 +1,9 @@
-from src.neat import ga
+from src.tests import initial_pop_speciation, test_startconfigs as ts
+from src.tests import visualize_genome as vg
+from src.neat import params
 
-def get_ga(param_name, log):
-    t_ga = ga.GeneticAlgorithm(param_name, log)
+
+def run(log):
+    params.load("speciation_params")
+    tg = ts.get_genomes(log)
+    return tg
