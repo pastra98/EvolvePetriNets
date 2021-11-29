@@ -1,3 +1,4 @@
+import sys, importlib # used for reset
 from typing import List
 from .netobj import GArc, GTrans, GPlace
 
@@ -14,8 +15,7 @@ curr_arc_id = 0
 curr_node_id = 0
 
 def reset():
-    # implement this function, to be called when setting up a new ga
-    print("Reset innovs!")
+    importlib.reload(sys.modules[__name__])
     return
 
 def get_new_genome_id():
