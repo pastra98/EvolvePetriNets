@@ -1,4 +1,4 @@
-from src.neat import startconfigs
+from src.neat import startconfigs, innovs
 from pm4py import view_petri_net
 
 from src.neat import genome

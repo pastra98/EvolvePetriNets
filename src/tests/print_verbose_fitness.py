@@ -79,3 +79,49 @@ def print_fitness(genome, log, view):
 
     print(f"overall time for fitness calc:\n{process_time()-fit_start}")
     print(f"{80*'-'}\n")
+
+def mpatch_test(genome, log, view):
+    from src.tests.monkeypatch import mp_tbr
+    genome.build_petri()
+    net, im, fm = genome.net, genome.im, genome.fm
+    if view:
+        print(genome.id)
+        view_petri_net(net, im, fm)
+
+    aligned_traces = mp_tbr.get_aligned_traces(log, net, im, fm)
+
+    # fitness eval
+    fitness = mp_tbr.get_replay_fitness(aligned_traces)
+    print(f"fitness:\n{pprint.pformat(fitness, indent=4)}")
+
+    # soundness check
+    is_sound = woflan.apply(net, im, fm, parameters={
+        woflan.Parameters.RETURN_ASAP_WHEN_NOT_SOUND: True,
+        woflan.Parameters.PRINT_DIAGNOSTICS: False,
+        woflan.Parameters.RETURN_DIAGNOSTICS: False
+        })
+    print(f"is sound: {is_sound}")
+
+    # precision
+    prec = mp_tbr.get_precision(log, net, im, fm)
+    print(f"precision: {prec}")
+
+    # generealization
+    gen = mp_tbr.get_generalization(net, aligned_traces)
+    print(f"generalization: {gen}")
+
+    # simplicity
+    simp = simplicity_evaluator.apply(net)
+    print(f"simplicity: {simp}")
+
+    # some preliminary fitness measure
+    genetic_fitness = (
+        + 1.0 * (fitness["perc_fit_traces"] / 100)
+        + 0.5 * int(is_sound)
+        + 0.3 * prec
+        + 0.3 * gen
+        + 0.3 * simp
+    )
+    print(f"prelimary genetic fitness: {genetic_fitness}\n")
+
+    print(f"{80*'-'}\n")
