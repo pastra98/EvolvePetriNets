@@ -7,14 +7,10 @@ from graphviz import Digraph
 from pm4py.objects.petri_net.obj import PetriNet, Marking
 from pm4py.objects.petri_net.utils import petri_utils
 
-from pm4py.algo.conformance.tokenreplay import algorithm as token_based_replay
-from pm4py.algo.evaluation.replay_fitness import algorithm as replay_fitness_evaluator
 from pm4py.algo.analysis.woflan import algorithm as woflan
-from pm4py.algo.evaluation.precision import algorithm as precision_evaluator
-from pm4py.algo.evaluation.generalization import algorithm as generalization_evaluator
 from pm4py.algo.evaluation.simplicity import algorithm as simplicity_evaluator
 
-from . import params, innovs
+from . import params, innovs, fitnesscalc
 from .netobj import GArc, GPlace, GTrans
 
 
@@ -204,13 +200,10 @@ class GeneticNet:
         distance = ((params.coeff_matched * arc_count_diff) / num_matched +
                     (params.coeff_disjoint * num_disjoint) / longest +
                     (params.coeff_excess * num_excess) / longest)
-
-
-        print(f"num_matched : {num_matched}")
-        print(f"num_disjoint : {num_disjoint}")
-        print(f"num_excess : {num_excess}")
-        print(f"arc_count_diff : {arc_count_diff}")
-
+        # print(f"num_matched : {num_matched}")
+        # print(f"num_disjoint : {num_disjoint}")
+        # print(f"num_excess : {num_excess}")
+        # print(f"arc_count_diff : {arc_count_diff}")
         return distance
 
 
@@ -267,15 +260,9 @@ class GeneticNet:
             self.build_petri()
         else:
             print("net has already been built!!, not building a new one")
-        # set tbr params
-        tbr = token_based_replay.Variants.TOKEN_REPLAY.value.Parameters
-        tbr_params = {tbr.SHOW_PROGRESS_BAR: False}
         # fitness eval
-        trace_fitness = replay_fitness_evaluator.apply(
-            log, self.net, self.im, self.fm,
-            parameters=tbr_params,
-            variant=replay_fitness_evaluator.Variants.TOKEN_BASED
-            )
+        aligned_traces = fitnesscalc.get_aligned_traces(log, self.net, self.im, self.fm)
+        trace_fitness = fitnesscalc.get_replay_fitness(aligned_traces)
         # soundness check
         is_sound = woflan.apply(self.net, self.im, self.fm, parameters={
             woflan.Parameters.RETURN_ASAP_WHEN_NOT_SOUND: True,
@@ -283,12 +270,9 @@ class GeneticNet:
             woflan.Parameters.RETURN_DIAGNOSTICS: False
             })
         # precision
-        prec = precision_evaluator.apply(
-            log, self.net, self.im, self.fm,
-            variant=precision_evaluator.Variants.ETCONFORMANCE_TOKEN
-            )
+        prec = fitnesscalc.get_precision(log, self.net, self.im, self.fm)
         # generealization
-        gen = generalization_evaluator.apply(log, self.net, self.im, self.fm)
+        gen = fitnesscalc.get_generalization(self.net, aligned_traces)
         # simplicity
         simp = simplicity_evaluator.apply(self.net)
         # some preliminary fitness measure
