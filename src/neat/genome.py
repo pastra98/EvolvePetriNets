@@ -2,6 +2,8 @@ import random as rd
 from copy import deepcopy
 from typing import Tuple
 
+from graphviz import Digraph
+
 from pm4py.objects.petri_net.obj import PetriNet, Marking
 from pm4py.objects.petri_net.utils import petri_utils
 
@@ -98,6 +100,7 @@ class GeneticNet:
             pass # try to find two transitions that can be connected
         place_id = innovs.check_trans_to_trans(source_id, target_id)
         if place_id not in self.places:
+            # this will always make a new innov
             self.places[place_id] = GPlace(place_id)
             arc1_id = innovs.check_arc(source_id, place_id)
             self.arcs[arc1_id] = GArc(arc1_id, source_id, place_id)
@@ -263,8 +266,7 @@ class GeneticNet:
         if not self.net:
             self.build_petri()
         else:
-            print("net has already been built!!")
-            # breakpoint()
+            print("net has already been built!!, not building a new one")
         # set tbr params
         tbr = token_based_replay.Variants.TOKEN_REPLAY.value.Parameters
         tbr_params = {tbr.SHOW_PROGRESS_BAR: False}
@@ -299,3 +301,43 @@ class GeneticNet:
         )
         if self.fitness <= 0: breakpoint()
         return
+
+# ------------------------------------------------------------------------------
+# MISC STUFF -------------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
+    def get_graphviz(self) -> None:
+        # parameter stuff, TODO: think about where to put this
+        fsize = "20"
+        tcol = "yellow"
+        pcol = "lightblue"
+        ahead = "normal"
+        viz = Digraph()
+        viz.graph_attr['rankdir'] = 'LR'
+        viz.attr('node', shape='box')
+        viz.attr(overlap='false')
+        # viz.attr(size="21, 21")
+        # viz.attr(size="11, 11")
+        used_t = set()
+        for a in self.arcs.values():
+            used_t.add(a.source_id), used_t.add(a.source_id)
+        # transitions
+        for t in self.transitions:
+            if t in used_t:
+                if self.transitions[t].is_task: # task
+                    viz.node(t, t, style='filled', fillcolor=tcol, border='1', fontsize=fsize)
+                else: # empty trans
+                    viz.node(t, t, style='filled', fontcolor="white", fillcolor="black", fontsize=fsize)
+        # places
+        for p in self.places:
+            if p == "start":
+                viz.node("start", style='filled', fillcolor="green", fontsize=fsize, shape='circle', fixedsize='true', width='0.75')
+            elif p == "start":
+                viz.node("end", style='filled', fillcolor="orange", fontsize=fsize, shape='circle', fixedsize='true', width='0.75')
+            else:
+                viz.node(p, p, style='filled', fillcolor=pcol, fontsize=fsize, shape='circle', fixedsize='true', width='0.75')
+        # arcs
+        for name, a in self.arcs.items():
+            for _ in range(a.n_arcs):
+                viz.edge(a.source_id, a.target_id, label=str(name), fontsize=fsize, arrowhead=ahead)
+        return viz
