@@ -16,9 +16,11 @@ class GeneticAlgorithm:
 
         self.curr_generation = 0 # TODO: need to increment that /deal with it
 
+        # these are set by calling get_initial_pop (only used if strat speciation)
         self.num_new_species = 0
-        self.curr_species = [] # is set by calling get_initial_pop (only used if strat speciation)
-        self.population = self.get_initial_pop()
+        self.curr_species = [] 
+        self.population = []
+        self.set_initial_pop()
 
         self.best_genome = None
         self.best_species = None
@@ -73,19 +75,22 @@ class GeneticAlgorithm:
         """
         return
 
-    def get_initial_pop(self) -> list:
+    def set_initial_pop(self) -> None:
         """
         """ 
         if params.start_config == "concurrent_traces":
             initial_pop = startconfigs.generate_n_traces_with_concurrency(params.popsize, self.log)
-            # if using speciation, generate initial set of spec, place genomes there
-            if params.selection_strategy == "speciation":
-                for g in initial_pop:
-                    found_species = self.find_species(g)
-                    found_species.add_member(g)
         elif params.start_config == "blabla":
+            pass
             # make other type of startconfig
-            return
+        # if using speciation, generate initial set of spec, place genomes there
+        if params.selection_strategy == "speciation":
+            for g in initial_pop:
+                found_species = self.find_species(g)
+                found_species.add_member(g)
+        # set initial pop
+        self.population = initial_pop
+        return
 
 # ------------------------------------------------------------------------------
 # POPULATION UPDATES -----------------------------------------------------------
