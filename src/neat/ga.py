@@ -19,7 +19,6 @@ class GeneticAlgorithm:
         self.num_new_species = 0
         self.curr_species = [] # is set by calling get_initial_pop (only used if strat speciation)
         self.population = self.get_initial_pop()
-        self.evaluate_curr_generation()
 
         self.best_genome = None
         self.best_species = None
@@ -39,12 +38,17 @@ class GeneticAlgorithm:
             self.roulette_pop_update()
         elif params.selection_strategy == "truncation": # https://www.researchgate.net/publication/259461147_Selection_Methods_for_Genetic_Algorithms
             self.truncation_pop_update()
+        # increment generation
+        self.curr_generation += 1
         # return info about curr generation
         return {
             "best_genome": self.best_genome,
             "best_species": self.best_species,
             "total_pop_fitness": self.total_pop_fitness,
             "avg_pop_fitness": self.avg_pop_fitness,
+            "gen": self.curr_generation,
+            "other stuff": "",
+            "some condition": "xyz"
         }
 
     def evaluate_curr_generation(self) -> None:
@@ -55,7 +59,7 @@ class GeneticAlgorithm:
         for g in self.population:
             g.evaluate_fitness(self.log)
             self.total_pop_fitness += g.fitness
-        self.population.sort(key=lambda g: g.fitness)
+        self.population.sort(key=lambda g: g.fitness, reverse=True)
         # determine best genome, avg pop fitness
         self.best_genome = self.population[0]
         self.avg_pop_fitness = self.total_pop_fitness / params.popsize
@@ -152,7 +156,7 @@ class GeneticAlgorithm:
         for s in updated_species:
             s.calculate_offspring_amount(total_adjusted_species_avg_fitness)
         # order the updated species by fitness, select the current best species, return
-        updated_species.sort(key=lambda s: s.avg_fitness)
+        updated_species.sort(key=lambda s: s.avg_fitness, reverse=True)
         self.best_species = updated_species[0]
         self.curr_species = updated_species
         return

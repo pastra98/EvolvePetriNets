@@ -81,7 +81,6 @@ def print_fitness(genome, log, view):
     print(f"{80*'-'}\n")
 
 def mpatch_test(genome, log, view):
-    from src.tests.monkeypatch import mp_tbr
     genome.build_petri()
     net, im, fm = genome.net, genome.im, genome.fm
     if view:

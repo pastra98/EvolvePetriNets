@@ -148,6 +148,7 @@ class GeneticNet:
 # ------------------------------------------------------------------------------
 # REPRODUCTION RELATED STUFF ---------------------------------------------------
 # ------------------------------------------------------------------------------
+
     def get_compatibility_score(self, other_genome) -> float:
         """Calculates how similar this genome is to another genome according to the
         formula proposed in the original NEAT Paper. See distance variable to see

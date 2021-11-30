@@ -47,14 +47,19 @@ coeff_excess: float
 # -------------------- selection strategy: ROULETTE 
 # -------------------- selection strategy: TRUNCATION
 
-# ---------- GENOME MUTATIONS
+# ---------- FITNESS CHECK
 perc_fit_traces_weight: float
 soundness_weight: float
 precision_weight: float
 generalization_weight: float
 simplicity_weight: float
 
-# ---------- GENOME MUTATIONS
+# ---------- MUTATIONS GENERAL
+mutation_rate = {
+    "normal": None,
+    "high": None
+}
+
 prob_t_p: float
 prob_t_t: float
 prob_p_p: float

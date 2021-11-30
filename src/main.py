@@ -9,10 +9,10 @@ def main():
     log_path = "pm_data/m1_log.xes"
     log = xes_importer.apply(log_path)
 
-    param_files = ["test"] # list of param file(names)
+    param_files = ["speciation_params"] # list of param file(names)
 
     results = {}
-    stop_cond = ""
+    stop_cond = 10
 
     for p in param_files:
         # measure time, initialize new ga
@@ -24,10 +24,10 @@ def main():
         stop_ga = False
         while not stop_ga:
             gen_info = new_ga.next_generation()
-            print(f"GA_{p} {gen_info['gen']}:\n{4*' '}{gen_info['other_stuff']}")
+            print(f"GA_{p} {gen_info['gen']}:\n{4*' '}{gen_info['other stuff']}")
 
             # check if reach stopping codition
-            if gen_info["some_condition"] == stop_cond:
+            if gen_info["gen"] == stop_cond:
                 # print info about current ga
                 ga_end_time = datetime.datetime.now()
                 ga_total_time = ga_end_time - ga_start_time 
