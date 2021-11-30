@@ -31,7 +31,7 @@ class GeneticNet:
 # MUTATIONS --------------------------------------------------------------------
 # ------------------------------------------------------------------------------
 
-    def mutate(self):
+    def mutate(self, mutation_rate):
         pass
 
     def trans_place_arc(self, place_id=None, trans_id=None):

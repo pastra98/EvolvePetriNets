@@ -44,6 +44,17 @@ coeff_matched: float
 coeff_disjoint: float
 coeff_excess: float
 
+# species relevant stuff
+enough_gens_to_change_things: int
+update_species_rep: bool
+leader_is_rep: bool
+selection_threshold: int
+spawn_cutoff: float
+
+old_age: int
+old_penalty: float
+youth_bonus: float
+random_mating: bool
 # -------------------- selection strategy: ROULETTE 
 # -------------------- selection strategy: TRUNCATION
 
@@ -55,24 +66,21 @@ generalization_weight: float
 simplicity_weight: float
 
 # ---------- MUTATIONS GENERAL
-mutation_rate = {
-    "normal": None,
-    "high": None
-}
-
-prob_t_p: float
-prob_t_t: float
-prob_p_p: float
-prob_new_place: float
-prob_split_arc: float
-prob_increase_arcs: float
-prob_disable_arc: float
+"""
+Parameters in list depend on the Mutation Rate, which is either 0 (normal) or 1 (high)
+"""
+prob_t_p = [float, float]
+prob_t_t = [float, float]
+prob_p_p = [float, float]
+prob_new_place = [float, float]
+prob_split_arc = [float, float]
+prob_increase_arcs = [float, float]
+prob_disable_arc = [float, float]
 
 num_trys_make_conn: int
-
 # -------------------- connect trans to place
-prob_connect_nontask_trans: float
-prob_trans_to_place: float
+prob_connect_nontask_trans = [float, float]
+prob_trans_to_place = [float, float]
 
 # -------------------- connect trans to trans
 

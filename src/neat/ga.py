@@ -25,6 +25,9 @@ class GeneticAlgorithm:
 
         self.total_pop_fitness = None
         self.avg_pop_fitness = None
+
+        # not sure if I will use this, can set mutation rate context for non-neat
+        self.global_mutation_rate = 0 # 0 -> normal or 1 -> high
     
     def next_generation(self) -> dict:
         """Makes new generation, evaluates it, and returns info that can be used
@@ -148,8 +151,7 @@ class GeneticAlgorithm:
                 total_species_avg_fitness += s.avg_fitness
                 total_adjusted_species_avg_fitness += s.avg_fitness_adjusted 
             else:
-                num_dead_species += 1
-                s.purge()
+                num_dead_species += 1 # dont add it to pool, no more s.purge()
         if not updated_species or total_adjusted_species_avg_fitness == 0:
             raise Exception("mass extinction")
         # calculate offspring amt based on fitness relative to the total_adjusted_species_avg_fitness
