@@ -207,6 +207,10 @@ class GeneticNet:
         # print(f"arc_count_diff : {arc_count_diff}")
         return distance
 
+    def crossover(self, other_genome):
+        """TODO: need to implement
+        """
+        return self.copy()
 
     def copy(self):
         """Make a deepcopy

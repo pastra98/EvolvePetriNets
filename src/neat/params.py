@@ -50,7 +50,10 @@ update_species_rep: bool
 leader_is_rep: bool
 selection_threshold: int
 spawn_cutoff: float
+elitism: bool
+prob_asex: float
 
+allowed_gens_no_improvement: int
 old_age: int
 old_penalty: float
 youth_bonus: float

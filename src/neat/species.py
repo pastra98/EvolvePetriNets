@@ -1,6 +1,6 @@
 import random as rd
 from . import params
-from genome import GeneticNet
+from .genome import GeneticNet
 
 class Species:
     def __init__(self, name) -> None:
@@ -90,7 +90,7 @@ class Species:
             self.num_to_spawn = round((self.avg_fitness_adjusted / total_avg_species_fitness) * params.popsize)
     
     def elite_spawn(self) -> GeneticNet:
-        """Returns a clone of the species leader WITHOUT INCREASING SPAWN COUNT
+        """Returns a copy of the species leader WITHOUT INCREASING SPAWN COUNT
         """
         return self.leader.copy()
 
@@ -118,14 +118,14 @@ class Species:
         return baby
 
     def asex_spawn(self) -> GeneticNet:
-        """Clones a member from the pool, mutates it, and returns it.
+        """Copy a member from the pool, mutates it, and returns it.
         """
         # As long as not every pool member as been spawned, pick next one from pool
         if self.spawn_count < len(self.pool):
-            baby = self.pool[self.spawn_count].clone()
+            baby = self.pool[self.spawn_count].copy()
         # if more spawns than pool size, start again
         else:
-            baby = self.pool[self.spawn_count % len(self.pool)].clone()
+            baby = self.pool[self.spawn_count % len(self.pool)].copy()
         baby.mutate(self.curr_mutation_rate)
         self.spawn_count += 1
         return baby

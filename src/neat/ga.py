@@ -1,4 +1,3 @@
-from os import popen
 import random as rd
 
 from . import params, innovs, startconfigs
@@ -43,10 +42,8 @@ class GeneticAlgorithm:
             self.roulette_pop_update()
         elif params.selection_strategy == "truncation": # https://www.researchgate.net/publication/259461147_Selection_Methods_for_Genetic_Algorithms
             self.truncation_pop_update()
-        # increment generation
-        self.curr_generation += 1
-        # return info about curr generation
-        return {
+        # save stuff TODO: this needs to thought out properly
+        generation_info = {
             "best_genome": self.best_genome,
             "best_species": self.best_species,
             "total_pop_fitness": self.total_pop_fitness,
@@ -55,6 +52,12 @@ class GeneticAlgorithm:
             "other stuff": "",
             "some condition": "xyz"
         }
+        self.history[self.curr_generation] = [generation_info, self.population]
+        # increment generation
+        self.curr_generation += 1
+        # return info about curr generation
+        return generation_info
+        
 
     def evaluate_curr_generation(self) -> None:
         """
@@ -73,7 +76,7 @@ class GeneticAlgorithm:
     def get_ga_info(self) -> dict:
         """ Should only be called at end of this ga instance, returns bunch of info
         """
-        return
+        return self.history
 
     def set_initial_pop(self) -> None:
         """
@@ -113,7 +116,7 @@ class GeneticAlgorithm:
                 s.num_to_spawn = params.popsize - num_spawned
             spawned_elite = False
             # spawn all the new members of a species
-            for _ in s.num_to_spawn:
+            for _ in range(s.num_to_spawn):
                 baby: GeneticNet = None
                 # first clone the species leader for elitism
                 if not spawned_elite and params.elitism:
@@ -195,8 +198,6 @@ class GeneticAlgorithm:
         self.curr_species.append(new_species)
         self.num_new_species += 1
         return new_species
-
-
 
 # ROULETTE ---------------------------------------------------------------------
 
