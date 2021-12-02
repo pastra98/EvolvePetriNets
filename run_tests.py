@@ -71,6 +71,7 @@ t = mom.get_compatibility_score(dad)
 # ---------- RELOAD AND SAVE PARAMS ----------
 # ------------------------------------------------------------------------------
 from src.tests import read_and_save_new_params as rsp
+from src.neat import params
 
 # overwrite the existing test params
 rsp.save_new_params(old_name="speciation_params", new_name="speciation_params")
