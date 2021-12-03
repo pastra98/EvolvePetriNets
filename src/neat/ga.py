@@ -9,7 +9,7 @@ class GeneticAlgorithm:
         self.history = {}
         self.params_name = params_name
         self.log = log
-        self.curr_generation = 0
+        self.curr_gen = 0
 
         # not sure if I will use this, can set mutation rate context for non-neat
         self.global_mutation_rate = 0 # 0 -> normal or 1 -> high
@@ -18,10 +18,12 @@ class GeneticAlgorithm:
         self.best_genome = None
         self.total_pop_fitness = None
         self.avg_pop_fitness = None
+        self.old_innovcount = 0
+        self.new_innovcount = 0
         
         # measurements specific to speciation
         self.num_new_species = 0 # these are set by calling get_initial_pop (only used if strat speciation)
-        self.curr_species = [] 
+        self.species = [] 
         self.population = []
         self.best_species = None
 
@@ -33,56 +35,81 @@ class GeneticAlgorithm:
         """Makes new generation, evaluates it, and returns info that can be used
         as stopping criteria.
         """
+        # evaluate old generation and save results in history
         self.evaluate_curr_generation()
-        old_innovcount = len(innovs.arcs)
-        # TODO increment generation counter, store shit in a dictionary
+        # make a new population
+        self.old_innovcount = len(innovs.arcs)
         if params.selection_strategy == "speciation":
             self.speciation_pop_update()
         elif params.selection_strategy == "roulette":
             self.roulette_pop_update()
         elif params.selection_strategy == "truncation": # https://www.researchgate.net/publication/259461147_Selection_Methods_for_Genetic_Algorithms
             self.truncation_pop_update()
-        # save info stuff TODO: this needs to thought out properly
-        new_innovcount = len(innovs.arcs)
-        generation_info = {
-            "gen": self.curr_generation,
-            "best genome fitness": self.best_genome.fitness,
-            "best genome fitness 2": self.population[0].fitness,
-            "worst genome fitness": self.population[-1].fitness,
-            "avg pop fitness": self.avg_pop_fitness,
-            "best species": self.best_species.name,
-            "num total species": len(self.curr_species),
-            "num new species": self.num_new_species,
-            "num total innovations": new_innovcount,
-            "num new innovations": new_innovcount - old_innovcount,
-            "total pop fitness": self.total_pop_fitness,
-            "avg pop fitness": self.avg_pop_fitness
-        }
-        self.history[self.curr_generation] = [generation_info, self.population]
+        self.new_innovcount = len(innovs.arcs)
         # increment generation
-        self.curr_generation += 1
+        self.curr_gen += 1
         # return info about curr generation
-        return generation_info
+        return self.get_printable_gen_info(self.curr_gen - 1)
         
 
     def evaluate_curr_generation(self) -> None:
+        """Evaluates genomes (and species if necessary), writes info into gen info dict
         """
-        """
-        # this is where multithreading magic will happen - i.e. that will need a rewrite
+        # evaluate current genomes and species
+        self.evaluate_curr_genomes()
+        if params.selection_strategy == "speciation":
+            self.evaluate_curr_species()
+        self.log_gen_info()
+        return
+
+    def evaluate_curr_genomes(self) -> None:
+        # this is where multithreading magic will happen - i.e. this will need a rewrite
         self.total_pop_fitness = 0
         for g in self.population:
             g.evaluate_fitness(self.log)
             self.total_pop_fitness += g.fitness
         self.population.sort(key=lambda g: g.fitness, reverse=True)
-        # determine best genome, avg pop fitness
-        self.best_genome = self.population[0]
-        self.avg_pop_fitness = self.total_pop_fitness / params.popsize
+
+    def log_gen_info(self) -> None:
+        """Writes info about current gen into history. Careful not to add too much
+        info that can be a-posteriori calculated in get_info_about_gen()
+        """
+        # dict for evaluation of current gen
+        gen_info = self.history[self.curr_gen] = {}
+        # save info about species
+        if params.selection_strategy == "speciation":
+            gen_info["species"] = self.species
+            gen_info["num total species"] = len(self.species)
+            gen_info["num new species"] = self.num_new_species
+            gen_info["best species"] = self.best_species.name
+            gen_info["best species avg fitness"] = self.best_species.avg_fitness
+        # save info about generation in general
+        gen_info["num total innovations"] = self.new_innovcount
+        gen_info["num new innovations"] = self.new_innovcount - self.old_innovcount
+        gen_info["best genome"] = self.population[0]
+        gen_info["best genome fitness"] = self.population[0].fitness
+        gen_info["avg pop fitness"] = self.total_pop_fitness / params.popsize
+        gen_info["total pop fitness"] = self.total_pop_fitness
+        gen_info["population"] = self.population
         return
 
-    def get_ga_info(self) -> dict:
-        """ Should only be called at end of this ga instance, returns bunch of info
+    def get_printable_gen_info(self, gen) -> dict:
+        """returns a dict of info about a generation. Uses info from self.history,
+        and writes nothing to it. Intended to print info during evolution runs.
+        Can calculate new info that I don't want to save in history.
         """
-        return self.history
+        gen_info  = self.history[gen] # stuff to take info from
+        print_info = {} # stuff to put info into
+        keep = [
+            "avg pop fitness", "num total innovations", "num new innovations",
+            "total pop fitness", "best genome fitness"
+            ]
+        if params.selection_strategy == "speciation":
+            keep += [
+                "num total species", "num new species", "best species avg fitness"
+            ]
+        print_info = print_info | {k: gen_info[k] for k in keep}
+        return print_info
 
     def set_initial_pop(self) -> None:
         """
@@ -110,11 +137,10 @@ class GeneticAlgorithm:
     def speciation_pop_update(self) -> None:
         """
         """ 
-        self.update_curr_species()
         self.num_new_species = 0
         new_genomes = []
         num_spawned = 0
-        for s in self.curr_species:
+        for s in self.species:
             # reduce num_to_spawn if it would exceed population size
             if num_spawned == params.popsize:
                 break
@@ -151,14 +177,14 @@ class GeneticAlgorithm:
         self.population = new_genomes
         return
 
-    def update_curr_species(self) -> None:
+    def evaluate_curr_species(self) -> None:
         """
         """
         updated_species = []
         total_adjusted_species_avg_fitness = 0
         total_species_avg_fitness = 0
         num_dead_species = 0
-        for s in self.curr_species:
+        for s in self.species:
             s.update()
             if not s.obliterate:
                 updated_species.append(s)
@@ -174,7 +200,7 @@ class GeneticAlgorithm:
         # order the updated species by fitness, select the current best species, return
         updated_species.sort(key=lambda s: s.avg_fitness, reverse=True)
         self.best_species = updated_species[0]
-        self.curr_species = updated_species
+        self.species = updated_species
         return
 
     def find_species(self, new_genome) -> Species:
@@ -185,7 +211,7 @@ class GeneticAlgorithm:
         found_species: Species = None
         # try to find an existing species to which the genome is close enough to be a member
         comp_score = params.species_boundary
-        for s in self.curr_species:
+        for s in self.species:
             if new_genome.get_compatibility_score(s.representative) < comp_score:
                 comp_score = new_genome.get_compatibility_score(s.representative)
                 found_species = s
@@ -198,10 +224,10 @@ class GeneticAlgorithm:
         """Generates a new species with a unique id, assigns the founding member as
         representative, and adds the new species to curr_species and returns it.
         """
-        new_species_id = f"{self.curr_generation}_{founding_member.id}"
+        new_species_id = f"{self.curr_gen}_{founding_member.id}"
         new_species = Species(new_species_id)
         new_species.representative = founding_member
-        self.curr_species.append(new_species)
+        self.species.append(new_species)
         self.num_new_species += 1
         return new_species
 
