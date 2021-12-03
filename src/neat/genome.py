@@ -38,6 +38,20 @@ class GeneticNet:
             pass
         if rd.random() < params.prob_t_t_conn[mutation_rate]:
             pass
+        if rd.random() < params.prob_new_p[mutation_rate]:
+            pass
+        if rd.random() < params.prob_new_empty_t[mutation_rate]:
+            pass
+        if rd.random() < params.prob_new_task_t[mutation_rate]:
+            pass
+        if rd.random() < params.prob_split_arc[mutation_rate]:
+            pass
+        # for arc in self.arcs:
+        #     if rd.random() < params.prob_increase_arcs[mutation_rate]:
+        #         pass
+        #     if rd.random() < params.prob_disable_arc[mutation_rate]:
+        #         pass
+        return
 
     def trans_place_arc(self, place_id=None, trans_id=None):
         for _try in range(params.num_trys_make_conn):
@@ -243,11 +257,7 @@ class GeneticNet:
             self.net.places.add(place.pm4py_obj)
         for trans_id in self.transitions:
             trans = self.transitions[trans_id]
-            # check if it is a task, else make it a dead transition
-            if trans.is_task:
-                trans.pm4py_obj = PetriNet.Transition(trans_id, label=trans_id)
-            else:
-                trans.pm4py_obj = PetriNet.Transition(trans_id)
+            trans.pm4py_obj = PetriNet.Transition(trans_id, label=trans_id)
             self.net.transitions.add(trans.pm4py_obj)
         for arc_id in self.arcs:
             arc = self.arcs[arc_id]
