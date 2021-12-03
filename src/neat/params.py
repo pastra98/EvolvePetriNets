@@ -72,26 +72,21 @@ simplicity_weight: float
 """
 Parameters in list depend on the Mutation Rate, which is either 0 (normal) or 1 (high)
 """
-prob_t_p = [float, float]
-prob_t_t = [float, float]
-prob_p_p = [float, float]
-prob_new_place = [float, float]
-prob_split_arc = [float, float]
-prob_increase_arcs = [float, float]
-prob_disable_arc = [float, float]
+prob_t_p_arc: list[float, float]
+prob_p_t_arc: list[float, float]
+prob_t_t_conn: list[float, float]
+prob_new_p: list[float, float]
+prob_new_empty_t: list[float, float]
+prob_split_arc: list[float, float]
+prob_increase_arcs: list[float, float]
+prob_disable_arc: list[float, float]
+
+prob_pick_empty_trans: list[float, float]
 
 num_trys_make_conn: int
-# -------------------- connect trans to place
-prob_connect_nontask_trans = [float, float]
-prob_trans_to_place = [float, float]
-
-# -------------------- connect trans to trans
 
 # -------------------- split arc
 prevent_chaining: bool
 num_trys_split_arc: int
-
-# -------------------- connect trans -> new place
-prob_pick_dead_trans: float
 
 # ------------------------------------------------------------------------------
