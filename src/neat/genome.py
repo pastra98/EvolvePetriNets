@@ -1,4 +1,5 @@
 import random as rd
+import itertools
 from copy import deepcopy
 from typing import Tuple
 
@@ -41,8 +42,6 @@ class GeneticNet:
         if rd.random() < params.prob_new_p[mutation_rate]:
             pass
         if rd.random() < params.prob_new_empty_t[mutation_rate]:
-            pass
-        if rd.random() < params.prob_new_task_t[mutation_rate]:
             pass
         if rd.random() < params.prob_split_arc[mutation_rate]:
             pass
@@ -251,14 +250,18 @@ class GeneticNet:
             del self.fm
         self.net = PetriNet(f"{self.id}-Net")
         merged_nodes = self.places | self.transitions
+        # only add transitions that are actually connected (since all tasks are in genome)
+        used_trans = [(a.source_id, a.target_id) for a in self.arcs.values()]
+        used_trans = set(itertools.chain.from_iterable(used_trans))
         for place_id in self.places:
             place = self.places[place_id]
             place.pm4py_obj = PetriNet.Place(place_id)
             self.net.places.add(place.pm4py_obj)
         for trans_id in self.transitions:
-            trans = self.transitions[trans_id]
-            trans.pm4py_obj = PetriNet.Transition(trans_id, label=trans_id)
-            self.net.transitions.add(trans.pm4py_obj)
+            if trans_id in used_trans:
+                trans = self.transitions[trans_id]
+                trans.pm4py_obj = PetriNet.Transition(trans_id, label=trans_id)
+                self.net.transitions.add(trans.pm4py_obj)
         for arc_id in self.arcs:
             arc = self.arcs[arc_id]
             if arc.n_arcs > 0:
@@ -303,7 +306,8 @@ class GeneticNet:
             + params.generalization_weight * gen
             + params.simplicity_weight * simp
         )
-        if self.fitness <= 0: breakpoint()
+        if self.fitness <= 0:
+            raise Exception("Fitness below 0 should not be possible!!!")
         return
 
 # ------------------------------------------------------------------------------
