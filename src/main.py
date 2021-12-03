@@ -25,7 +25,7 @@ def main():
         stop_ga = False
         while not stop_ga:
             gen_info = new_ga.next_generation()
-            print(f"GA_{p} {pp.pprint(gen_info)}:\n{4*' '}{gen_info['other stuff']}")
+            print(f"GA_{p} {pp.pprint(gen_info)}:\n{4*' '}")
 
             # check if reach stopping codition, could be anything
             if gen_info["gen"] == stop_cond:
@@ -33,7 +33,7 @@ def main():
                 ga_end_time = datetime.datetime.now()
                 ga_total_time = ga_end_time - ga_start_time 
                 print(f"\n{40*'-'}\nGA_{p} stop time: {ga_end_time}, time: {ga_total_time}")
-                print(f"GA_{p} reached {stop_cond}: {gen_info['some condition']}\n\n")
+                print(f"GA_{p} reached {stop_cond}: {gen_info['gen']}\n\n")
 
                 # save results, incl. time
                 results[f"{p}_ga_params"] = new_ga.get_ga_info() | {"time_took": ga_total_time}

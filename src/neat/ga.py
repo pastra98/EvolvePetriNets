@@ -9,32 +9,32 @@ class GeneticAlgorithm:
         self.history = {}
         self.params_name = params_name
         self.log = log
-
-        params.load(params_name)
-        innovs.reset()
-
-        self.curr_generation = 0 # TODO: need to increment that /deal with it
-
-        # these are set by calling get_initial_pop (only used if strat speciation)
-        self.num_new_species = 0
-        self.curr_species = [] 
-        self.population = []
-        self.set_initial_pop()
-
-        self.best_genome = None
-        self.best_species = None
-
-        self.total_pop_fitness = None
-        self.avg_pop_fitness = None
+        self.curr_generation = 0
 
         # not sure if I will use this, can set mutation rate context for non-neat
         self.global_mutation_rate = 0 # 0 -> normal or 1 -> high
+
+        # measurement stuff general
+        self.best_genome = None
+        self.total_pop_fitness = None
+        self.avg_pop_fitness = None
+        
+        # measurements specific to speciation
+        self.num_new_species = 0 # these are set by calling get_initial_pop (only used if strat speciation)
+        self.curr_species = [] 
+        self.population = []
+        self.best_species = None
+
+        params.load(params_name)
+        innovs.reset()
+        self.set_initial_pop()
     
     def next_generation(self) -> dict:
         """Makes new generation, evaluates it, and returns info that can be used
         as stopping criteria.
         """
         self.evaluate_curr_generation()
+        old_innovcount = len(innovs.arcs)
         # TODO increment generation counter, store shit in a dictionary
         if params.selection_strategy == "speciation":
             self.speciation_pop_update()
@@ -42,15 +42,21 @@ class GeneticAlgorithm:
             self.roulette_pop_update()
         elif params.selection_strategy == "truncation": # https://www.researchgate.net/publication/259461147_Selection_Methods_for_Genetic_Algorithms
             self.truncation_pop_update()
-        # save stuff TODO: this needs to thought out properly
+        # save info stuff TODO: this needs to thought out properly
+        new_innovcount = len(innovs.arcs)
         generation_info = {
-            "best_genome": self.best_genome,
-            "best_species": self.best_species,
-            "total_pop_fitness": self.total_pop_fitness,
-            "avg_pop_fitness": self.avg_pop_fitness,
             "gen": self.curr_generation,
-            "other stuff": "",
-            "some condition": "xyz"
+            "best genome fitness": self.best_genome.fitness,
+            "best genome fitness 2": self.population[0].fitness,
+            "worst genome fitness": self.population[-1].fitness,
+            "avg pop fitness": self.avg_pop_fitness,
+            "best species": self.best_species.name,
+            "num total species": len(self.curr_species),
+            "num new species": self.num_new_species,
+            "num total innovations": new_innovcount,
+            "num new innovations": new_innovcount - old_innovcount,
+            "total pop fitness": self.total_pop_fitness,
+            "avg pop fitness": self.avg_pop_fitness
         }
         self.history[self.curr_generation] = [generation_info, self.population]
         # increment generation

@@ -32,7 +32,12 @@ class GeneticNet:
 # ------------------------------------------------------------------------------
 
     def mutate(self, mutation_rate):
-        pass
+        if rd.random() < params.prob_t_p_arc[mutation_rate]:
+            pass
+        if rd.random() < params.prob_p_t_arc[mutation_rate]:
+            pass
+        if rd.random() < params.prob_t_t_conn[mutation_rate]:
+            pass
 
     def trans_place_arc(self, place_id=None, trans_id=None):
         for _try in range(params.num_trys_make_conn):
