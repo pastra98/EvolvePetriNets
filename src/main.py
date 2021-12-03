@@ -13,7 +13,8 @@ def main():
     param_files = ["speciation_params"] # list of param file(names)
 
     results = {}
-    stop_cond = 3
+    stop_cond = "xyz"
+    stop_gen = 3
 
     for p in param_files:
         # measure time, initialize new ga
@@ -24,19 +25,31 @@ def main():
         # run current ga
         stop_ga = False
         while not stop_ga:
-            gen_info = new_ga.next_generation()
-            print(f"GA_{p} {pp.pprint(gen_info)}:\n{4*' '}")
+
+            # try to go to the next generation
+            try:
+                gen_info = new_ga.next_generation()
+                print(f"GA_{p} {pp.pprint(gen_info)}:\n{8*'-'}")
+            # on exception save the ga
+            except Exception as exception:
+                print(f"GA_{p} encountered an exception in generation {new_ga.curr_gen}")
+                print(f" -> {exception}\nThe current state of the ga will be saved!")
+                results[f"{p}_ga_params_EXCEPTION"] = new_ga.history | {
+                    "time": datetime.datetime.now(),
+                    "exception" : exception
+                    }
+                break
 
             # check if reach stopping codition, could be anything
-            if gen_info["gen"] == stop_cond:
+            if gen_info["best genome fitness"] == stop_cond or new_ga.curr_gen == stop_gen:
                 # print info about current ga
                 ga_end_time = datetime.datetime.now()
                 ga_total_time = ga_end_time - ga_start_time 
                 print(f"\n{40*'-'}\nGA_{p} stop time: {ga_end_time}, time: {ga_total_time}")
-                print(f"GA_{p} reached {stop_cond}: {gen_info['gen']}\n\n")
+                print(f"GA_{p} reached {stop_cond}: {gen_info['best genome fitness']}\n\n")
 
                 # save results, incl. time
-                results[f"{p}_ga_params"] = new_ga.get_ga_info() | {"time_took": ga_total_time}
+                results[f"{p}_ga_params"] = new_ga.history | {"time took": ga_total_time}
                 stop_ga = True
 
     # finished with all configurations, stop the process
@@ -44,7 +57,7 @@ def main():
     print(f"Process finished at {finish_time}, dumping results in pickle file!")
 
     # write results to pkl file
-    results_fname = f"results/data/{finish_time.strftime('%m-%d-%Y %H-%M-%S')}_results.pkl"
+    results_fname = f"results/data/{finish_time.strftime('%m-%d-%Y_%H-%M-%S')}_results.pkl"
     with open(results_fname, "wb") as f:
         pickle.dump(results, f)
     print(f"File saved as:\n{results_fname}\nStopping program!")
