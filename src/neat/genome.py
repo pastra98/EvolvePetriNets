@@ -16,16 +16,21 @@ from .netobj import GArc, GPlace, GTrans
 
 
 class GeneticNet:
-    def __init__(self, transitions, places, arcs) -> None:
+    def __init__(self, transitions=dict(), places=dict(), arcs=dict()) -> None:
+        """Can rece
+        """
         self.id = innovs.get_new_genome_id()
         self.net: PetriNet = None
         self.im: Marking = None
         self.fm: Marking = None
         self.fitness: float = None
-
-        self.transitions = transitions
-        self.places = places | {"start":GPlace("start", is_start=True),
-                                "end":GPlace("end", is_end=True)}
+        # make Transition genes for every task saved in innovs and add to genome
+        task_trans = {t: GTrans(t, True) for t in innovs.tasks}
+        self.transitions = transitions | task_trans
+        # make place genes for start and end places
+        se_places = {"start":GPlace("start", is_start=True), "end":GPlace("end", is_end=True)}
+        self.places = places | se_places
+        # make arcs
         self.arcs = arcs
 
 # ------------------------------------------------------------------------------
@@ -34,9 +39,9 @@ class GeneticNet:
 
     def mutate(self, mutation_rate):
         if rd.random() < params.prob_t_p_arc[mutation_rate]:
-            pass
+            self.trans_place_arc()
         if rd.random() < params.prob_p_t_arc[mutation_rate]:
-            pass
+            self.place_trans_arc()
         if rd.random() < params.prob_t_t_conn[mutation_rate]:
             pass
         if rd.random() < params.prob_new_p[mutation_rate]:
@@ -52,29 +57,80 @@ class GeneticNet:
         #         pass
         return
 
-    def trans_place_arc(self, place_id=None, trans_id=None):
-        for _try in range(params.num_trys_make_conn):
-            place = rd.choice(list(self.places.values()))
-            trans = rd.choice(list(self.transitions.values()))
-            # this can also be more fancy, e.g. consider number of dead trans
-            if rd.random() < params.prob_connect_nontask_trans and not trans.is_task:
-                break
-            trans_to_place = rd.random() < params.prob_t_p
-            arc_id = ""
-            # trans -> place
-            if trans_to_place and not place.is_start:
-                arc_id = innovs.check_arc(trans.id, place.id)
-            # place -> trans
-            elif (not trans_to_place) and (not place.is_end):
-                arc_id = innovs.check_arc(place.id, trans.id)
-            # finally check if we haven't already picked that arc
-            if arc_id != "" and arc_id not in self.arcs:
-                if trans_to_place:
-                    new_arc = GArc(arc_id, trans.id, place.id)
-                else:
-                    new_arc = GArc(arc_id, place.id, trans.id)
-                self.arcs[arc_id] = new_arc
-                return
+
+    def place_trans_arc(self, place_id=None, trans_id=None) -> None:
+        if not place_id and not trans_id: # no trans/place specified in arguments
+            # search until a place/trans combi is found that is not already connected
+            for _try in range(params.num_trys_make_conn):
+                # pick a place that is not the end place, pick a trans
+                place_id = rd.choice([p for p in self.places if p != "end"])
+                trans_id = self.pick_trans_with_preference()
+                # check in innovs
+                arc_id = innovs.check_arc(place_id, trans_id)
+                if arc_id not in self.arcs:
+                    break
+        else: # if place/trans specified in arguments, just get that innov number
+            arc_id = innovs.check_arc(place_id, trans_id)
+        new_arc = GArc(arc_id, place_id, trans_id)
+        self.arcs[arc_id] = new_arc
+        return
+
+
+    def trans_place_arc(self, trans_id=None, place_id=None):
+        if not trans_id and not place_id: # no trans/place specified in arguments
+            # search until a place/trans combi is found that is not already connected
+            for _try in range(params.num_trys_make_conn):
+                # pick a trans, pick a place that is not the start place
+                trans_id = self.pick_trans_with_preference()
+                place_id = rd.choice([p for p in self.places if p != "start"])
+                # check in innovs
+                arc_id = innovs.check_arc(trans_id, place_id)
+                if arc_id not in self.arcs:
+                    break
+        else: # if place/trans specified in arguments, just get that innov number
+            arc_id = innovs.check_arc(trans_id, place_id)
+        new_arc = GArc(arc_id, trans_id, place_id)
+        self.arcs[arc_id] = new_arc
+        return
+
+    def pick_trans_with_preference(self) -> str:
+        """Just pick a transition according to preferences set in params
+        """
+        # set of task trans and empty trans
+        task_trans = set(innovs.tasks)
+        empty_trans = set(self.transitions.keys()).difference(task_trans)
+        # pick a trans
+        if params.is_no_preference_for_tasks: # choose from all trans
+            trans_id = rd.choice(list(self.transitions.keys()))
+        elif rd.random() < params.prob_pick_task_trans: # choose from tasks
+            trans_id = rd.choice(list(task_trans))
+        else: # choose from empty trans
+            trans_id = rd.choice(list(empty_trans)) 
+        return trans_id
+
+    # def trans_place_arc(self, trans_id=None, place_id=None):
+    #     for _try in range(params.num_trys_make_conn):
+    #         place = rd.choice(list(self.places.values()))
+    #         trans = rd.choice(list(self.transitions.values()))
+    #         # this can also be more fancy, e.g. consider number of dead trans
+    #         if rd.random() < params.prob_connect_nontask_trans and not trans.is_task:
+    #             break
+    #         trans_to_place = rd.random() < params.prob_t_p
+    #         arc_id = ""
+    #         # trans -> place
+    #         if trans_to_place and not place.is_start:
+    #             arc_id = innovs.check_arc(trans.id, place.id)
+    #         # place -> trans
+    #         elif (not trans_to_place) and (not place.is_end):
+    #             arc_id = innovs.check_arc(place.id, trans.id)
+    #         # finally check if we haven't already picked that arc
+    #         if arc_id != "" and arc_id not in self.arcs:
+    #             if trans_to_place:
+    #                 new_arc = GArc(arc_id, trans.id, place.id)
+    #             else:
+    #                 new_arc = GArc(arc_id, place.id, trans.id)
+    #             self.arcs[arc_id] = new_arc
+    #             return
 
     def new_place(self, trans_id=None) -> str:
         if trans_id:
@@ -230,12 +286,12 @@ class GeneticNet:
         """
         return self.copy()
 
-    def copy(self):
-        """Make a deepcopy
+    def clone(self):
+        """returns a deepcopy
         """
-        new_transitions = deepcopy(self.transitions)
-        new_places = deepcopy(self.places)
-        new_arcs = deepcopy(self.arcs)
+        new_transitions = {k: GTrans(k, v.is_task) for k, v in self.transitions.items()}
+        new_places = {k: GPlace(k, is_start=v.is_start, is_end=v.is_end) for k, v in self.places.items()}
+        new_arcs = {k: GArc(k, v.source_id, v.target_id, v.n_arcs) for k, v in self.arcs.items()}
         return GeneticNet(new_transitions, new_places, new_arcs)
 
 # ------------------------------------------------------------------------------
@@ -243,22 +299,23 @@ class GeneticNet:
 # ------------------------------------------------------------------------------
 
     def build_petri(self) -> None:
-        if self.net:
-            print("Genome already has net, rebuilding it")
+        try:
             del self.net
             del self.im
             del self.fm
+            print("Genome already has net, rebuilding it")
+        except:
+            pass
         self.net = PetriNet(f"{self.id}-Net")
         merged_nodes = self.places | self.transitions
         # only add transitions that are actually connected (since all tasks are in genome)
-        used_trans = [(a.source_id, a.target_id) for a in self.arcs.values()]
-        used_trans = set(itertools.chain.from_iterable(used_trans))
+        connected_t = self.get_connected_trans()
         for place_id in self.places:
             place = self.places[place_id]
             place.pm4py_obj = PetriNet.Place(place_id)
             self.net.places.add(place.pm4py_obj)
         for trans_id in self.transitions:
-            if trans_id in used_trans:
+            if trans_id in connected_t:
                 trans = self.transitions[trans_id]
                 trans.pm4py_obj = PetriNet.Transition(trans_id, label=trans_id)
                 self.net.transitions.add(trans.pm4py_obj)
@@ -313,8 +370,13 @@ class GeneticNet:
 # ------------------------------------------------------------------------------
 # MISC STUFF -------------------------------------------------------------------
 # ------------------------------------------------------------------------------
+    def get_connected_trans(self) -> set:
+        # get set of all transitions that are connected to the network via arcs
+        connected = [(a.source_id, a.target_id) for a in self.arcs.values()]
+        connected = set(itertools.chain.from_iterable(connected))
+        return set(self.transitions.keys()).intersection(connected)
 
-    def get_graphviz(self) -> None:
+    def get_graphviz(self) -> Digraph:
         # parameter stuff, TODO: think about where to put this
         fsize = "20"
         tcol = "yellow"
@@ -326,12 +388,10 @@ class GeneticNet:
         viz.attr(overlap='false')
         # viz.attr(size="21, 21")
         # viz.attr(size="11, 11")
-        used_t = set()
-        for a in self.arcs.values():
-            used_t.add(a.source_id), used_t.add(a.source_id)
+        connected_t = self.get_connected_trans()
         # transitions
         for t in self.transitions:
-            if t in used_t:
+            if t in connected_t:
                 if self.transitions[t].is_task: # task
                     viz.node(t, t, style='filled', fillcolor=tcol, border='1', fontsize=fsize)
                 else: # empty trans

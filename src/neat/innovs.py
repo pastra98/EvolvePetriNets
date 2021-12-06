@@ -71,25 +71,21 @@ def store_new_arc(source_id: int, target_id: int)-> int:
     arcs[arc_name] = curr_arc_id
     return curr_arc_id
 
-def store_new_node(node_type: type, *task_name: str)-> str:
-    if task_name: # it is a task
-        node_name = task_name
-        tasks.append(task_name)
-        is_task = True
-    else: # it is NOT a task
-        check_tasks_set()
-        global curr_node_id
-        curr_node_id += 1
-        prefix = "t" if node_type == GTrans else "p"
-        node_name = prefix + str(curr_node_id)
-        is_task = False
-    nodes[node_name] = (node_type, is_task)
+def store_new_node(node_type: type)-> str:
+    # can only store empty transitions and places. set_tasks() stores tasks
+    check_tasks_set()
+    global curr_node_id
+    curr_node_id += 1
+    prefix = "t" if node_type == GTrans else "p"
+    node_name = prefix + str(curr_node_id)
+    nodes[node_name] = (node_type, False)
     return node_name
 
 def set_tasks(task_list: list):
     for name in task_list:
-        store_new_node(GTrans, name)
-    check_tasks_set()
+        global tasks
+        tasks.append(name)
+        nodes[name] = (GTrans, True)
 
 def check_tasks_set():
     if not tasks:

@@ -33,14 +33,12 @@ def traces_with_concurrency(log):
     fp_log = footprints(log, visualize=False, printit=False)
     task_list = list(fp_log["activities"])
     innovs.set_tasks(task_list)
-    task_dict = dict()
-    for task in task_list:
-        task_dict[task] = netobj.GTrans(task, True)
     # generate genomes
     new_genomes = []
     # start traces loop --------------------------------------------------------
     for trace in log:
-        gen_net = genome.GeneticNet(task_dict, dict(), dict())
+        # task dict with fresh genes for each genome
+        gen_net = genome.GeneticNet()
         # start task loop ------------------------------------------------------
         parallels = []
         for i, task in enumerate(trace):

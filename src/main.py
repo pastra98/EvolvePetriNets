@@ -7,7 +7,7 @@ from pm4py.objects.log.importer.xes import importer as xes_importer
 
 
 def main():
-    log_path = "pm_data/m1_log.xes"
+    log_path = "pm_data/running_example.xes" # "pm_data/m1_log.xes"
     log = xes_importer.apply(log_path)
 
     param_files = ["speciation_params"] # list of param file(names)
@@ -29,7 +29,7 @@ def main():
             # try to go to the next generation
             try:
                 gen_info = new_ga.next_generation()
-                print(f"GA_{p} {pp.pprint(gen_info)}:\n{8*'-'}")
+                print(f"GA_{p} GEN: {new_ga.curr_gen}\n{pp.pformat(gen_info)}\n{8*'-'}")
             # on exception save the ga
             except Exception as exception:
                 print(f"GA_{p} encountered an exception in generation {new_ga.curr_gen}")

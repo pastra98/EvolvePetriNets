@@ -1,7 +1,5 @@
 import copy
 
-# fuck inheritance
-
 class GArc:
     def __init__(self, id, source_id, target_id, n_arcs=1):
         self.id = id
