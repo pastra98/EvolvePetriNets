@@ -16,8 +16,10 @@ from .netobj import GArc, GPlace, GTrans
 
 
 class GeneticNet:
-    def __init__(self, transitions=dict(), places=dict(), arcs=dict()) -> None:
-        """Can rece
+    def __init__(self, transitions: dict, places: dict, arcs: dict) -> None:
+        """transitions, places and arcs must either be dicts containing valid id: netobj
+        key-value pairings, or an empty dict.
+        Reasoning: Cannot use mutable default args, and didn't want to use *args or **kwargs
         """
         self.id = innovs.get_new_genome_id()
         self.net: PetriNet = None

@@ -38,7 +38,7 @@ def traces_with_concurrency(log):
     # start traces loop --------------------------------------------------------
     for trace in log:
         # task dict with fresh genes for each genome
-        gen_net = genome.GeneticNet()
+        gen_net = genome.GeneticNet(dict(), dict(), dict())
         # start task loop ------------------------------------------------------
         parallels = []
         for i, task in enumerate(trace):
