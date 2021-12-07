@@ -326,16 +326,14 @@ class GeneticNet:
         self.net = PetriNet(f"{self.id}-Net")
         merged_nodes = self.places | self.transitions
         # only add transitions that are actually connected (since all tasks are in genome)
-        connected_t = self.get_connected_trans()
         for place_id in self.places:
             place = self.places[place_id]
             place.pm4py_obj = PetriNet.Place(place_id)
             self.net.places.add(place.pm4py_obj)
         for trans_id in self.transitions:
-            if trans_id in connected_t:
-                trans = self.transitions[trans_id]
-                trans.pm4py_obj = PetriNet.Transition(trans_id, label=trans_id)
-                self.net.transitions.add(trans.pm4py_obj)
+            trans = self.transitions[trans_id]
+            trans.pm4py_obj = PetriNet.Transition(trans_id, label=trans_id)
+            self.net.transitions.add(trans.pm4py_obj)
         for arc_id in self.arcs:
             arc = self.arcs[arc_id]
             if arc.n_arcs > 0:
@@ -388,12 +386,6 @@ class GeneticNet:
 # ------------------------------------------------------------------------------
 # MISC STUFF -------------------------------------------------------------------
 # ------------------------------------------------------------------------------
-    def get_connected_trans(self) -> set:
-        # get set of all transitions that are connected to the network via arcs
-        connected = [(a.source_id, a.target_id) for a in self.arcs.values()]
-        connected = set(itertools.chain.from_iterable(connected))
-        return set(self.transitions.keys()).intersection(connected)
-
 
     def get_graphviz(self) -> Digraph:
         # parameter stuff, TODO: think about where to put this
