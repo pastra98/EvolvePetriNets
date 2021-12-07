@@ -19,6 +19,8 @@ class GeneticNet:
     def __init__(self, transitions: dict, places: dict, arcs: dict) -> None:
         """transitions, places and arcs must either be dicts containing valid id: netobj
         key-value pairings, or an empty dict.
+        - Adds task transitions and start/end place automatically
+        - make sure that argument dicts contain fresh genes
         Reasoning: Cannot use mutable default args, and didn't want to use *args or **kwargs
         """
         self.id = innovs.get_new_genome_id()
@@ -95,6 +97,7 @@ class GeneticNet:
         self.arcs[arc_id] = new_arc
         return
 
+
     def pick_trans_with_preference(self) -> str:
         """Just pick a transition according to preferences set in params
         """
@@ -110,29 +113,6 @@ class GeneticNet:
             trans_id = rd.choice(list(empty_trans)) 
         return trans_id
 
-    # def trans_place_arc(self, trans_id=None, place_id=None):
-    #     for _try in range(params.num_trys_make_conn):
-    #         place = rd.choice(list(self.places.values()))
-    #         trans = rd.choice(list(self.transitions.values()))
-    #         # this can also be more fancy, e.g. consider number of dead trans
-    #         if rd.random() < params.prob_connect_nontask_trans and not trans.is_task:
-    #             break
-    #         trans_to_place = rd.random() < params.prob_t_p
-    #         arc_id = ""
-    #         # trans -> place
-    #         if trans_to_place and not place.is_start:
-    #             arc_id = innovs.check_arc(trans.id, place.id)
-    #         # place -> trans
-    #         elif (not trans_to_place) and (not place.is_end):
-    #             arc_id = innovs.check_arc(place.id, trans.id)
-    #         # finally check if we haven't already picked that arc
-    #         if arc_id != "" and arc_id not in self.arcs:
-    #             if trans_to_place:
-    #                 new_arc = GArc(arc_id, trans.id, place.id)
-    #             else:
-    #                 new_arc = GArc(arc_id, place.id, trans.id)
-    #             self.arcs[arc_id] = new_arc
-    #             return
 
     def new_place(self, trans_id=None) -> str:
         if trans_id:
@@ -154,6 +134,7 @@ class GeneticNet:
         self.arcs[arc_id] = new_arc
         return place_id
 
+
     def new_empty_trans(self, place_id=None):
         # would need to check innovations to prevent creating duplicate empty transitions
         new_trans_id = innovs.store_new_node(GTrans)
@@ -164,6 +145,7 @@ class GeneticNet:
         new_arc = GArc(arc_id, place_id, new_trans_id)
         self.arcs[arc_id] = new_arc
         return new_trans_id
+
 
     def trans_trans_conn(self, source_id=None, target_id=None):
         # this pos function should check if the two are really transitions
@@ -212,11 +194,14 @@ class GeneticNet:
                 arc_to_split.n_arcs=0
                 return
 
+
     def increase_arcs(self, arc_id=None):
         pass
 
+
     def disable_arc(self, arc_id=None):
         pass
+
 
     def disable_place(self, place_id=None):
         pass
@@ -283,17 +268,19 @@ class GeneticNet:
         # print(f"arc_count_diff : {arc_count_diff}")
         return distance
 
+
     def crossover(self, other_genome):
         """TODO: need to implement
         """
         return self.copy()
 
+
     def clone(self):
         """returns a deepcopy
         """
-        new_transitions = {k: GTrans(k, v.is_task) for k, v in self.transitions.items()}
-        new_places = {k: GPlace(k, is_start=v.is_start, is_end=v.is_end) for k, v in self.places.items()}
-        new_arcs = {k: GArc(k, v.source_id, v.target_id, v.n_arcs) for k, v in self.arcs.items()}
+        new_transitions = {k: v.get_copy() for k, v in self.transitions.items()}
+        new_places = {k: v.get_copy() for k, v in self.places.items()}
+        new_arcs = {k: v.get_copy() for k, v in self.arcs.items()}
         return GeneticNet(new_transitions, new_places, new_arcs)
 
 # ------------------------------------------------------------------------------
@@ -337,6 +324,7 @@ class GeneticNet:
         self.fm[end] = 1
         return
 
+
     def evaluate_fitness(self, log) -> None:
         if not self.net:
             self.build_petri()
@@ -377,6 +365,7 @@ class GeneticNet:
         connected = [(a.source_id, a.target_id) for a in self.arcs.values()]
         connected = set(itertools.chain.from_iterable(connected))
         return set(self.transitions.keys()).intersection(connected)
+
 
     def get_graphviz(self) -> Digraph:
         # parameter stuff, TODO: think about where to put this
