@@ -74,12 +74,12 @@ def traces_with_concurrency(log):
                     # take first parallel task, build parallel structure
                     first_para_task_id = parallels.pop(0)
                     #  use it to create start trans, connect to it
-                    start_place_id = gen_net.new_place(task_before_para)
-                    start_trans_id = gen_net.new_empty_trans(start_place_id)
+                    start_place_id = gen_net.extend_new_place(task_before_para)
+                    start_trans_id = gen_net.extend_new_trans(start_place_id)
                     gen_net.trans_trans_conn(start_trans_id, first_para_task_id)
                     # create end trans (it is already conn to first_para_task!)
-                    end_place_id = gen_net.new_place(first_para_task_id)
-                    end_trans_id = gen_net.new_empty_trans(end_place_id)
+                    end_place_id = gen_net.extend_new_place(first_para_task_id)
+                    end_trans_id = gen_net.extend_new_trans(end_place_id)
                     # build remaining parallels
                     for task_id in parallels:
                         # print(f"{task_before_para} -> {task_id}")

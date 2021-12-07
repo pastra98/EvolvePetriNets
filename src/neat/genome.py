@@ -49,9 +49,9 @@ class GeneticNet:
         if rd.random() < params.prob_t_t_conn[mutation_rate]:
             pass
         if rd.random() < params.prob_new_p[mutation_rate]:
-            pass
+            self.extend_new_place()
         if rd.random() < params.prob_new_empty_t[mutation_rate]:
-            pass
+            self.extend_new_trans()
         if rd.random() < params.prob_split_arc[mutation_rate]:
             pass
         # for arc in self.arcs:
@@ -75,12 +75,15 @@ class GeneticNet:
                     break
         else: # if place/trans specified in arguments, just get that innov number
             arc_id = innovs.check_arc(place_id, trans_id)
+            if arc_id in self.arcs:
+                print("arc already exists")
+                return # no connection is made
         new_arc = GArc(arc_id, place_id, trans_id)
         self.arcs[arc_id] = new_arc
         return
 
 
-    def trans_place_arc(self, trans_id=None, place_id=None):
+    def trans_place_arc(self, trans_id=None, place_id=None) -> None:
         if not trans_id and not place_id: # no trans/place specified in arguments
             # search until a place/trans combi is found that is not already connected
             for _try in range(params.num_trys_make_conn):
@@ -93,58 +96,54 @@ class GeneticNet:
                     break
         else: # if place/trans specified in arguments, just get that innov number
             arc_id = innovs.check_arc(trans_id, place_id)
+            if arc_id in self.arcs:
+                print("arc already exists")
+                return # no connection is made
         new_arc = GArc(arc_id, trans_id, place_id)
         self.arcs[arc_id] = new_arc
         return
 
 
-    def pick_trans_with_preference(self) -> str:
-        """Just pick a transition according to preferences set in params
-        """
-        # set of task trans and empty trans
-        task_trans = set(innovs.tasks)
-        empty_trans = set(self.transitions.keys()).difference(task_trans)
-        # pick a trans
-        if params.is_no_preference_for_tasks: # choose from all trans
-            trans_id = rd.choice(list(self.transitions.keys()))
-        elif rd.random() < params.prob_pick_task_trans: # choose from tasks
-            trans_id = rd.choice(list(task_trans))
-        else: # choose from empty trans
-            trans_id = rd.choice(list(empty_trans)) 
-        return trans_id
-
-
-    def new_place(self, trans_id=None) -> str:
-        if trans_id:
-            trans = self.transitions[trans_id]
-        else:
+    def extend_new_place(self, trans_id=None) -> str:
+        if not trans_id:
             for _try in range(params.num_trys_make_conn):
-                trans = rd.choice(list(self.transitions.values()))
-                # this can also be more fancy, e.g. consider number of dead trans
-                if rd.random() < params.prob_connect_nontask_trans and not trans.is_task:
+                trans_id = self.pick_trans_with_preference()
+                ext_info = innovs.check_extension(trans_id)
+                if ext_info["node"] not in self.places: # check if place not already exist
                     break
-        # !!!!!!!!!!!!!!!!!!!
-        # IMPORTANT WILL HAVE TO CHECK IF TRANS IS ALREADY CONNECTED TO EMPTY PLACE!!!!
-        # !!!!!!!!!!!!!!!!!!!
-        place_id = innovs.store_new_node(GPlace)
-        arc_id = innovs.check_arc(trans.id, place_id)
-        new_place = GPlace(place_id)
-        new_arc = GArc(arc_id, trans.id, place_id)
-        self.places[place_id] = new_place
-        self.arcs[arc_id] = new_arc
-        return place_id
+                else: # place already exists, reset ext_info
+                    ext_info = ""
+        else:
+            ext_info = innovs.check_extension(trans_id)
+            if ext_info["node"] in self.places:
+                print("transition already extended")
+                return
+        if ext_info:
+            self.places[ext_info["node"]] = GPlace(ext_info["node"])
+            self.arcs[ext_info["arc"]] = GArc(ext_info["arc"], trans_id, ext_info["node"])
+            return ext_info["node"] # return id of new place
+        return # nothing found
 
 
-    def new_empty_trans(self, place_id=None):
-        # would need to check innovations to prevent creating duplicate empty transitions
-        new_trans_id = innovs.store_new_node(GTrans)
-        new_trans = GTrans(new_trans_id, is_task=False)
-        self.transitions[new_trans_id] = new_trans
-        # kinda pointless because new_trans_id was just generated without check in innovs
-        arc_id = innovs.check_arc(place_id, new_trans_id) 
-        new_arc = GArc(arc_id, place_id, new_trans_id)
-        self.arcs[arc_id] = new_arc
-        return new_trans_id
+    def extend_new_trans(self, place_id=None) -> str:
+        if not place_id:
+            for _try in range(params.num_trys_make_conn):
+                place_id = rd.choice([p for p in self.places if p not in ["start", "end"]])
+                ext_info = innovs.check_extension(place_id)
+                if ext_info["node"] not in self.transitions: # check if transition not already exist
+                    break
+                else: # place already exists, reset ext_info
+                    ext_info = ""
+        else:
+            ext_info = innovs.check_extension(place_id)
+            if ext_info["node"] in self.transitions:
+                print("place already extended")
+                return
+        if ext_info:
+            self.transitions[ext_info["node"]] = GTrans(ext_info["node"], is_task=False)
+            self.arcs[ext_info["arc"]] = GArc(ext_info["arc"], place_id, ext_info["node"])
+            return ext_info["node"] # return id of new trans
+        return # nothing found
 
 
     def trans_trans_conn(self, source_id=None, target_id=None):
@@ -160,6 +159,38 @@ class GeneticNet:
             self.arcs[arc1_id] = GArc(arc1_id, source_id, place_id)
             arc2_id = innovs.check_arc(place_id, target_id)
             self.arcs[arc2_id] = GArc(arc2_id, place_id, target_id)
+
+
+    # def trans_trans_conn(self, source_id=None, target_id=None):
+    #     # this pos function should check if the two are really transitions
+    #     if not source_id and not target_id:
+    #         # code this later
+    #         pass # try to find two transitions that can be connected
+    #     place_id = innovs.check_trans_to_trans(source_id, target_id)
+    #     if place_id not in self.places:
+    #         # this will always make a new innov
+    #         self.places[place_id] = GPlace(place_id)
+    #         arc1_id = innovs.check_arc(source_id, place_id)
+    #         self.arcs[arc1_id] = GArc(arc1_id, source_id, place_id)
+    #         arc2_id = innovs.check_arc(place_id, target_id)
+    #         self.arcs[arc2_id] = GArc(arc2_id, place_id, target_id)
+
+
+    def pick_trans_with_preference(self) -> str:
+        """Returns transition id according to preferences set in params
+        """
+        # set of task trans and empty trans
+        task_trans = set(innovs.tasks)
+        empty_trans = set(self.transitions.keys()).difference(task_trans)
+        # pick a trans
+        if params.is_no_preference_for_tasks: # choose from all trans
+            trans_id = rd.choice(list(self.transitions.keys()))
+        elif rd.random() < params.prob_pick_task_trans: # choose from tasks
+            trans_id = rd.choice(list(task_trans))
+        else: # choose from empty trans
+            trans_id = rd.choice(list(empty_trans)) 
+        return trans_id
+
         
     def split_arc(self, arc_id=None):
         for _try in range(params.num_trys_split_arc):
@@ -391,7 +422,7 @@ class GeneticNet:
         for p in self.places:
             if p == "start":
                 viz.node("start", style='filled', fillcolor="green", fontsize=fsize, shape='circle', fixedsize='true', width='0.75')
-            elif p == "start":
+            elif p == "end":
                 viz.node("end", style='filled', fillcolor="orange", fontsize=fsize, shape='circle', fixedsize='true', width='0.75')
             else:
                 viz.node(p, p, style='filled', fillcolor=pcol, fontsize=fsize, shape='circle', fixedsize='true', width='0.75')

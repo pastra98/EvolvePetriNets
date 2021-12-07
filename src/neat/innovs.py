@@ -5,6 +5,11 @@ from .netobj import GArc, GTrans, GPlace
 tasks = []
 nodes = {"start":GPlace, "end":GPlace}
 arcs = {}
+
+# dict containing extended places and trans that are not yet connected to any other nodes
+extensions = {} 
+extensions_inverted = {}
+
 splits = {}
 
 trans = {}
@@ -14,16 +19,20 @@ curr_genome_id = 0
 curr_arc_id = 0
 curr_node_id = 0
 
+
 def reset():
     importlib.reload(sys.modules[__name__])
     return
+
 
 def get_new_genome_id():
     global curr_genome_id
     curr_genome_id += 1
     return curr_genome_id
 
+
 def check_trans_to_trans(source_id, target_id):
+    global trans
     if (source_id, target_id) in trans:
         return trans[(source_id, target_id)]
     else:
@@ -31,7 +40,25 @@ def check_trans_to_trans(source_id, target_id):
         trans[(source_id, target_id)] = new_id
         return new_id
 
+
+def check_extension(extend_from_id: str) -> dict:
+    global extensions, extensions_inverted, nodes
+    if extend_from_id in extensions:
+        return extensions[extend_from_id]
+    else:
+        # based on nodetype, create new node
+        ntype = GPlace if nodes[extend_from_id][0] == GTrans else GTrans
+        new_node_id = store_new_node(ntype)
+        new_arc_id = store_new_arc(extend_from_id, new_node_id)
+        ext_info = {"arc": new_arc_id, "node": new_node_id}
+        # save extension info
+        extensions[extend_from_id] = ext_info
+        extensions_inverted[new_node_id] = extend_from_id
+        return ext_info
+
+
 def check_split(source, target):
+    global splits
     check_tasks_set()
     split_name = f"{source.id}-x->{target.id}"
     if split_name in splits:
@@ -54,8 +81,16 @@ def check_split(source, target):
         splits[split_name] = split_d
         return split_d
 
+
 def check_arc(source_id: int, target_id: int) -> int:
+    global arcs, extensions
     check_tasks_set()
+    # in case the source is a (so far) unconnected extension, remove it from extensions
+    # before connecting to it to target
+    if source_id in extensions_inverted:
+        ext_key = extensions_inverted[source_id] # get the orig. node that source was extended from
+        del extensions[ext_key] # delete extension such that new extensions -> new keys
+        del extensions_inverted[source_id] # delete reverse extension
     arc_name = f"{source_id}--->{target_id}"
     if arc_name in arcs:
         return arcs[arc_name]
@@ -63,29 +98,33 @@ def check_arc(source_id: int, target_id: int) -> int:
         new_id = store_new_arc(source_id, target_id)
         return new_id
 
+
 def store_new_arc(source_id: int, target_id: int)-> int:
+    global curr_arc_id, arcs
     check_tasks_set()
     arc_name = f"{source_id}--->{target_id}"
-    global curr_arc_id
     curr_arc_id += 1
     arcs[arc_name] = curr_arc_id
     return curr_arc_id
 
+
 def store_new_node(node_type: type)-> str:
+    global curr_node_id, nodes
     # can only store empty transitions and places. set_tasks() stores tasks
     check_tasks_set()
-    global curr_node_id
     curr_node_id += 1
     prefix = "t" if node_type == GTrans else "p"
     node_name = prefix + str(curr_node_id)
     nodes[node_name] = (node_type, False)
     return node_name
 
+
 def set_tasks(task_list: list):
+    global tasks
     for name in task_list:
-        global tasks
         tasks.append(name)
         nodes[name] = (GTrans, True)
+
 
 def check_tasks_set():
     if not tasks:
