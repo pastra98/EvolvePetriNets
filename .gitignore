@@ -3,3 +3,4 @@ results/
 pm_data/
 # don't save compiled modules
 *.pyc
+.vscode/settings.json
