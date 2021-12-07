@@ -63,6 +63,8 @@ target_g = test_genomes[1]
 
 show_graphviz(target_g)
 
+# target_g.trans_trans_conn()
+
 # target_g.place_trans_arc()
 # target_g.trans_place_arc()
 

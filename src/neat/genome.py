@@ -47,7 +47,7 @@ class GeneticNet:
         if rd.random() < params.prob_p_t_arc[mutation_rate]:
             self.place_trans_arc()
         if rd.random() < params.prob_t_t_conn[mutation_rate]:
-            pass
+            self.trans_trans_conn()
         if rd.random() < params.prob_new_p[mutation_rate]:
             self.extend_new_place()
         if rd.random() < params.prob_new_empty_t[mutation_rate]:
@@ -112,7 +112,7 @@ class GeneticNet:
                 if ext_info["node"] not in self.places: # check if place not already exist
                     break
                 else: # place already exists, reset ext_info
-                    ext_info = ""
+                    ext_info = None
         else:
             ext_info = innovs.check_extension(trans_id)
             if ext_info["node"] in self.places:
@@ -133,7 +133,7 @@ class GeneticNet:
                 if ext_info["node"] not in self.transitions: # check if transition not already exist
                     break
                 else: # place already exists, reset ext_info
-                    ext_info = ""
+                    ext_info = None
         else:
             ext_info = innovs.check_extension(place_id)
             if ext_info["node"] in self.transitions:
@@ -149,31 +149,26 @@ class GeneticNet:
     def trans_trans_conn(self, source_id=None, target_id=None):
         # this pos function should check if the two are really transitions
         if not source_id and not target_id:
-            # code this later
-            pass # try to find two transitions that can be connected
-        place_id = innovs.check_trans_to_trans(source_id, target_id)
-        if place_id not in self.places:
-            # this will always make a new innov
+            for _try in range(params.num_trys_make_conn):
+                source_id = self.pick_trans_with_preference()
+                target_id = self.pick_trans_with_preference()
+                place_id = innovs.check_trans_to_trans(source_id, target_id)
+                if place_id not in self.places and source_id != target_id: # check if valid
+                    break
+                else:
+                    place_id = None
+        else:
+            place_id = innovs.check_trans_to_trans(source_id, target_id)
+            if place_id in self.places:
+                print("trans-trans-conn already made")
+                return
+        if place_id:
             self.places[place_id] = GPlace(place_id)
             arc1_id = innovs.check_arc(source_id, place_id)
             self.arcs[arc1_id] = GArc(arc1_id, source_id, place_id)
             arc2_id = innovs.check_arc(place_id, target_id)
             self.arcs[arc2_id] = GArc(arc2_id, place_id, target_id)
-
-
-    # def trans_trans_conn(self, source_id=None, target_id=None):
-    #     # this pos function should check if the two are really transitions
-    #     if not source_id and not target_id:
-    #         # code this later
-    #         pass # try to find two transitions that can be connected
-    #     place_id = innovs.check_trans_to_trans(source_id, target_id)
-    #     if place_id not in self.places:
-    #         # this will always make a new innov
-    #         self.places[place_id] = GPlace(place_id)
-    #         arc1_id = innovs.check_arc(source_id, place_id)
-    #         self.arcs[arc1_id] = GArc(arc1_id, source_id, place_id)
-    #         arc2_id = innovs.check_arc(place_id, target_id)
-    #         self.arcs[arc2_id] = GArc(arc2_id, place_id, target_id)
+            return
 
 
     def pick_trans_with_preference(self) -> str:
