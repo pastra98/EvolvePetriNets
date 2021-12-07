@@ -72,12 +72,17 @@ simplicity_weight: float
 """
 Parameters in list depend on the Mutation Rate, which is either 0 (normal) or 1 (high)
 """
+# Make a new arc
 prob_t_p_arc: list[float, float]
 prob_p_t_arc: list[float, float]
+# connect trans to trans
 prob_t_t_conn: list[float, float]
+# extend to new node or trans
 prob_new_p: list[float, float]
 prob_new_empty_t: list[float, float]
+# split an arc
 prob_split_arc: list[float, float]
+# arc mutations
 prob_increase_arcs: list[float, float]
 prob_disable_arc: list[float, float]
 

@@ -62,7 +62,7 @@ def check_split(source, target):
     check_tasks_set()
     split_name = f"{source.id}-x->{target.id}"
     if split_name in splits:
-        new_place_id, new_trans_id, arc1_id, arc2_id, arc3_id = splits[split_name]
+        return splits[split_name]
     else:
         new_place_id = store_new_node(GPlace)
         new_trans_id = store_new_node(GTrans)
@@ -72,7 +72,7 @@ def check_split(source, target):
             arc2_id = store_new_arc(new_place_id, new_trans_id)
             arc3_id = store_new_arc(new_trans_id, target.id)
         # place -> trans: PLACE -ARC1-> NEW_TRANS -ARC2-> NEW_PLACE -ARC3-> TRANS
-        if isinstance(source, GPlace) and isinstance(target, GTrans):
+        elif isinstance(source, GPlace) and isinstance(target, GTrans):
             arc1_id = store_new_arc(source.id, new_trans_id)
             arc2_id = store_new_arc(new_trans_id, new_place_id)
             arc3_id = store_new_arc(new_place_id, target.id)

@@ -171,6 +171,42 @@ class GeneticNet:
             return
 
 
+    def split_arc(self):
+        for _try in range(params.num_trys_split_arc):
+            arc_to_split = rd.choice(list(self.arcs.values()))
+            all_nodes = self.places | self.transitions
+            source = all_nodes[arc_to_split.source_id]
+            target = all_nodes[arc_to_split.target_id]
+            # check if arc is trans -> place, and if this mutation should occur
+            is_t_p = isinstance(source, GTrans)
+            if (is_t_p and not target.is_start) or (not is_t_p and not source.is_end):
+                sp_d = innovs.check_split(source, target)
+                # check if mutation has already occured via place (could also be t or a)
+                if sp_d["p"] not in self.places:
+                    break
+                else:
+                    sp_d = None
+        if sp_d:
+            new_place = GPlace(sp_d["p"])
+            new_trans = GTrans(sp_d["t"], False)
+            if is_t_p:
+                a1 = GArc(sp_d["a1"], source.id, new_place.id)
+                a2 = GArc(sp_d["a2"], new_place.id, new_trans.id)
+                a3 = GArc(sp_d["a3"], new_trans.id, target.id)
+            else:
+                a1 = GArc(sp_d["a1"], source.id, new_trans.id)
+                a2 = GArc(sp_d["a2"], new_trans.id, new_place.id)
+                a3 = GArc(sp_d["a3"], new_place.id, target.id)
+            # insert new stuff to genome
+            self.places[sp_d["p"]] = new_place
+            self.transitions[sp_d["t"]] = new_trans
+            self.arcs.update({sp_d["a1"]:a1, sp_d["a2"]:a2, sp_d["a3"]:a3})
+            # disable old arc
+            arc_to_split.n_arcs = 0
+            return # mutation success
+        return # nothing found
+
+
     def pick_trans_with_preference(self) -> str:
         """Returns transition id according to preferences set in params
         """
@@ -187,40 +223,6 @@ class GeneticNet:
         return trans_id
 
         
-    def split_arc(self, arc_id=None):
-        for _try in range(params.num_trys_split_arc):
-            arc_to_split = rd.choice(list(self.arcs.values()))
-################################################################################
-            # super shitty hack immediately delete this later
-            joined = self.places | self.transitions
-            source = joined[arc_to_split.source_id]
-            target = joined[arc_to_split.target_id]
-################################################################################
-            # check if arc is trans -> place, and if this mutation should occur
-            is_t_p = isinstance(source, GTrans)
-            if is_t_p and not (rd.random() < params.prob_t_p):
-                break
-            if (is_t_p and not target.is_start) or (not is_t_p and not source.is_end):
-                sp_d = innovs.check_split(source, target)
-                new_place = GPlace(sp_d["p"])
-                new_trans = GTrans(sp_d["t"], False)
-                if is_t_p:
-                    a1 = GArc(sp_d["a1"], source.id, new_place.id)
-                    a2 = GArc(sp_d["a2"], new_place.id, new_trans.id)
-                    a3 = GArc(sp_d["a3"], new_trans.id, target.id)
-                else:
-                    a1 = GArc(sp_d["a1"], source.id, new_trans.id)
-                    a2 = GArc(sp_d["a2"], new_trans.id, new_place.id)
-                    a3 = GArc(sp_d["a3"], new_place.id, target.id)
-                # insert new stuff to genome
-                self.places[sp_d["p"]] = new_place
-                self.transitions[sp_d["t"]] = new_trans
-                self.arcs.update({sp_d["a1"]:a1, sp_d["a2"]:a2, sp_d["a3"]:a3})
-                # disable old arc
-                arc_to_split.n_arcs=0
-                return
-
-
     def increase_arcs(self, arc_id=None):
         pass
 

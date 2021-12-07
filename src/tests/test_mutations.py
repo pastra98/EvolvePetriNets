@@ -61,8 +61,12 @@ for g in test_genomes:
 # perform mutations on target g
 target_g = test_genomes[1]
 
+target_g.evaluate_fitness(log)
+print(f"BEFORE mutation fitness:\n{target_g.fitness}")
+
 show_graphviz(target_g)
 
+target_g.split_arc()
 # target_g.trans_trans_conn()
 
 # target_g.place_trans_arc()
@@ -72,3 +76,6 @@ show_graphviz(target_g)
 # target_g.extend_new_trans()
 
 show_graphviz(target_g)
+
+target_g.evaluate_fitness(log)
+print(f"AFTER mutation fitness:\n{target_g.fitness}")
