@@ -6,7 +6,6 @@ class GArc:
         self.source_id = source_id
         self.target_id = target_id
         self.n_arcs = n_arcs
-        self.pm4py_obj = None
 
     def get_copy(self):
         return copy.deepcopy(self)
@@ -15,7 +14,6 @@ class GTrans:
     def __init__(self, id, is_task):
         self.id = id
         self.is_task = is_task
-        self.pm4py_obj = None
 
     def get_copy(self):
         return copy.deepcopy(self)
@@ -26,7 +24,6 @@ class GPlace:
         self.id = id
         self.is_start = is_start
         self.is_end = is_end
-        self.pm4py_obj = None
 
     def get_copy(self):
         return copy.deepcopy(self)
