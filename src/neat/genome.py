@@ -23,7 +23,7 @@ class GeneticNet:
         - make sure that argument dicts contain fresh genes
         Reasoning: Cannot use mutable default args, and didn't want to use *args or **kwargs
         """
-        self.id = innovs.get_new_genome_id()
+        self.id = innovs.get_new_genome_id() # big changes about to happen
         self.net: PetriNet = None
         self.im: Marking = None
         self.fm: Marking = None
