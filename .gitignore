@@ -1,6 +1,0 @@
-# don't save results and pm_data
-results/
-# pm_data/
-# don't save compiled modules
-*.pyc
-.vscode/settings.json
