@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<log xes.version="1849-2016" xes.features="nested-attributes" xmlns="http://www.xes-standard.org/">
+	<trace>
+		<string key="concept:name" value="0" />
+		<event>
+			<string key="concept:name" value="A" />
+			<date key="time:timestamp" value="1970-04-26T19:46:41" />
+		</event>
+		<event>
+			<string key="concept:name" value="D" />
+			<date key="time:timestamp" value="1970-04-26T19:46:42" />
+		</event>
+		<event>
+			<string key="concept:name" value="B" />
+			<date key="time:timestamp" value="1970-04-26T19:46:43" />
+		</event>
+		<event>
+			<string key="concept:name" value="E" />
+			<date key="time:timestamp" value="1970-04-26T19:46:44" />
+		</event>
+	</trace>
+	<trace>
+		<string key="concept:name" value="1" />
+		<event>
+			<string key="concept:name" value="A" />
+			<date key="time:timestamp" value="1970-04-26T19:46:45" />
+		</event>
+		<event>
+			<string key="concept:name" value="B" />
+			<date key="time:timestamp" value="1970-04-26T19:46:46" />
+		</event>
+		<event>
+			<string key="concept:name" value="D" />
+			<date key="time:timestamp" value="1970-04-26T19:46:47" />
+		</event>
+		<event>
+			<string key="concept:name" value="E" />
+			<date key="time:timestamp" value="1970-04-26T19:46:48" />
+		</event>
+	</trace>
+	<trace>
+		<string key="concept:name" value="2" />
+		<event>
+			<string key="concept:name" value="A" />
+			<date key="time:timestamp" value="1970-04-26T19:46:49" />
+		</event>
+		<event>
+			<string key="concept:name" value="B" />
+			<date key="time:timestamp" value="1970-04-26T19:46:50" />
+		</event>
+		<event>
+			<string key="concept:name" value="C" />
+			<date key="time:timestamp" value="1970-04-26T19:46:51" />
+		</event>
+		<event>
+			<string key="concept:name" value="E" />
+			<date key="time:timestamp" value="1970-04-26T19:46:52" />
+		</event>
+	</trace>
+	<trace>
+		<string key="concept:name" value="3" />
+		<event>
+			<string key="concept:name" value="A" />
+			<date key="time:timestamp" value="1970-04-26T19:46:53" />
+		</event>
+		<event>
+			<string key="concept:name" value="C" />
+			<date key="time:timestamp" value="1970-04-26T19:46:54" />
+		</event>
+		<event>
+			<string key="concept:name" value="B" />
+			<date key="time:timestamp" value="1970-04-26T19:46:55" />
+		</event>
+		<event>
+			<string key="concept:name" value="E" />
+			<date key="time:timestamp" value="1970-04-26T19:46:56" />
+		</event>
+	</trace>
+</log>
