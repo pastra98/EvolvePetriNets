@@ -13,7 +13,6 @@ def run():
     print(len(genetic_algo.population))
     # why is dis a nested list? lots of stuff to fix here
     for g in genetic_algo.population:
-        # implement genome.copy() method
         print(g.id)
         net, im, fm = g.build_petri()
         net_gviz = visualizer.apply(net, im, fm)

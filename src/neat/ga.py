@@ -220,6 +220,9 @@ class GeneticAlgorithm:
             found_species = self.make_new_species(new_genome)
         return found_species
 
+    def make_hybrids(self, num) -> list:
+        return []
+
     def make_new_species(self, founding_member: GeneticNet) -> Species:
         """Generates a new species with a unique id, assigns the founding member as
         representative, and adds the new species to curr_species and returns it.

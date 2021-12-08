@@ -1,12 +1,10 @@
 import random as rd
 import itertools
-from copy import deepcopy
-from typing import Tuple
 
 from graphviz import Digraph
 
 from pm4py.objects.petri_net.obj import PetriNet, Marking
-from pm4py.objects.petri_net.utils import petri_utils
+from pm4py.objects.petri_net.utils.petri_utils import add_arc_from_to
 
 from pm4py.algo.analysis.woflan import algorithm as woflan
 from pm4py.algo.evaluation.simplicity import algorithm as simplicity_evaluator
@@ -23,11 +21,14 @@ class GeneticNet:
         - make sure that argument dicts contain fresh genes
         Reasoning: Cannot use mutable default args, and didn't want to use *args or **kwargs
         """
-        self.id = innovs.get_new_genome_id() # big changes about to happen
-        self.net: PetriNet = None
-        self.im: Marking = None
-        self.fm: Marking = None
+        self.id = innovs.get_new_genome_id()
         self.fitness: float = None
+        # fitness measures
+        self.trace_fitness: float = None # overall genetic fitness
+        self.is_sound: bool = None
+        self.precision: float = None
+        self.generalization: float = None
+        self.simplicity: float = None
         # make Transition genes for every task saved in innovs and add to genome
         task_trans = {t: GTrans(t, True) for t in innovs.tasks}
         self.transitions = transitions | task_trans
@@ -300,7 +301,7 @@ class GeneticNet:
     def crossover(self, other_genome):
         """TODO: need to implement
         """
-        return self.copy()
+        return self.clone()
 
 
     def clone(self):
@@ -316,68 +317,56 @@ class GeneticNet:
 # ------------------------------------------------------------------------------
 
     def build_petri(self) -> None:
-        try:
-            del self.net
-            del self.im
-            del self.fm
-            print("Genome already has net, rebuilding it")
-        except:
-            pass
-        self.net = PetriNet(f"{self.id}-Net")
-        merged_nodes = self.places | self.transitions
-        # only add transitions that are actually connected (since all tasks are in genome)
+        net = PetriNet(f"{self.id}-Net")
+        temp_obj_d = {} # stores both trans and place pm4py objs in the scope of this method
+        # genome contains all tasks, but not all are connected necessarily
+        connected_trans = self.get_connected_trans()
         for place_id in self.places:
-            place = self.places[place_id]
-            place.pm4py_obj = PetriNet.Place(place_id)
-            self.net.places.add(place.pm4py_obj)
+            temp_obj_d[place_id] = PetriNet.Place(place_id)
+            net.places.add(temp_obj_d[place_id])
         for trans_id in self.transitions:
-            trans = self.transitions[trans_id]
-            trans.pm4py_obj = PetriNet.Transition(trans_id, label=trans_id)
-            self.net.transitions.add(trans.pm4py_obj)
+            if trans_id in connected_trans:
+                temp_obj_d[trans_id] = PetriNet.Transition(trans_id, label=trans_id)
+                net.transitions.add(temp_obj_d[trans_id])
         for arc_id in self.arcs:
             arc = self.arcs[arc_id]
             if arc.n_arcs > 0:
-                source_obj = merged_nodes[arc.source_id].pm4py_obj
-                target_obj = merged_nodes[arc.target_id].pm4py_obj
-                arc.pm4py_obj = petri_utils.add_arc_from_to(source_obj, target_obj, self.net)
+                source_obj = temp_obj_d[arc.source_id]
+                target_obj = temp_obj_d[arc.target_id]
+                arc.pm4py_obj = add_arc_from_to(source_obj, target_obj, net)
         # initial marking
-        self.im = Marking()
-        start = self.places["start"].pm4py_obj
-        self.im[start] = 1
+        im = Marking()
+        im[temp_obj_d["start"]] = 1
         # final marking
-        self.fm = Marking()
-        end = self.places["end"].pm4py_obj
-        self.fm[end] = 1
-        return
+        fm = Marking()
+        fm[temp_obj_d["end"]] = 1
+        return net, im, fm
 
 
     def evaluate_fitness(self, log) -> None:
-        if not self.net:
-            self.build_petri()
-        else:
-            print("net has already been built!!, not building a new one")
+        net, im, fm = self.build_petri()
         # fitness eval
-        aligned_traces = fitnesscalc.get_aligned_traces(log, self.net, self.im, self.fm)
-        trace_fitness = fitnesscalc.get_replay_fitness(aligned_traces)
+        aligned_traces = fitnesscalc.get_aligned_traces(log, net, im, fm)
+        self.trace_fitness = fitnesscalc.get_replay_fitness(aligned_traces)
         # soundness check
-        is_sound = woflan.apply(self.net, self.im, self.fm, parameters={
+        self.is_sound = woflan.apply(net, im, fm, parameters={
             woflan.Parameters.RETURN_ASAP_WHEN_NOT_SOUND: True,
             woflan.Parameters.PRINT_DIAGNOSTICS: False,
             woflan.Parameters.RETURN_DIAGNOSTICS: False
             })
         # precision
-        prec = fitnesscalc.get_precision(log, self.net, self.im, self.fm)
+        self.precision = fitnesscalc.get_precision(log, net, im, fm)
         # generealization
-        gen = fitnesscalc.get_generalization(self.net, aligned_traces)
+        self.generalization = fitnesscalc.get_generalization(net, aligned_traces)
         # simplicity
-        simp = simplicity_evaluator.apply(self.net)
+        self.simplicity = simplicity_evaluator.apply(net)
         # some preliminary fitness measure
         self.fitness = (
-            + params.perc_fit_traces_weight * (trace_fitness["perc_fit_traces"] / 100)
-            + params.soundness_weight * int(is_sound)
-            + params.precision_weight * prec
-            + params.generalization_weight * gen
-            + params.simplicity_weight * simp
+            + params.perc_fit_traces_weight * (self.trace_fitness["perc_fit_traces"] / 100)
+            + params.soundness_weight * int(self.is_sound)
+            + params.precision_weight * self.precision
+            + params.generalization_weight * self.generalization
+            + params.simplicity_weight * self.simplicity
         )
         if self.fitness <= 0:
             raise Exception("Fitness below 0 should not be possible!!!")
@@ -386,6 +375,12 @@ class GeneticNet:
 # ------------------------------------------------------------------------------
 # MISC STUFF -------------------------------------------------------------------
 # ------------------------------------------------------------------------------
+
+    def get_connected_trans(self) -> set:
+        # get set of all transitions that are connected to the network via arcs
+        connected = [(a.source_id, a.target_id) for a in self.arcs.values()]
+        connected = set(itertools.chain.from_iterable(connected))
+        return set(self.transitions.keys()).intersection(connected)
 
     def get_graphviz(self) -> Digraph:
         # parameter stuff, TODO: think about where to put this
