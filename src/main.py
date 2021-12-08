@@ -14,7 +14,7 @@ def main():
 
     results = {}
     stop_cond = "xyz"
-    stop_gen = 3
+    stop_gen = 50
 
     for p in param_files:
         # measure time, initialize new ga
