@@ -1,6 +1,6 @@
 {
     "start_config": "concurrent_traces",
-    "popsize": 200,
+    "popsize": 100,
     "selection_strategy": "speciation",
     "species_boundary": 1.3,
     "coeff_matched": 0.6,
