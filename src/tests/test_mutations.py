@@ -53,9 +53,13 @@ for _ in range(3):
 
 # %%
 # visualize all test genomes
+from pm4py import view_petri_net
+
 for g in test_genomes:
     print(g.id)
     show_graphviz(g)
+    # net, im, fm = g.build_petri()
+    # view_petri_net(net, im, fm)
 
 # %%
 # perform mutations on target g
