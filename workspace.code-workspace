@@ -1,0 +1,11 @@
+{
+	"folders": [
+		{
+			"name": "genetic_miner",
+			"path": "."
+		}
+	],
+    "settings": {
+        "jupyter.jupyterServerType": "local"
+    }
+}
