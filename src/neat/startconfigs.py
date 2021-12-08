@@ -26,7 +26,7 @@ def generate_n_traces_with_concurrency(n_genomes, log):
     new_genomes = []
     while len(new_genomes) < n_genomes:
         for new_genome in base_genomes:
-            new_genomes.append(new_genome.copy())
+            new_genomes.append(new_genome.clone())
     return new_genomes
 
 def traces_with_concurrency(log):
