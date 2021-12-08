@@ -1,7 +1,5 @@
 import random as rd
 import itertools
-from copy import deepcopy
-from typing import Tuple
 
 from graphviz import Digraph
 
@@ -303,7 +301,7 @@ class GeneticNet:
     def crossover(self, other_genome):
         """TODO: need to implement
         """
-        return self.copy()
+        return self.clone()
 
 
     def clone(self):
@@ -318,33 +316,30 @@ class GeneticNet:
 # FITNESS RELATED STUFF --------------------------------------------------------
 # ------------------------------------------------------------------------------
 
-    def build_petri(self) -> PetriNet:
+    def build_petri(self) -> None:
         net = PetriNet(f"{self.id}-Net")
-        merged_nodes = self.places | self.transitions
-        start_obj, end_obj = None, None
+        temp_obj_d = {} # stores both trans and place pm4py objs in the scope of this method
+        # genome contains all tasks, but not all are connected necessarily
+        connected_trans = self.get_connected_trans()
+        for place_id in self.places:
+            temp_obj_d[place_id] = PetriNet.Place(place_id)
+            net.places.add(temp_obj_d[place_id])
+        for trans_id in self.transitions:
+            if trans_id in connected_trans:
+                temp_obj_d[trans_id] = PetriNet.Transition(trans_id, label=trans_id)
+                net.transitions.add(temp_obj_d[trans_id])
         for arc_id in self.arcs:
             arc = self.arcs[arc_id]
             if arc.n_arcs > 0:
-                if isinstance(merged_nodes[arc.source_id], GTrans): # check if source is trans -> t to p
-                    trans_obj = PetriNet.Transition(arc.source_id, label=arc.source_id)
-                    place_obj = PetriNet.Place(arc.target_id)
-                    add_arc_from_to(trans_obj, place_obj, net)
-                    if arc.target_id == "end": # check if we found end place
-                        end = place_obj
-                else: # must be p to t
-                    place_obj = PetriNet.Place(arc.source_id)
-                    trans_obj = PetriNet.Transition(arc.target_id, label=arc.target_id)
-                    add_arc_from_to(place_obj, trans_obj, net)
-                    if arc.source_id == "start": # check if we found start place
-                        start = place_obj
-                net.transitions.add(trans_obj)
-                net.places.add(place_obj)
+                source_obj = temp_obj_d[arc.source_id]
+                target_obj = temp_obj_d[arc.target_id]
+                arc.pm4py_obj = add_arc_from_to(source_obj, target_obj, net)
         # initial marking
         im = Marking()
-        im[start] = 1
+        im[temp_obj_d["start"]] = 1
         # final marking
         fm = Marking()
-        fm[end] = 1
+        fm[temp_obj_d["end"]] = 1
         return net, im, fm
 
 
@@ -380,6 +375,12 @@ class GeneticNet:
 # ------------------------------------------------------------------------------
 # MISC STUFF -------------------------------------------------------------------
 # ------------------------------------------------------------------------------
+
+    def get_connected_trans(self) -> set:
+        # get set of all transitions that are connected to the network via arcs
+        connected = [(a.source_id, a.target_id) for a in self.arcs.values()]
+        connected = set(itertools.chain.from_iterable(connected))
+        return set(self.transitions.keys()).intersection(connected)
 
     def get_graphviz(self) -> Digraph:
         # parameter stuff, TODO: think about where to put this
