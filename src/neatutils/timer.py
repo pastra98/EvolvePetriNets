@@ -29,7 +29,16 @@ class Timer:
             raise Exception("not timing the same func")
 
         elapsed_time = time.perf_counter() - self._start_time
-        self.time_info[gen][funcname] = elapsed_time
+        # ugly piece of shit
+        if gen in self.time_info:
+            if isinstance(self.time_info[gen], dict):
+                self.time_info[gen][funcname] = elapsed_time
+            else:
+                self.time_info[gen] = {funcname: elapsed_time}
+        else:
+            self.time_info[gen] = {funcname: elapsed_time}
+
+
         self._start_time = None
         return elapsed_time
 
