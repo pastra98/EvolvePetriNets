@@ -1,6 +1,6 @@
 import random as rd
 from copy import deepcopy
-from src.neatutils import timer
+from neatutils import timer
 from . import params, innovs, startconfigs
 from .genome import GeneticNet
 from .species import Species
@@ -115,6 +115,8 @@ class GeneticAlgorithm:
             gen_info["total pop fitness"] = self.total_pop_fitness
             if self.is_timed and self.curr_gen > 0:
                 gen_info["times"] = self.timer.get_gen_times(self.curr_gen)
+            else:
+                gen_info["times"] = "No time, sorry"
         else:
             raise Exception("Tried to log gen before evaluating")
         return
@@ -128,7 +130,7 @@ class GeneticAlgorithm:
         print_info = {} # stuff to put info into
         keep = [
             "avg pop fitness", "num total innovations", "num new innovations",
-            "total pop fitness", "best genome fitness"
+            "total pop fitness", "best genome fitness", "times"
             ]
         if params.selection_strategy == "speciation":
             keep += [
