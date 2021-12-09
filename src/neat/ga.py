@@ -1,11 +1,17 @@
 import random as rd
-
+from copy import deepcopy
+from src.neatutils import timer
 from . import params, innovs, startconfigs
 from .genome import GeneticNet
 from .species import Species
 
 class GeneticAlgorithm:
-    def __init__(self, params_name:str, log)-> None:
+    def __init__(
+            self,
+            params_name:str,
+            log,
+            is_minimal_serialization=False,
+            is_timed=False)-> None:
         self.history = {}
         self.params_name = params_name
         self.log = log
@@ -15,6 +21,10 @@ class GeneticAlgorithm:
         self.global_mutation_rate = 0 # 0 -> normal or 1 -> high
 
         # measurement stuff general
+        if is_timed:
+            self.timer = timer.Timer()
+            self.is_timed = True
+        self.is_minimal_serialization = is_minimal_serialization,
         self.best_genome = None
         self.total_pop_fitness = None
         self.avg_pop_fitness = None
@@ -37,29 +47,31 @@ class GeneticAlgorithm:
         """
         # evaluate old generation and save results in history
         self.evaluate_curr_generation()
-        # make a new population
-        self.old_innovcount = len(innovs.arcs)
-        if params.selection_strategy == "speciation":
-            self.speciation_pop_update()
-        elif params.selection_strategy == "roulette":
-            self.roulette_pop_update()
-        elif params.selection_strategy == "truncation": # https://www.researchgate.net/publication/259461147_Selection_Methods_for_Genetic_Algorithms
-            self.truncation_pop_update()
-        self.new_innovcount = len(innovs.arcs)
+        self.is_curr_gen_evaluated = True
+
+        # writes info into gen info dict
+        self.log_gen_info()
+
         # increment generation
         self.curr_gen += 1
+
+        # make a new population
+        self.pop_update()
+        self.is_curr_gen_evaluated = False
+
         # return info about curr generation
         return self.get_printable_gen_info(self.curr_gen - 1)
         
 
     def evaluate_curr_generation(self) -> None:
-        """Evaluates genomes (and species if necessary), writes info into gen info dict
+        """Evaluates genomes (and species if necessary)
         """
         # evaluate current genomes and species
+        if self.is_timed: self.timer.start("evaluate_curr_generation", self.curr_gen)
         self.evaluate_curr_genomes()
         if params.selection_strategy == "speciation":
             self.evaluate_curr_species()
-        self.log_gen_info()
+        if self.is_timed: self.timer.stop("evaluate_curr_generation", self.curr_gen)
         return
 
     def evaluate_curr_genomes(self) -> None:
@@ -74,23 +86,37 @@ class GeneticAlgorithm:
         """Writes info about current gen into history. Careful not to add too much
         info that can be a-posteriori calculated in get_info_about_gen()
         """
-        # dict for evaluation of current gen
-        gen_info = self.history[self.curr_gen] = {}
-        # save info about species
-        if params.selection_strategy == "speciation":
-            gen_info["species"] = self.species
-            gen_info["num total species"] = len(self.species)
-            gen_info["num new species"] = self.num_new_species
-            gen_info["best species"] = self.best_species.name
-            gen_info["best species avg fitness"] = self.best_species.avg_fitness
-        # save info about generation in general
-        gen_info["num total innovations"] = self.new_innovcount
-        gen_info["num new innovations"] = self.new_innovcount - self.old_innovcount
-        gen_info["best genome"] = self.population[0]
-        gen_info["best genome fitness"] = self.population[0].fitness
-        gen_info["avg pop fitness"] = self.total_pop_fitness / params.popsize
-        gen_info["total pop fitness"] = self.total_pop_fitness
-        gen_info["population"] = self.population
+        if self.is_curr_gen_evaluated:
+            # dict for evaluation of current gen
+            gen_info = self.history[self.curr_gen] = {}
+
+            # save info about species
+            if params.selection_strategy == "speciation":
+                if self.is_minimal_serialization:
+                    gen_info["species"] = [s.get_curr_info() for s in self.species]
+                else:
+                    gen_info["species"] = self.species
+                gen_info["num total species"] = len(self.species)
+                gen_info["num new species"] = self.num_new_species
+                gen_info["best species"] = self.best_species.name
+                gen_info["best species avg fitness"] = self.best_species.avg_fitness
+
+            # save info about generation in general
+            if self.is_minimal_serialization: # TODO really not sure if pop should still be saved
+                gen_info["best genome"] = self.population[0].get_curr_info()
+                gen_info["population"] = [s.get_curr_info() for s in self.population]
+            else: # TODO this is very likely super borked
+                gen_info["best genome"] = deepcopy(self.population[0])
+                gen_info["population"] = deepcopy(self.population)
+            gen_info["num total innovations"] = self.new_innovcount
+            gen_info["num new innovations"] = self.new_innovcount - self.old_innovcount
+            gen_info["best genome fitness"] = self.population[0].fitness
+            gen_info["avg pop fitness"] = self.total_pop_fitness / params.popsize
+            gen_info["total pop fitness"] = self.total_pop_fitness
+            if self.is_timed and self.curr_gen > 0:
+                gen_info["times"] = self.timer.get_gen_times(self.curr_gen)
+        else:
+            raise Exception("Tried to log gen before evaluating")
         return
 
     def get_printable_gen_info(self, gen) -> dict:
@@ -131,6 +157,21 @@ class GeneticAlgorithm:
 # ------------------------------------------------------------------------------
 # POPULATION UPDATES -----------------------------------------------------------
 # ------------------------------------------------------------------------------
+
+    def pop_update(self) -> None:
+        if self.is_timed: self.timer.start("pop_update", self.curr_gen)
+        self.old_innovcount = len(innovs.arcs)
+
+        if params.selection_strategy == "speciation":
+            self.speciation_pop_update()
+        elif params.selection_strategy == "roulette":
+            self.roulette_pop_update()
+        elif params.selection_strategy == "truncation": # https://www.researchgate.net/publication/259461147_Selection_Methods_for_Genetic_Algorithms
+            self.truncation_pop_update()
+
+        self.new_innovcount = len(innovs.arcs)
+        if self.is_timed: self.timer.stop("pop_update", self.curr_gen)
+        return
 
 # SPECIATION -------------------------------------------------------------------
 

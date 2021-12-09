@@ -23,6 +23,7 @@ class Species:
         self.num_gens_no_improvement = 0
         self.curr_mutation_rate = 0 # 0 -> normal or 1 -> high
 
+    
     def add_member(self, new_genome) -> None:
         """Just appends a new genome to the alive_members and updates the new_members count.
         """
@@ -30,6 +31,7 @@ class Species:
         new_genome.species_id = self.name
         return
 
+    
     def update(self) -> None:
         """Checks if the species continues to survive into the next generation. If so,
         the total fitness of the species is calculated and adjusted according to the age
@@ -79,6 +81,7 @@ class Species:
             self.alive_members = [] # gotta test this for python
             return
             
+    
     def calculate_offspring_amount(self, total_avg_species_fitness) -> None:
         """This func does not care about the fitness of individual members. It
         calculates the total spawn tickets allotted to this species by comparing
@@ -88,6 +91,7 @@ class Species:
         # prevent species added in the current gen from producing offspring
         if self.age > 0:
             self.num_to_spawn = round((self.avg_fitness_adjusted / total_avg_species_fitness) * params.popsize)
+    
     
     def elite_spawn(self) -> GeneticNet:
         """Returns a copy of the species leader WITHOUT INCREASING SPAWN COUNT
@@ -117,6 +121,7 @@ class Species:
         self.spawn_count += 1
         return baby
 
+
     def asex_spawn(self) -> GeneticNet:
         """Copy a member from the pool, mutates it, and returns it.
         """
@@ -129,3 +134,26 @@ class Species:
         baby.mutate(self.curr_mutation_rate)
         self.spawn_count += 1
         return baby
+
+
+    def get_curr_info(self) -> dict:
+        """Used for serialization when not wanting to save the entire object
+        """
+        info_d = {}
+        info_d["name"] = self.name
+        info_d["alive_member_ids"] = [g.id for g in self.alive_members]
+        info_d["age"] = self.age
+        info_d["representative_id"] = self.representative.id
+        info_d["leader_id"] = self.leader.id
+        info_d["num_members"] = self.num_members
+        info_d["pool"] = [g.id for g in self.pool]
+        info_d["expected_offspring"] = self.expected_offspring
+        info_d["spawn_count"] = self.spawn_count
+        info_d["avg_fitness"] = self.avg_fitness
+        info_d["avg_fitness_adjusted"] = self.avg_fitness_adjusted
+        info_d["best_ever_fitness"] = self.best_ever_fitness
+        info_d["obliterate"] = self.obliterate
+        info_d["num_to_spawn"] = self.num_to_spawn
+        info_d["num_gens_no_improvement"] = self.num_gens_no_improvement
+        info_d["curr_mutation_rate"] = self.curr_mutation_rate
+        return info_d

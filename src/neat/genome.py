@@ -54,7 +54,7 @@ class GeneticNet:
         if rd.random() < params.prob_new_empty_t[mutation_rate]:
             self.extend_new_trans()
         if rd.random() < params.prob_split_arc[mutation_rate]:
-            pass
+            self.split_arc()
         # for arc in self.arcs:
         #     if rd.random() < params.prob_increase_arcs[mutation_rate]:
         #         pass
@@ -415,3 +415,20 @@ class GeneticNet:
             for _ in range(a.n_arcs):
                 viz.edge(a.source_id, a.target_id, label=str(name), fontsize=fsize, arrowhead=ahead)
         return viz
+
+
+    def get_curr_info(self) -> dict:
+        """Used for serialization when not wanting to save the entire object
+        """
+        info_d = {}
+        info_d["id"] = self.id
+        info_d["fitness"] = self.fitness
+        info_d["trace_fitness"] = self.trace_fitness
+        info_d["is_sound"] = self.is_sound
+        info_d["precision"] = self.precision
+        info_d["generalization"] = self.generalization
+        info_d["simplicity"] = self.simplicity
+        info_d["transitions"] = self.transitions
+        info_d["places"] = self.places
+        info_d["arcs"] = self.arcs
+        return info_d
