@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from copy import deepcopy
+from copy import copy
 
 @dataclass(frozen=False) # think about if we can make it true -> would require copying shit
 class GArc:
@@ -9,7 +9,7 @@ class GArc:
     n_arcs: int = 1
 
     def get_copy(self):
-        return deepcopy(self)
+        return copy(self)
 
 @dataclass(frozen=True)
 class GTrans:
@@ -17,7 +17,7 @@ class GTrans:
     is_task: bool
 
     def get_copy(self):
-        return deepcopy(self)
+        return copy(self)
 
 
 @dataclass(frozen=True)
@@ -27,4 +27,4 @@ class GPlace:
     is_end: bool = False
 
     def get_copy(self):
-        return deepcopy(self)
+        return copy(self)
