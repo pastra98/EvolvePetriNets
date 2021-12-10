@@ -14,13 +14,13 @@ def main():
 
     results = {}
     stop_cond = "xyz"
-    stop_gen = 3
+    stop_gen = 200
 
     for p in param_files:
         # measure time, initialize new ga
         ga_start_time = datetime.datetime.now()
         print(f"\n{80*'-'}\n{ga_start_time}: loading new ga with params {p}\n")
-        new_ga = ga.GeneticAlgorithm(p, log)
+        new_ga = ga.GeneticAlgorithm(p, log, True, True)
 
         # run current ga
         stop_ga = False
@@ -29,7 +29,7 @@ def main():
             # try to go to the next generation
             try:
                 gen_info = new_ga.next_generation()
-                print(f"GA_{p} GEN: {new_ga.curr_gen}\n{pp.pformat(gen_info)}\n{8*'-'}")
+                print(f"GA {p} GEN: {new_ga.curr_gen}\n{pp.pformat(gen_info)}\n{8*'-'}")
             # on exception save the ga
             except Exception as exception:
                 print(f"GA_{p} encountered an exception in generation {new_ga.curr_gen}")
@@ -49,7 +49,8 @@ def main():
                 print(f"GA_{p} reached {stop_cond}: {gen_info['best genome fitness']}\n\n")
 
                 # save results, incl. time
-                results[f"{p}_ga_params"] = new_ga.history | {"time took": ga_total_time}
+                results[f"{p}_ga_params"] = new_ga.history 
+                results | {"time took": ga_total_time}
                 stop_ga = True
 
     # finished with all configurations, stop the process
