@@ -116,7 +116,7 @@ class GeneticAlgorithm:
             if self.is_timed and self.curr_gen > 0:
                 gen_info["times"] = self.timer.get_gen_times(self.curr_gen)
             else:
-                gen_info["times"] = "No time, sorry"
+                gen_info["times"] = None
         else:
             raise Exception("Tried to log gen before evaluating")
         return
