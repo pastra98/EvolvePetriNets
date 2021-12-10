@@ -123,16 +123,23 @@ def info_about_gen(gen: int):
 info_about_gen(20)
 
 # %%
-import matplotlib.pyplot as plt
 
-gens = d["speciation_params_ga_params"]
-if "time took" in gens:
-    del gens["time took"]
+def get_n_sound(picklename):
+    with open(picklename, "rb") as f:
+        d = pkl.load(f)
+    sounds = 0
+    all = 0
+    for gen, info_dict in d["speciation_params_ga_params"].items():
+        if gen != "time took":
+            if int(gen) > 0:
+                pop = info_dict["population"]
+                for g in pop:
+                    if g["is_sound"]:
+                        sounds += 1
+                    all += 1
+    return all, sounds
 
-avgs = []
+a, s = get_n_sound("results/data/12-09-2021_20-53-10_results.pkl")
 
-for gen in gens:
-    # print(f"{gen} - {gens[gen]['avg pop fitness']}")
-    avgs.append(gens[gen]['avg pop fitness'])
-
-plt.plot(avgs)
+print(a)
+print(s)
