@@ -1,3 +1,5 @@
+import cProfile
+
 import datetime
 import pickle
 import pprint as pp
@@ -14,7 +16,7 @@ def main():
 
     results = {}
     stop_cond = "xyz"
-    stop_gen = 200
+    stop_gen = 10
 
     for p in param_files:
         # measure time, initialize new ga
@@ -61,12 +63,16 @@ def main():
     results_fname = f"results/data/{finish_time.strftime('%m-%d-%Y_%H-%M-%S')}_results.pkl"
     with open(results_fname, "wb") as f:
         pickle.dump(results, f)
-    print(f"File saved as:\n{results_fname}\nStopping program!")
+    print(f"File saved as:\n{results_fname}")
 
     return
 
 
 if __name__ == "__main__":
-    main()
+    with cProfile.Profile() as pr:
+        main()  
+    t = datetime.datetime.now()
+    pr.dump_stats(f"{t.strftime('%m-%d-%Y_%H-%M-%S')}_profile.prof")
+    print("profile dumped\nStopping program!")
 else:
     raise Exception("this file should not be imported!")
