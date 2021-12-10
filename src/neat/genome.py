@@ -405,11 +405,14 @@ class GeneticNet:
         # places
         for p in self.places:
             if p == "start":
-                viz.node("start", style='filled', fillcolor="green", fontsize=fsize, shape='circle', fixedsize='true', width='0.75')
+                viz.node("start", style='filled', fillcolor="green", fontsize=fsize,
+                            shape='circle', fixedsize='true', width='0.75')
             elif p == "end":
-                viz.node("end", style='filled', fillcolor="orange", fontsize=fsize, shape='circle', fixedsize='true', width='0.75')
+                viz.node("end", style='filled', fillcolor="orange", fontsize=fsize,
+                            shape='circle', fixedsize='true', width='0.75')
             else:
-                viz.node(p, p, style='filled', fillcolor=pcol, fontsize=fsize, shape='circle', fixedsize='true', width='0.75')
+                viz.node(p, p, style='filled', fillcolor=pcol, fontsize=fsize,
+                            shape='circle', fixedsize='true', width='0.75')
         # arcs
         for name, a in self.arcs.items():
             for _ in range(a.n_arcs):

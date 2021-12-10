@@ -40,6 +40,7 @@ class GeneticAlgorithm:
         params.load(params_name)
         innovs.reset()
         self.set_initial_pop()
+
     
     def next_generation(self) -> dict:
         """Makes new generation, evaluates it, and returns info that can be used
@@ -74,6 +75,7 @@ class GeneticAlgorithm:
         if self.is_timed: self.timer.stop("evaluate_curr_generation", self.curr_gen)
         return
 
+
     def evaluate_curr_genomes(self) -> None:
         # this is where multithreading magic will happen - i.e. this will need a rewrite
         self.total_pop_fitness = 0
@@ -81,6 +83,7 @@ class GeneticAlgorithm:
             g.evaluate_fitness(self.log)
             self.total_pop_fitness += g.fitness
         self.population.sort(key=lambda g: g.fitness, reverse=True)
+
 
     def log_gen_info(self) -> None:
         """Writes info about current gen into history. Careful not to add too much
@@ -121,6 +124,7 @@ class GeneticAlgorithm:
             raise Exception("Tried to log gen before evaluating")
         return
 
+
     def get_printable_gen_info(self, gen) -> dict:
         """returns a dict of info about a generation. Uses info from self.history,
         and writes nothing to it. Intended to print info during evolution runs.
@@ -138,6 +142,7 @@ class GeneticAlgorithm:
             ]
         print_info = print_info | {k: gen_info[k] for k in keep}
         return print_info
+
 
     def set_initial_pop(self) -> None:
         """
@@ -220,6 +225,7 @@ class GeneticAlgorithm:
         self.population = new_genomes
         return
 
+
     def evaluate_curr_species(self) -> None:
         """
         """
@@ -246,6 +252,7 @@ class GeneticAlgorithm:
         self.species = updated_species
         return
 
+
     def find_species(self, new_genome) -> Species:
         """Tries to find a species to which the given genome is similar enough to be
         added as a member. If no compatible species is found, a new one is made. Returns
@@ -263,8 +270,10 @@ class GeneticAlgorithm:
             found_species = self.make_new_species(new_genome)
         return found_species
 
+
     def make_hybrids(self, num) -> list:
         return []
+
 
     def make_new_species(self, founding_member: GeneticNet) -> Species:
         """Generates a new species with a unique id, assigns the founding member as
