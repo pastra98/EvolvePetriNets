@@ -14,19 +14,23 @@ def main(conf: dict) -> None:
         for run in range(setup["n_runs"]):
             run_start = datetime.datetime.now()
             # create a dir for the current run, along with subdir for reports
-            run_name = f"{run}_{setup['setupname']}_{fs_compatible_time(run_start)}"
+            run_name = f"{setup['setupname']}_{run}_{fs_compatible_time(run_start)}"
             run_dir = f"{results_path}/{run_name}"
             os.makedirs(f"{run_dir}/reports")
 
             # run the current setup once, profile if enabled in setup, save result
             print(f"\n{80*'-'}\n{run_start}: loading new ga with params {setup['parampath']}\n")
-            if setup["is_profiled"]:
-                with cProfile.Profile() as pr:
+            try:
+                if setup["is_profiled"]:
+                    with cProfile.Profile() as pr:
+                        run_result = run_setup(setup)
+                    pr.dump_stats(f"{run_dir}/{run_name}_profile.prof")
+                    print("profile dumped!")
+                else:
                     run_result = run_setup(setup)
-                pr.dump_stats(f"{run_dir}/{run_name}_profile.prof")
-                print("profile dumped!")
-            else:
-                run_result = run_setup(setup)
+            except: # woops, maybe config or log path or something messed up
+                run_result = {"EXCEPTION": traceback.format_exc()}
+                print(traceback.format_exc())
                 
             # update results of this run with times
             run_end = datetime.datetime.now()
@@ -34,7 +38,7 @@ def main(conf: dict) -> None:
             print(f"{80*'/'}\nRun finished at {run_end}, dumping results in pickle file!")
             # write results of run to pkl file
             if "EXCEPTION" in run_result:
-                run_name += "EXCEPTION"
+                run_name += "___EXCEPTION"
             results_name = f"{run_dir}/{run_name}_results.pkl"
             with open(results_name, "wb") as f:
                 pickle.dump(run_result, f)
