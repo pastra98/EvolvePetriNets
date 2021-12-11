@@ -12,7 +12,7 @@
             },
             "stop_cond": {
                 "var": "gen",
-                "val": 20
+                "val": 60
             },
             "n_runs": 1,
             "print_gen_info": true,
