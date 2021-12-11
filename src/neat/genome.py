@@ -281,7 +281,7 @@ class GeneticNet:
             elif innov in self.arcs or innov in other_genome.arcs:
                 num_disjoint += 1
             innov_count += 1
-        # calculate the distance
+        # calculate the distance TODO: this is still not perfect - maybe consider matched ones?
         distance = ((params.coeff_disjoint * num_disjoint) / longest +
                     (params.coeff_excess * num_excess) / longest)
         # print(f"num_matched : {num_matched}")
