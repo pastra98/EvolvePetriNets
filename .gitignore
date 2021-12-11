@@ -9,3 +9,4 @@ pm_data/
 *.pyc
 *.mps
 *.prof
+*.sol
