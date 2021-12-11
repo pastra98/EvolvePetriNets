@@ -14,7 +14,7 @@ def main(conf: dict) -> None:
         for run in range(setup["n_runs"]):
             run_start = datetime.datetime.now()
             # create a dir for the current run, along with subdir for reports
-            run_name = f"{setup['setupname']}_{run}_{fs_compatible_time(run_start)}"
+            run_name = f"{setup['setupname']}_{run}___{fs_compatible_time(run_start)}"
             run_dir = f"{results_path}/{run_name}"
             os.makedirs(f"{run_dir}/reports")
 
@@ -49,8 +49,7 @@ def main(conf: dict) -> None:
     dur = exec_end_time - exec_start_time
     print(f"Execution finished at: {exec_end_time}\nTime: {dur}")
     with open(f"{results_path}/times.txt", "w") as f:
-        f.write(f"""{fs_compatible_time(exec_start_time)}
-            {fs_compatible_time(exec_end_time)}\n{dur}""")
+        f.write(f"""{exec_start_time}\n{exec_end_time}\n{dur}""")
 
 
 def run_setup(setup):
@@ -71,7 +70,7 @@ def run_setup(setup):
         try:
             gen_info = curr_ga.next_generation()
             if setup["print_gen_info"]:
-                print(f"GA {setup['setupname']} GEN: {curr_ga.curr_gen}")
+                print(f"GA {setup['setupname']} GEN: {gen_info['gen']}")
                 print(f"{pprint.pformat(gen_info)}\n{8*'-'}")
         # on exception save the ga, return to main
         except Exception:
