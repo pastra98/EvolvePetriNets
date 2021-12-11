@@ -16,13 +16,13 @@ def main():
 
     results = {}
     stop_cond = "xyz"
-    stop_gen = 10
+    stop_gen = 50
 
     for p in param_files:
         # measure time, initialize new ga
         ga_start_time = datetime.datetime.now()
         print(f"\n{80*'-'}\n{ga_start_time}: loading new ga with params {p}\n")
-        new_ga = ga.GeneticAlgorithm(p, log, True, True)
+        new_ga = ga.GeneticAlgorithm(p, log, is_minimal_serialization=False, is_timed=True)
 
         # run current ga
         stop_ga = False
@@ -67,12 +67,18 @@ def main():
 
     return
 
+def parse_arguments():
+    pass
 
 if __name__ == "__main__":
-    with cProfile.Profile() as pr:
-        main()  
-    t = datetime.datetime.now()
-    pr.dump_stats(f"{t.strftime('%m-%d-%Y_%H-%M-%S')}_profile.prof")
-    print("profile dumped\nStopping program!")
+    # with cProfile.Profile() as pr:
+    #     main()  
+    # t = datetime.datetime.now()
+    # pr.dump_stats(f"{t.strftime('%m-%d-%Y_%H-%M-%S')}_profile.prof")
+    # print("profile dumped\nStopping program!")
+
+    main()  
+
+
 else:
     raise Exception("this file should not be imported!")
