@@ -1,5 +1,5 @@
 import random as rd
-from copy import deepcopy
+from copy import copy
 from neatutils import timer
 from . import params, innovs, startconfigs
 from .genome import GeneticNet
@@ -11,7 +11,8 @@ class GeneticAlgorithm:
             params_name:str,
             log,
             is_minimal_serialization=False,
-            is_timed=False)-> None:
+            is_pop_serialized=True,
+            is_timed=True)-> None:
         self.history = {}
         self.params_name = params_name
         self.log = log
@@ -24,7 +25,8 @@ class GeneticAlgorithm:
         if is_timed:
             self.timer = timer.Timer()
             self.is_timed = True
-        self.is_minimal_serialization = is_minimal_serialization,
+        self.is_minimal_serialization = is_minimal_serialization
+        self.is_pop_serialized = is_pop_serialized
         self.best_genome = None
         self.total_pop_fitness = None
         self.avg_pop_fitness = None
@@ -83,6 +85,7 @@ class GeneticAlgorithm:
             g.evaluate_fitness(self.log)
             self.total_pop_fitness += g.fitness
         self.population.sort(key=lambda g: g.fitness, reverse=True)
+        return
 
 
     def log_gen_info(self) -> None:
@@ -95,22 +98,25 @@ class GeneticAlgorithm:
 
             # save info about species
             if params.selection_strategy == "speciation":
-                if self.is_minimal_serialization:
-                    gen_info["species"] = [s.get_curr_info() for s in self.species]
-                else:
-                    gen_info["species"] = self.species
+                if self.is_pop_serialized:
+                    if self.is_minimal_serialization:
+                        gen_info["species"] = [s.get_curr_info() for s in self.species]
+                    else:
+                        gen_info["species"] = [copy(s) for s in self.species]
                 gen_info["num total species"] = len(self.species)
                 gen_info["num new species"] = self.num_new_species
                 gen_info["best species"] = self.best_species.name
                 gen_info["best species avg fitness"] = self.best_species.avg_fitness
 
             # save info about generation in general
-            if self.is_minimal_serialization: # TODO really not sure if pop should still be saved
-                gen_info["best genome"] = self.population[0].get_curr_info()
-                gen_info["population"] = [s.get_curr_info() for s in self.population]
-            else: # TODO this is very likely super borked
-                gen_info["best genome"] = deepcopy(self.population[0])
-                gen_info["population"] = deepcopy(self.population)
+            if self.is_pop_serialized:
+                if self.is_minimal_serialization: # TODO really not sure if pop should still be saved
+                    gen_info["best genome"] = self.population[0].get_curr_info()
+                    gen_info["population"] = [s.get_curr_info() for s in self.population]
+                else: # TODO this is very likely super borked
+                    gen_info["best genome"] = copy(self.population[0])
+                    gen_info["population"] = [copy(g) for g in self.population]
+
             gen_info["num total innovations"] = self.new_innovcount
             gen_info["num new innovations"] = self.new_innovcount - self.old_innovcount
             gen_info["best genome fitness"] = self.population[0].fitness
@@ -119,7 +125,7 @@ class GeneticAlgorithm:
             if self.is_timed and self.curr_gen > 0:
                 gen_info["times"] = self.timer.get_gen_times(self.curr_gen)
             else:
-                gen_info["times"] = None
+                gen_info["times"] = None # TODO fix this
         else:
             raise Exception("Tried to log gen before evaluating")
         return
