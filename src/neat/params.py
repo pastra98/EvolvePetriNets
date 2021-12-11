@@ -40,7 +40,6 @@ selection_strategy: str # "speciation" / "roulette" / "truncation"
 
 # -------------------- selection strategy: SPECIATION
 species_boundary: float
-coeff_matched: float
 coeff_disjoint: float
 coeff_excess: float
 
