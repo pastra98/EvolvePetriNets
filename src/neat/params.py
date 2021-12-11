@@ -1,21 +1,20 @@
 import json
 
-name: str
-vars_not_in_config = ["name"]
+name = None
 
-def load(fname: str, savepath="param_files/"):
+def load(fpath: str):
     """Read in a params json, assign global variables to it
     """
-    savepath = savepath + fname + ".json"
-    with open(savepath) as f:
-        global name
-        name = fname
+    global name
+    name = fpath
+    with open(fpath) as f:
         new_params = json.load(f)
     for k in globals()["__annotations__"]:
         if k in new_params:
             globals()[k] = new_params[k]
-        elif k not in vars_not_in_config:
+        else:
             print(f"Parameter '{k}' missing in json")
+
 
 def new_param_json(fname: str, save_current=False, savepath="param_files/"):
     """Save list of variables, along with a type hint
@@ -24,14 +23,21 @@ def new_param_json(fname: str, save_current=False, savepath="param_files/"):
     vars = globals()["__annotations__"]
     export_vars = {}
     for k, v in list(vars.items()):
-        if k not in vars_not_in_config:
-            if save_current and k in globals():
-                export_vars[k] = globals()[k]
-            else:
-                export_vars[k] = str(v)
+        if save_current and k in globals():
+            export_vars[k] = globals()[k]
+        else:
+            export_vars[k] = str(v)
     with open(savepath, "w") as f:
         json.dump(export_vars, f, indent=4)
         print(f"saved params at:\n{savepath}")
+
+
+def get_curr_curr_dict() -> dict:
+    export_vars = {}
+    for k in globals()["__annotations__"]:
+        export_vars[k] = globals()[k]
+    return export_vars
+
 
 # ---------- GENERAL GA SETTINGS
 start_config: str

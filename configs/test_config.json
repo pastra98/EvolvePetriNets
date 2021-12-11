@@ -1,0 +1,22 @@
+{
+    "name": "testing",
+    "setups": [
+        {
+            "setupname": "speciation_test",
+            "parampath": "params/testing/default_speciation_params.json",
+            "logpath": "pm_data/running_example.xes",
+            "ga_kwargs": {
+                "is_pop_serialized": true,
+                "is_minimal_serialization": false,
+                "is_timed": true
+            },
+            "stop_cond": {
+                "var": "gen",
+                "val": 20
+            },
+            "n_runs": 1,
+            "print_gen_info": true,
+            "is_profiled": true
+        }
+    ]
+}

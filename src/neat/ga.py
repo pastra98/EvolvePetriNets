@@ -137,7 +137,7 @@ class GeneticAlgorithm:
         Can calculate new info that I don't want to save in history.
         """
         gen_info  = self.history[gen] # stuff to take info from
-        print_info = {} # stuff to put info into
+        print_info = {"gen": gen} # other stuff to put info into?
         keep = [
             "avg pop fitness", "num total innovations", "num new innovations",
             "total pop fitness", "best genome fitness", "times"
@@ -166,6 +166,12 @@ class GeneticAlgorithm:
         # set initial pop
         self.population = initial_pop
         return
+    
+
+    def get_ga_final_info(self) -> dict:
+        """Returns dict of history along with dict of param values
+        """ 
+        return {"history": self.history, "param values": params.get_curr_curr_dict()}
 
 # ------------------------------------------------------------------------------
 # POPULATION UPDATES -----------------------------------------------------------

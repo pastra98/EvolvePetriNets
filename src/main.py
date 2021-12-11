@@ -1,84 +1,98 @@
-import cProfile
-
-import datetime
-import pickle
-import pprint as pp
-
-from neat import ga
+import cProfile, sys, os, json, traceback, datetime, pickle, pprint
 from pm4py.objects.log.importer.xes import importer as xes_importer
+from neat import ga
+
+def main(conf: dict) -> None:
+    conf_name = conf["name"]
+    exec_start_time = datetime.datetime.now()
+    # create new dir for the current conf execution
+    results_path = f"results/data/{conf_name}_{fs_compatible_time(exec_start_time)}"
+    os.mkdir(results_path)
+
+    for setup in conf["setups"]:
+
+        for run in range(setup["n_runs"]):
+            run_start = datetime.datetime.now()
+            # create a dir for the current run, along with subdir for reports
+            run_name = f"{run}_{setup['setupname']}_{fs_compatible_time(run_start)}"
+            run_dir = f"{results_path}/{run_name}"
+            os.makedirs(f"{run_dir}/reports")
+
+            # run the current setup once, profile if enabled in setup, save result
+            print(f"\n{80*'-'}\n{run_start}: loading new ga with params {setup['parampath']}\n")
+            if setup["is_profiled"]:
+                with cProfile.Profile() as pr:
+                    run_result = run_setup(setup)
+                pr.dump_stats(f"{run_dir}/{run_name}_profile.prof")
+                print("profile dumped!")
+            else:
+                run_result = run_setup(setup)
+                
+            # update results of this run with times
+            run_end = datetime.datetime.now()
+            run_result |= {"start": run_start, "end": run_end, "time": run_end - run_start}
+            print(f"{80*'/'}\nRun finished at {run_end}, dumping results in pickle file!")
+            # write results of run to pkl file
+            if "EXCEPTION" in run_result:
+                run_name += "EXCEPTION"
+            results_name = f"{run_dir}/{run_name}_results.pkl"
+            with open(results_name, "wb") as f:
+                pickle.dump(run_result, f)
+            print(f"File saved as:\n{results_name}")
+    
+    # info about overall execution (may put log in there) TODO: dump output log here
+    exec_end_time = datetime.datetime.now()
+    dur = exec_end_time - exec_start_time
+    print(f"Execution finished at: {exec_end_time}\nTime: {dur}")
+    with open(f"{results_path}/times.txt", "w") as f:
+        f.write(f"""{fs_compatible_time(exec_start_time)}
+            {fs_compatible_time(exec_end_time)}\n{dur}""")
 
 
-def main():
-    log_path = "pm_data/running_example.xes" # "pm_data/m1_log.xes"
-    log = xes_importer.apply(log_path)
+def run_setup(setup):
+    log = xes_importer.apply(setup["logpath"])
+    stopvar, stopval = setup["stop_cond"]["var"], setup["stop_cond"]["val"]
+    # initialize GeneticAlgorithm with setup info
+    curr_ga = ga.GeneticAlgorithm(
+        setup["parampath"],
+        log,
+        is_minimal_serialization=setup["ga_kwargs"]["is_minimal_serialization"],
+        is_pop_serialized=setup["ga_kwargs"]["is_pop_serialized"],
+        is_timed=setup["ga_kwargs"]["is_timed"]
+        )
+    # run current ga
+    stop_ga = False
+    while not stop_ga:
+        # try to go to the next generation
+        try:
+            gen_info = curr_ga.next_generation()
+            if setup["print_gen_info"]:
+                print(f"GA {setup['setupname']} GEN: {curr_ga.curr_gen}")
+                print(f"{pprint.pformat(gen_info)}\n{8*'-'}")
+        # on exception save the ga, return to main
+        except Exception:
+            print(f"GA_{setup['parampath']}\nEXCEPTION in generation {curr_ga.curr_gen}")
+            print(f" -> {traceback.format_exc()}\nSaving curr ga state!")
+            result = curr_ga.get_ga_final_info()
+            result["EXCEPTION"] = traceback.format_exc()
+            return result
+        # check if reach stopping codition, could be anything
+        if gen_info[stopvar] == stopval: # TODO probably will have to think about other operators
+            print(f"{setup['setupname']} reached {stopvar} of {stopval}")
+            result = curr_ga.get_ga_final_info()
+            return result
 
-    param_files = ["speciation_params"] # list of param file(names)
 
-    results = {}
-    stop_cond = "xyz"
-    stop_gen = 50
+def fs_compatible_time(dt) -> str:
+    return dt.strftime('%m-%d-%Y_%H-%M-%S')
 
-    for p in param_files:
-        # measure time, initialize new ga
-        ga_start_time = datetime.datetime.now()
-        print(f"\n{80*'-'}\n{ga_start_time}: loading new ga with params {p}\n")
-        new_ga = ga.GeneticAlgorithm(p, log, is_minimal_serialization=False, is_timed=True)
-
-        # run current ga
-        stop_ga = False
-        while not stop_ga:
-
-            # try to go to the next generation
-            try:
-                gen_info = new_ga.next_generation()
-                print(f"GA {p} GEN: {new_ga.curr_gen}\n{pp.pformat(gen_info)}\n{8*'-'}")
-            # on exception save the ga
-            except Exception as exception:
-                print(f"GA_{p} encountered an exception in generation {new_ga.curr_gen}")
-                print(f" -> {exception}\nThe current state of the ga will be saved!")
-                results[f"{p}_ga_params_EXCEPTION"] = new_ga.history | {
-                    "time": datetime.datetime.now(),
-                    "exception" : exception
-                    }
-                break
-
-            # check if reach stopping codition, could be anything
-            if gen_info["best genome fitness"] == stop_cond or new_ga.curr_gen == stop_gen:
-                # print info about current ga
-                ga_end_time = datetime.datetime.now()
-                ga_total_time = ga_end_time - ga_start_time 
-                print(f"\n{40*'-'}\nGA_{p} stop time: {ga_end_time}, time: {ga_total_time}")
-                print(f"GA_{p} reached {stop_cond}: {gen_info['best genome fitness']}\n\n")
-
-                # save results, incl. time
-                results[f"{p}_ga_params"] = new_ga.history 
-                results | {"time took": ga_total_time}
-                stop_ga = True
-
-    # finished with all configurations, stop the process
-    finish_time = datetime.datetime.now()
-    print(f"Process finished at {finish_time}, dumping results in pickle file!")
-
-    # write results to pkl file
-    results_fname = f"results/data/{finish_time.strftime('%m-%d-%Y_%H-%M-%S')}_results.pkl"
-    with open(results_fname, "wb") as f:
-        pickle.dump(results, f)
-    print(f"File saved as:\n{results_fname}")
-
-    return
-
-def parse_arguments():
-    pass
 
 if __name__ == "__main__":
-    # with cProfile.Profile() as pr:
-    #     main()  
-    # t = datetime.datetime.now()
-    # pr.dump_stats(f"{t.strftime('%m-%d-%Y_%H-%M-%S')}_profile.prof")
-    # print("profile dumped\nStopping program!")
-
-    main()  
-
-
+    try:
+        with open(sys.argv[1]) as f:
+            config = json.load(f)
+    except:
+        raise Exception("passed invalid config filepath!")
+    main(config)
 else:
     raise Exception("this file should not be imported!")
