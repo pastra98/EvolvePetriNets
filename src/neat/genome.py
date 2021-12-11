@@ -239,7 +239,7 @@ class GeneticNet:
 # REPRODUCTION RELATED STUFF ---------------------------------------------------
 # ------------------------------------------------------------------------------
 
-    def get_compatibility_score(self, other_genome) -> float:
+    def get_compatibility_score(self, other_genome, printstuff=False) -> float:
         """Calculates how similar this genome is to another genome according to the
         formula proposed in the original NEAT Paper. See distance variable to see
         how the formula works. It's parameters can be adjusted.
@@ -284,10 +284,9 @@ class GeneticNet:
         # calculate the distance TODO: this is still not perfect - maybe consider matched ones?
         distance = ((params.coeff_disjoint * num_disjoint) / longest +
                     (params.coeff_excess * num_excess) / longest)
-        # print(f"num_matched : {num_matched}")
-        # print(f"num_disjoint : {num_disjoint}")
-        # print(f"num_excess : {num_excess}")
-        # print(f"arc_count_diff : {arc_count_diff}")
+        if printstuff:
+            print(f"""num_matched: {num_matched}\nnum_disjoint: {num_disjoint}
+                num_excess: {num_excess}\ncomputed distance: {distance}""")
         return distance
 
 
