@@ -248,7 +248,6 @@ class GeneticNet:
         num_matched = 0
         num_disjoint = 0
         num_excess = 0
-        arc_count_diff = 0.0
         # get sorted arrays of both genomes innovation historys 
         my_innovs = sorted([a_id for a_id in self.arcs if self.arcs[a_id].n_arcs > 0])
         other_innovs = sorted([a_id for a_id in other_genome.arcs if other_genome.arcs[a_id].n_arcs > 0])
@@ -271,7 +270,6 @@ class GeneticNet:
         for innov in all_Innovations:
             # match: both genomes have invented this arc, calculate difference in number of links
             if innov in self.arcs and innov in other_genome.arcs:
-                arc_count_diff += abs(self.arcs[innov].n_arcs - other_genome.arcs[innov].n_arcs)
                 num_matched += 1
             # excess: elif innov_id exceeds last innov_id of older_Innovations genome, the
             # remaining Innovations in all_Innovations are excess genes. stop the search.
@@ -283,13 +281,8 @@ class GeneticNet:
             elif innov in self.arcs or innov in other_genome.arcs:
                 num_disjoint += 1
             innov_count += 1
-        # If none match, set to 1 to prevent division by zero if no genes match. The
-        # match score is still gives zero because the weight difference is zero.
-        if num_matched == 0:
-            num_matched = 1
         # calculate the distance
-        distance = ((params.coeff_matched * arc_count_diff) / num_matched +
-                    (params.coeff_disjoint * num_disjoint) / longest +
+        distance = ((params.coeff_disjoint * num_disjoint) / longest +
                     (params.coeff_excess * num_excess) / longest)
         # print(f"num_matched : {num_matched}")
         # print(f"num_disjoint : {num_disjoint}")
