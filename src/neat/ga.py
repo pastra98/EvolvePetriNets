@@ -122,10 +122,10 @@ class GeneticAlgorithm:
             gen_info["best genome fitness"] = self.population[0].fitness
             gen_info["avg pop fitness"] = self.total_pop_fitness / params.popsize
             gen_info["total pop fitness"] = self.total_pop_fitness
-            if self.is_timed and self.curr_gen > 0:
+            if self.is_timed:
                 gen_info["times"] = self.timer.get_gen_times(self.curr_gen)
-            else:
-                gen_info["times"] = None # TODO fix this
+                if self.curr_gen == 0:
+                    gen_info["times"]["pop_update"] = 0 # TODO total hack lol
         else:
             raise Exception("Tried to log gen before evaluating")
         return
