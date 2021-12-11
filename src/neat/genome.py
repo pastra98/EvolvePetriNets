@@ -427,3 +427,9 @@ class GeneticNet:
         info_d["places"] = self.places
         info_d["arcs"] = self.arcs
         return info_d
+
+
+    def show_nb_graphviz(self) -> None:
+        from IPython.core.display import display, Image
+        gviz = self.get_graphviz()
+        display(Image(data=gviz.pipe(format="png"), unconfined=True, retina=True))
