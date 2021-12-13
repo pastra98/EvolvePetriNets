@@ -114,8 +114,8 @@ class GeneticAlgorithm:
                     gen_info["best genome"] = self.population[0].get_curr_info()
                     gen_info["population"] = [s.get_curr_info() for s in self.population]
                 else: # TODO this is very likely super borked
-                    gen_info["best genome"] = copy(self.population[0])
-                    gen_info["population"] = [copy(g) for g in self.population]
+                    gen_info["best genome"] = self.population[0].clone()
+                    gen_info["population"] = [g.clone() for g in self.population]
 
             gen_info["num total innovations"] = self.new_innovcount
             gen_info["num new innovations"] = self.new_innovcount - self.old_innovcount
