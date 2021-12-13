@@ -16,7 +16,7 @@ class GeneticAlgorithm:
         self.history = {}
         self.params_name = params_name
         self.log = log
-        self.curr_gen = 0
+        self.curr_gen = 1
 
         # not sure if I will use this, can set mutation rate context for non-neat
         self.global_mutation_rate = 0 # 0 -> normal or 1 -> high
@@ -156,8 +156,9 @@ class GeneticAlgorithm:
         if params.start_config == "concurrent_traces":
             initial_pop = startconfigs.generate_n_traces_with_concurrency(params.popsize, self.log)
         elif params.start_config == "blabla":
-            pass
-            # make other type of startconfig
+            raise NotImplementedError() # make other type of startconfig
+        else:
+            raise NotImplementedError()
         # if using speciation, generate initial set of spec, place genomes there
         if params.selection_strategy == "speciation":
             for g in initial_pop:
