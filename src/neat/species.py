@@ -29,7 +29,6 @@ class Species:
         """
         self.alive_members.append(new_genome)
         new_genome.species_id = self.name
-        return
 
     
     def update(self) -> None:
@@ -78,8 +77,7 @@ class Species:
             self.avg_fitness_adjusted = self.avg_fitness * fit_modif
             # reassign alive members to a new empty array, so new agents can be placed
             # in the next gen. Clearing it also clear the pool, since pool is a reference.
-            self.alive_members = [] # gotta test this for python
-            return
+            self.alive_members = []
             
     
     def calculate_offspring_amount(self, total_avg_species_fitness) -> None:
