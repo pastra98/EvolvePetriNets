@@ -1,6 +1,7 @@
 import cProfile, sys, os, json, traceback, datetime, pickle, pprint
 from pm4py.objects.log.importer.xes import importer as xes_importer
 from neat import ga
+from neatutils import endreports
 
 def main(conf: dict) -> None:
     conf_name = conf["name"]
@@ -39,6 +40,14 @@ def main(conf: dict) -> None:
             # write results of run to pkl file
             if "EXCEPTION" in run_result:
                 run_name += "___EXCEPTION"
+            # if no exception occured, save some plots
+            elif conf["save_reports"]:
+                endreports.save_report(
+                    run_result,
+                    f"{run_dir}/reports",
+                    conf["show_report_plots"],
+                    conf["save_reduced_history_df"]
+                    )
             results_name = f"{run_dir}/{run_name}_results.pkl"
             with open(results_name, "wb") as f:
                 pickle.dump(run_result, f)
