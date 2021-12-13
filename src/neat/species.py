@@ -112,7 +112,7 @@ class Species:
             mom = self.pool[pool_index]
             # ensure that second parent is not out of pool bounds
             dad = self.pool[-1] if pool_index == 0 else self.pool[pool_index + 1]
-        if mom == dad: raise Exception("woops, this shouldn't happen!!!!")
+        if mom == dad: raise Exception("woops, this shouldn't happen lol")
         # now that the parents are determined, produce a baby and mutate it
         baby = dad.crossover(mom)
         baby.mutate(self.curr_mutation_rate)
