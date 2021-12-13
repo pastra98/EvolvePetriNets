@@ -5,10 +5,10 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python: Aktuelle Datei",
+            "name": "debug main",
             "type": "python",
             "request": "launch",
-            "program": "${file}",
+            "program": "src/main.py",
             "console": "integratedTerminal",
             "justMyCode": false,
             "args": ["configs/test_config.json"]
