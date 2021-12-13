@@ -90,6 +90,8 @@ prob_split_arc: list[float, float]
 # arc mutations
 prob_increase_arcs: list[float, float]
 prob_disable_arc: list[float, float]
+# prune extensions
+prob_prune_extensions: list[float, float]
 
 is_no_preference_for_tasks: bool # if this is True, prob pick_tasks_trans is ignored
 prob_pick_task_trans: list[float, float] # probability of picking a task transition
