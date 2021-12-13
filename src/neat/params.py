@@ -16,10 +16,9 @@ def load(fpath: str):
             print(f"Parameter '{k}' missing in json")
 
 
-def new_param_json(fname: str, save_current=False, savepath="param_files/"):
+def new_param_json(fpath: str, save_current=False):
     """Save list of variables, along with a type hint
     """
-    savepath = savepath + fname + ".json"
     vars = globals()["__annotations__"]
     export_vars = {}
     for k, v in list(vars.items()):
@@ -27,9 +26,9 @@ def new_param_json(fname: str, save_current=False, savepath="param_files/"):
             export_vars[k] = globals()[k]
         else:
             export_vars[k] = str(v)
-    with open(savepath, "w") as f:
+    with open(fpath, "w") as f:
         json.dump(export_vars, f, indent=4)
-        print(f"saved params at:\n{savepath}")
+        print(f"saved params at:\n{fpath}")
 
 
 def get_curr_curr_dict() -> dict:
@@ -48,6 +47,7 @@ selection_strategy: str # "speciation" / "roulette" / "truncation"
 species_boundary: float
 coeff_disjoint: float
 coeff_excess: float
+coeff_matched: float
 
 # species relevant stuff
 enough_gens_to_change_things: int
