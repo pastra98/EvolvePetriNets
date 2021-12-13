@@ -89,7 +89,7 @@ prob_new_empty_t: list[float, float]
 prob_split_arc: list[float, float]
 # arc mutations
 prob_increase_arcs: list[float, float]
-prob_disable_arc: list[float, float]
+prob_remove_arc: list[float, float]
 # prune extensions
 prob_prune_extensions: list[float, float]
 
