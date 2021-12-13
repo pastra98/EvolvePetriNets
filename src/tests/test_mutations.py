@@ -1,19 +1,17 @@
 # %%
-import sys # syspath fuckery to run from same location as main
-import os # set cwd to same as project cwd from vscode
-import pprint as pp
+import sys, os, pprint
+from pathlib import Path
 from pm4py import view_petri_net
 
-# TODO do this using python lol
-# laptop
-# srcpath = "C:\\Users\\pauls\\OneDrive\\Dokumente\\Uni\\Fächer\\BSc\\GeneticProcessMining\\genetic_miner\\src"
-# rootpath = "C:\\Users\\pauls\\OneDrive\\Dokumente\\Uni\\Fächer\\BSc\\GeneticProcessMining\\genetic_miner"
-# desktop
-srcpath = "D:\\Bibliotheken\\OneDrive\\Dokumente\\Uni\\Fächer\\BSc\\GeneticProcessMining\\genetic_miner\\src"
-rootpath = "D:\\Bibliotheken\\OneDrive\\Dokumente\\Uni\\Fächer\\BSc\\GeneticProcessMining\\genetic_miner"
+from src.neat.genome import GeneticNet
 
-sys.path.append(srcpath)
-os.chdir(rootpath)
+
+cwd = Path.cwd()
+
+# RUN ONLY ONCE
+if not os.getcwd().endswith("genetic_miner"):
+    sys.path.append(str(cwd.parent.parent / "src")) # src from where all the relative imports work
+    os.chdir(cwd.parent.parent) # workspace level from where I execute scripts
 
 from IPython import get_ipython
 ipython = get_ipython()
@@ -32,7 +30,7 @@ def show_graphviz(g):
 lp = "pm_data/running_example.xes" # "pm_data/m1_log.xes"
 log = xes_importer.apply(lp)
 innovs.reset()
-params.load("speciation_params")
+params.load("params/testing/default_speciation_params.json")
 
 test_genomes = startconfigs.traces_with_concurrency(log)
 
@@ -63,23 +61,27 @@ for g in test_genomes:
 
 # %%
 # perform mutations on target g
-target_g = test_genomes[1]
+target_g: GeneticNet = test_genomes[1]
 
 target_g.evaluate_fitness(log)
 print(f"BEFORE mutation fitness:\n{target_g.fitness}")
 
-show_graphviz(target_g)
+target_g.show_nb_graphviz()
 
-target_g.split_arc()
+# target_g.split_arc()
 # target_g.trans_trans_conn()
 
 # target_g.place_trans_arc()
 # target_g.trans_place_arc()
 
-# target_g.extend_new_place()
-# target_g.extend_new_trans()
+target_g.extend_new_place()
+target_g.extend_new_trans()
 
-show_graphviz(target_g)
+target_g.show_nb_graphviz()
+
+target_g.prune_extensions()
+
+target_g.show_nb_graphviz()
 
 target_g.evaluate_fitness(log)
 print(f"AFTER mutation fitness:\n{target_g.fitness}")
