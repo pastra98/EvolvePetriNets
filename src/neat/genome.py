@@ -55,12 +55,15 @@ class GeneticNet:
             self.extend_new_trans()
         if rd.random() < params.prob_split_arc[mutation_rate]:
             self.split_arc()
-        # for arc in self.arcs:
-        #     if rd.random() < params.prob_increase_arcs[mutation_rate]:
-        #         pass
-        #     if rd.random() < params.prob_disable_arc[mutation_rate]:
-        #         pass
-        return
+
+        if rd.random() < params.prob_prune_extensions[mutation_rate]:
+            self.prune_extensions()
+        for arc in self.arcs:
+            if rd.random() < params.prob_disable_arc[mutation_rate]:
+                del self.arcs[arc]
+
+        # TODO: consider implementing a remove_unused_transitions() method, which ofc doesnt remove tasks
+        self.remove_unused_nodes()
 
 
     def place_trans_arc(self, place_id=None, trans_id=None) -> None:
@@ -117,7 +120,7 @@ class GeneticNet:
         else:
             ext_info = innovs.check_extension(trans_id)
             if ext_info["node"] in self.places:
-                print("transition already extended")
+                print(f"trans {trans_id} has already been ext to {ext_info['node']}!")
                 return
         if ext_info:
             self.places[ext_info["node"]] = GPlace(ext_info["node"])
@@ -138,7 +141,7 @@ class GeneticNet:
         else:
             ext_info = innovs.check_extension(place_id)
             if ext_info["node"] in self.transitions:
-                print("place already extended")
+                print(f"place {place_id} has already been ext to {ext_info['node']}!")
                 return
         if ext_info:
             self.transitions[ext_info["node"]] = GTrans(ext_info["node"], is_task=False)
@@ -202,8 +205,8 @@ class GeneticNet:
             self.places[sp_d["p"]] = new_place
             self.transitions[sp_d["t"]] = new_trans
             self.arcs.update({sp_d["a1"]:a1, sp_d["a2"]:a2, sp_d["a3"]:a3})
-            # disable old arc
-            arc_to_split.n_arcs = 0
+            # remove old arc
+            del self.arcs[arc_to_split.id]
             return # mutation success
         return # nothing found
 
@@ -223,17 +226,21 @@ class GeneticNet:
             trans_id = rd.choice(list(empty_trans)) 
         return trans_id
 
-        
-    def increase_arcs(self, arc_id=None):
-        pass
 
-
-    def disable_arc(self, arc_id=None):
-        pass
-
-
-    def disable_place(self, place_id=None):
-        pass
+    def prune_extensions(self) -> None:
+        for ext_info in innovs.extensions.values():
+            arc_id, node_id, ntype = ext_info["arc"], ext_info["node"], ext_info["ntype"]
+            if arc_id in self.arcs:
+                source_nodes = map(lambda a: a.source_id, self.arcs.values())
+                if node_id not in source_nodes:
+                    # delete node, delete arc
+                    if ntype == GTrans: del self.transitions[node_id]
+                    elif ntype == GPlace: del self.places[node_id]
+                    del self.arcs[arc_id]
+                    # delete all arcs pointing to extension (they shouldnt exist, don't know why still here) 
+                    arcs_to_ext = [a.id for a in self.arcs.values() if a.target_id == node_id]
+                    for arc_id in arcs_to_ext:
+                        del self.arcs[arc_id]
 
 # ------------------------------------------------------------------------------
 # REPRODUCTION RELATED STUFF ---------------------------------------------------
@@ -249,8 +256,8 @@ class GeneticNet:
         num_disjoint = 0
         num_excess = 0
         # get sorted arrays of both genomes innovation historys 
-        my_innovs = sorted([a_id for a_id in self.arcs if self.arcs[a_id].n_arcs > 0])
-        other_innovs = sorted([a_id for a_id in other_genome.arcs if other_genome.arcs[a_id].n_arcs > 0])
+        my_innovs = sorted(list(self.arcs.keys()))
+        other_innovs = sorted(list(other_genome.arcs.keys()))
         # if both genomes don't have enabled links, they are compatible. stop calculations here
         if not (my_innovs and other_innovs):
             return params.species_boundary - 1
@@ -314,20 +321,20 @@ class GeneticNet:
         net = PetriNet(f"{self.id}-Net")
         temp_obj_d = {} # stores both trans and place pm4py objs in the scope of this method
         # genome contains all tasks, but not all are connected necessarily
-        connected_trans = self.get_connected_trans()
+        connected = self.get_connected()
         for place_id in self.places:
-            temp_obj_d[place_id] = PetriNet.Place(place_id)
-            net.places.add(temp_obj_d[place_id])
+            if place_id in connected:
+                temp_obj_d[place_id] = PetriNet.Place(place_id)
+                net.places.add(temp_obj_d[place_id])
         for trans_id in self.transitions:
-            if trans_id in connected_trans:
+            if trans_id in connected:
                 temp_obj_d[trans_id] = PetriNet.Transition(trans_id, label=trans_id)
                 net.transitions.add(temp_obj_d[trans_id])
         for arc_id in self.arcs:
             arc = self.arcs[arc_id]
-            if arc.n_arcs > 0:
-                source_obj = temp_obj_d[arc.source_id]
-                target_obj = temp_obj_d[arc.target_id]
-                arc.pm4py_obj = add_arc_from_to(source_obj, target_obj, net)
+            source_obj = temp_obj_d[arc.source_id]
+            target_obj = temp_obj_d[arc.target_id]
+            add_arc_from_to(source_obj, target_obj, net)
         # initial marking
         im = Marking()
         im[temp_obj_d["start"]] = 1
@@ -343,11 +350,13 @@ class GeneticNet:
         aligned_traces = fitnesscalc.get_aligned_traces(log, net, im, fm)
         self.trace_fitness = fitnesscalc.get_replay_fitness(aligned_traces)
         # soundness check
+
         self.is_sound = woflan.apply(net, im, fm, parameters={
             woflan.Parameters.RETURN_ASAP_WHEN_NOT_SOUND: True,
             woflan.Parameters.PRINT_DIAGNOSTICS: False,
             woflan.Parameters.RETURN_DIAGNOSTICS: False
             })
+
         # precision
         self.precision = fitnesscalc.get_precision(log, net, im, fm)
         # generealization
@@ -370,11 +379,11 @@ class GeneticNet:
 # MISC STUFF -------------------------------------------------------------------
 # ------------------------------------------------------------------------------
 
-    def get_connected_trans(self) -> set:
-        # get set of all transitions that are connected to the network via arcs
+    def get_connected(self) -> set:
+        # get set of all nodes that are connected to the network via arcs
         connected = [(a.source_id, a.target_id) for a in self.arcs.values()]
-        connected = set(itertools.chain.from_iterable(connected))
-        return set(self.transitions.keys()).intersection(connected)
+        return set(itertools.chain.from_iterable(connected))
+
 
     def get_graphviz(self) -> Digraph:
         # parameter stuff, TODO: think about where to put this
@@ -382,35 +391,35 @@ class GeneticNet:
         tcol = "yellow"
         pcol = "lightblue"
         ahead = "normal"
-        viz = Digraph()
-        viz.graph_attr['rankdir'] = 'LR'
-        viz.attr('node', shape='box')
-        viz.attr(overlap='false')
+        viz = Digraph(format="png")
+        viz.graph_attr["rankdir"] = "LR"
+        viz.attr("node", shape="box")
+        viz.attr(overlap="false")
         # viz.attr(size="21, 21")
         # viz.attr(size="11, 11")
-        connected_t = self.get_connected_trans()
+        connected = self.get_connected()
         # transitions
         for t in self.transitions:
-            if t in connected_t:
+            if t in connected:
                 if self.transitions[t].is_task: # task
                     viz.node(t, t, style='filled', fillcolor=tcol, border='1', fontsize=fsize)
                 else: # empty trans
                     viz.node(t, t, style='filled', fontcolor="white", fillcolor="black", fontsize=fsize)
         # places
         for p in self.places:
-            if p == "start":
-                viz.node("start", style='filled', fillcolor="green", fontsize=fsize,
-                            shape='circle', fixedsize='true', width='0.75')
-            elif p == "end":
-                viz.node("end", style='filled', fillcolor="orange", fontsize=fsize,
-                            shape='circle', fixedsize='true', width='0.75')
-            else:
-                viz.node(p, p, style='filled', fillcolor=pcol, fontsize=fsize,
-                            shape='circle', fixedsize='true', width='0.75')
+            if p in connected:
+                if p == "start":
+                    viz.node("start", style='filled', fillcolor="green", fontsize=fsize,
+                                shape='circle', fixedsize='true', width='0.75')
+                elif p == "end":
+                    viz.node("end", style='filled', fillcolor="orange", fontsize=fsize,
+                                shape='circle', fixedsize='true', width='0.75')
+                else:
+                    viz.node(p, p, style='filled', fillcolor=pcol, fontsize=fsize,
+                                shape='circle', fixedsize='true', width='0.75')
         # arcs
         for name, a in self.arcs.items():
-            for _ in range(a.n_arcs):
-                viz.edge(a.source_id, a.target_id, label=str(name), fontsize=fsize, arrowhead=ahead)
+            viz.edge(a.source_id, a.target_id, label=str(name), fontsize=fsize, arrowhead=ahead)
         return viz
 
 
@@ -435,3 +444,21 @@ class GeneticNet:
         from IPython.core.display import display, Image
         gviz = self.get_graphviz()
         display(Image(data=gviz.pipe(format="png"), unconfined=True, retina=True))
+
+
+    def remove_unused_nodes(self) -> None:
+        # wow this is a piece of shit
+        connected = self.get_connected()
+        t_to_del = []
+        for t in self.transitions:
+            if t not in connected or t not in innovs.tasks:
+                t_to_del.append(t)
+        for t in t_to_del:
+            del self.transitions[t]
+
+        p_to_del = []
+        for p in self.places:
+            if p not in connected or p not in ["start", "end"]:
+                p_to_del.append(p)
+        for p in p_to_del:
+            del self.places[p]

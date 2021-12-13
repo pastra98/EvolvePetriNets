@@ -1,12 +1,11 @@
 from dataclasses import dataclass
 from copy import copy
 
-@dataclass(frozen=False) # think about if we can make it true -> would require copying shit
+@dataclass(frozen=True)
 class GArc:
     id: int
     source_id: str
     target_id: str
-    n_arcs: int = 1
 
     def get_copy(self):
         return copy(self)
