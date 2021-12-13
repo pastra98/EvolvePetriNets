@@ -10,4 +10,4 @@ pm_data/
 *.mps
 *.prof
 *.sol
-*.workspace
+*.code-workspace
