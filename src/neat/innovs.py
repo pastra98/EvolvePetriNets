@@ -49,8 +49,11 @@ def check_extension(extend_from_id: str) -> dict:
         # based on nodetype, create new node
         ntype = GPlace if nodes[extend_from_id][0] == GTrans else GTrans
         new_node_id = store_new_node(ntype)
+        # in case of extending extension (e.g. in startconfigs), check arc makes sure
+        # to delete from_id from extensions. the returned innov id will still be new
+        check_arc(extend_from_id, new_node_id)
         new_arc_id = store_new_arc(extend_from_id, new_node_id)
-        ext_info = {"arc": new_arc_id, "node": new_node_id}
+        ext_info = {"arc": new_arc_id, "node": new_node_id, "ntype": ntype}
         # save extension info
         extensions[extend_from_id] = ext_info
         extensions_inverted[new_node_id] = extend_from_id
