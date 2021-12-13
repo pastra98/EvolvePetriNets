@@ -33,7 +33,10 @@ def plot_run_df(df):
         "innovplotvars" : ["num new innovations"],
     }
     for name, vars in plotvars.items():
-        df[vars].plot(title=name)
+        plot = df[vars].plot(title=name)
+        fig = plot.get_figure()
+        fig.savefig(f"{name}.png")
+
     
 
 def get_run_df(picklename):
@@ -95,11 +98,10 @@ def pickle_to_df(picklef):
     df = pd.DataFrame(dlist)
     return df.set_index("gen")
 
-# %%
 
-def plot_species(picklef):
+def plot_species(results_d: dict):
     s_dict = {}
-    hist = picklef["history"]
+    hist = results_d["history"]
     for gen, info in hist.items():
         for s in info["species"]: # list of all species objects (assuming != minimal serialize)
             if s.name in s_dict:
@@ -125,15 +127,21 @@ def plot_species(picklef):
 
 
 # %%
-fp = "results/data/testing_12-11-2021_22-08-42/speciation_test_0___12-11-2021_22-08-42/speciation_test_0___12-11-2021_22-08-42_results.pkl"
+fp = "results/data/after_fixing_extensions_12-13-2021_13-38-07/speciation_test_0___12-13-2021_13-38-07/speciation_test_0___12-13-2021_13-38-07_results.pkl"
+# fp = "results/data/after_fixing_extensions_12-13-2021_13-38-07/speciation_test_1___12-13-2021_13-45-15/speciation_test_1___12-13-2021_13-45-15_results.pkl"
+# fp = "results/data/after_fixing_extensions_12-13-2021_13-38-07/speciation_test_2___12-13-2021_13-52-40/speciation_test_2___12-13-2021_13-52-40_results.pkl"
 # df = get_run_df()
-pf = get_unpickled(fp)
-df = pickle_to_df(pf)
+
+d = get_unpickled(fp)
+df = pickle_to_df(d)
+
+plot_run_df(df)
+# plot_species(d)
 
 # %%
 # print_info_about_gen(pf, 10)
 # plot_run_df(df)
-plot_species(pf)
+plot_species(d)
 
 # %%
 for genome in last_gen["population"]:
