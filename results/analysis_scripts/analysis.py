@@ -14,6 +14,7 @@ if not os.getcwd().endswith("genetic_miner"):
 import pickle as pkl
 import pandas as pd
 from src.tests import visualize_genome as vg
+import matplotlib.pyplot as plt
 
 # %%
 # list available files
@@ -48,14 +49,14 @@ def get_unpickled(picklename):
 
 
 def get_gen_species_from_pickle(picklef, gen):
-    gen = picklef["speciation_params_ga_params"][gen]
+    gen = picklef["history"][gen]
     return gen["species"]
 
 
 def print_info_about_gen(picklef, gen: int):
     print(f"showing info about generation {gen}:")
-    ga_inst = picklef['speciation_params_ga_params']
-    for s in ga_inst[gen]["species"]:
+    history = picklef["history"]
+    for s in history[gen]["species"]:
         print(f"{80*'-'}\n{80*'-'}")
         print(f"{s.name} - Age: {s.age} - num members: {len(s.alive_members)}")
         print(f"fitness stuff\navg_fitness {s.avg_fitness} - adjusted: {s.avg_fitness_adjusted}")
@@ -85,26 +86,54 @@ def print_info_about_gen(picklef, gen: int):
 def pickle_to_df(picklef):
     dlist = []
     excludes = ["population", "species", "best genome", "times"]
-    for gen, info_dict in picklef["speciation_params_ga_params"].items():
-        if gen > 0: # fix this one day
-            d = {k: info_dict[k] for k in info_dict if k not in excludes}
-            d["gen"] = int(gen)
-            times = info_dict["times"]
-            d = d | {k: times[k] for k in times}
-            dlist.append(d)
+    for gen, info_dict in picklef["history"].items():
+        d = {k: info_dict[k] for k in info_dict if k not in excludes}
+        d["gen"] = int(gen)
+        times = info_dict["times"]
+        d |= {k: times[k] for k in times}
+        dlist.append(d)
     df = pd.DataFrame(dlist)
     return df.set_index("gen")
 
+# %%
 
 def plot_species(picklef):
-    return # TODO implement
+    s_dict = {}
+    hist = picklef["history"]
+    for gen, info in hist.items():
+        for s in info["species"]: # list of all species objects (assuming != minimal serialize)
+            if s.name in s_dict:
+                s_dict[s.name][gen] = s.num_members
+            else:
+                s_dict[s.name] = {gen: s.num_members}
+    total_gens = len(hist)
+    pop_sizes = []
+    for s, gens in s_dict.items():
+        s_sizes = []
+        if (first_appear := list(gens.keys())[0]) > 1:
+            s_sizes = [0] * (first_appear - 1)
+        s_sizes += gens.values()
+        if (last_appear := list(gens.keys())[-1]) < total_gens:
+            s_sizes += [0] * (total_gens - last_appear)
+        pop_sizes.append(s_sizes)
+    ##
+    fig, ax = plt.subplots()
+    ax.stackplot(list(hist.keys()), *pop_sizes, labels=list(s_dict.keys()))
+    ax.legend(loc='upper left')
+    plt.rcParams["figure.figsize"] = (20,20)
+    plt.show()
+
 
 # %%
+fp = "results/data/testing_12-11-2021_22-08-42/speciation_test_0___12-11-2021_22-08-42/speciation_test_0___12-11-2021_22-08-42_results.pkl"
 # df = get_run_df()
-pf = get_unpickled("results/data/12-10-2021_21-57-14_results.pkl")
+pf = get_unpickled(fp)
 df = pickle_to_df(pf)
+
 # %%
-print_info_about_gen(pf, 10)
+# print_info_about_gen(pf, 10)
+# plot_run_df(df)
+plot_species(pf)
 
 # %%
 for genome in last_gen["population"]:
