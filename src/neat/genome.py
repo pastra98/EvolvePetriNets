@@ -282,8 +282,10 @@ class GeneticNet:
                 num_disjoint += 1
             innov_count += 1
         # calculate the distance TODO: this is still not perfect - maybe consider matched ones?
-        distance = ((params.coeff_disjoint * num_disjoint) / longest +
-                    (params.coeff_excess * num_excess) / longest)
+        distance = ((params.coeff_disjoint * num_disjoint) / longest + # disjoint increase dist
+                    (params.coeff_excess * num_excess) / longest) # excess increase dist
+        if distance < 0:
+            raise Exception("Distance should not be < 0")
         if printstuff:
             print(f"""num_matched: {num_matched}\nnum_disjoint: {num_disjoint}
                 num_excess: {num_excess}\ncomputed distance: {distance}""")
