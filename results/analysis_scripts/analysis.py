@@ -125,23 +125,43 @@ def plot_species(results_d: dict):
     plt.rcParams["figure.figsize"] = (20,20)
     plt.show()
 
-def plot_best_g_fitness(result_d):
+def plot_detailed_fitness(result_d):
+    popsize = result_d["param values"]["popsize"]
     hist = result_d["history"]
     # trace_fitness, precision, generalization, simplicity, gen_fit = [], [], [], [], []
     plotvars = {
-        "trace_fitness": [],
-        "precision": [],
-        "generalization": [],
-        "simplicity": [],
-        "gen_fit": []
+        "trace_fitness": {"best": [], "population_avg": []},
+        "precision": {"best": [], "population_avg": []},
+        "generalization": {"best": [], "population_avg": []},
+        "simplicity": {"best": [], "population_avg": []},
+        "is_sound": {"best": [], "population_avg": []},
+        "gen_fit": {"best": [], "population_avg": []}
     }
     for info_d in hist.values():
         best_g = info_d["best genome"]
-        plotvars["trace_fitness"].append(best_g.trace_fitness['perc_fit_traces'] / 100)
-        plotvars["precision"].append(best_g.precision)
-        plotvars["generalization"].append(best_g.generalization)
-        plotvars["simplicity"].append(best_g.simplicity)
-        plotvars["gen_fit"].append(best_g.fitness)
+
+        plotvars["trace_fitness"]["best"].append(best_g.trace_fitness['perc_fit_traces'] / 100)
+        # TODO: HERES WHERE IM AT
+        sum(map(lambda g: g.trace_fitness["perc_fit_traces"] / 100, gen["population"])) / 100
+        best_g.trace_fitness['perc_fit_traces'] / 100
+
+        plotvars["trace_fitness"]["population_avg"].append()
+
+        plotvars["precision"]["best"].append(best_g.precision)
+        plotvars["precision"]["best"].append(best_g.precision)
+
+        plotvars["generalization"]["best"].append(best_g.generalization)
+        plotvars["generalization"]["best"].append(best_g.generalization)
+
+        plotvars["simplicity"]["best"].append(best_g.simplicity)
+        plotvars["simplicity"]["best"].append(best_g.simplicity)
+
+        plotvars["is_sound"]["best"].append(int(best_g.is_sound))
+        plotvars["is_sound"]["best"].append(int(best_g.is_sound))
+
+        plotvars["gen_fit"]["best"].append(best_g.fitness)
+        plotvars["gen_fit"]["best"].append(best_g.fitness)
+
     for name, values in plotvars.items():
         # print(pltdata)
         plt.plot(values)
@@ -154,7 +174,8 @@ def plot_best_g_fitness(result_d):
 plot_best_g_fitness(d)
 
 # %%
-fp = "results/data/pruning_and_deleting_12-14-2021_13-38-23/speciation_test_0___12-14-2021_13-38-23/speciation_test_0___12-14-2021_13-38-23_results.pkl"
+fp = "results/data/woflan_is_back_12-14-2021_14-16-30/speciation_test_0___12-14-2021_14-16-30/speciation_test_0___12-14-2021_14-16-30_results.pkl"
+# fp = "results/data/pruning_and_deleting_12-14-2021_13-38-23/speciation_test_0___12-14-2021_13-38-23/speciation_test_0___12-14-2021_13-38-23_results.pkl"
 # df = get_run_df()
 
 d = get_unpickled(fp)
