@@ -114,8 +114,8 @@ class GeneticAlgorithm:
                     gen_info["best genome"] = self.population[0].get_curr_info()
                     gen_info["population"] = [s.get_curr_info() for s in self.population]
                 else: # TODO this is very likely super borked
-                    gen_info["best genome"] = self.population[0].clone()
-                    gen_info["population"] = [g.clone() for g in self.population]
+                    gen_info["best genome"] = copy(self.population[0]) # cant use clone because we want keep fitness
+                    gen_info["population"] = [copy(g) for g in self.population]
 
             gen_info["num total innovations"] = self.new_innovcount
             gen_info["num new innovations"] = self.new_innovcount - self.old_innovcount
@@ -164,6 +164,7 @@ class GeneticAlgorithm:
             for g in initial_pop:
                 found_species = self.find_species(g)
                 found_species.add_member(g)
+                self.best_species = found_species # just to initialize best species to a species for allowing comparison
         # set initial pop
         self.population = initial_pop
         return
@@ -248,7 +249,7 @@ class GeneticAlgorithm:
         num_dead_species = 0
         for s in self.species:
             s.update()
-            if not s.obliterate:
+            if not s.obliterate or s == self.best_species: # don't kill off best species (of previous gen at least)
                 updated_species.append(s)
                 total_species_avg_fitness += s.avg_fitness
                 total_adjusted_species_avg_fitness += s.avg_fitness_adjusted 
