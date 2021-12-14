@@ -125,11 +125,36 @@ def plot_species(results_d: dict):
     plt.rcParams["figure.figsize"] = (20,20)
     plt.show()
 
+def plot_best_g_fitness(result_d):
+    hist = result_d["history"]
+    # trace_fitness, precision, generalization, simplicity, gen_fit = [], [], [], [], []
+    plotvars = {
+        "trace_fitness": [],
+        "precision": [],
+        "generalization": [],
+        "simplicity": [],
+        "gen_fit": []
+    }
+    for info_d in hist.values():
+        best_g = info_d["best genome"]
+        plotvars["trace_fitness"].append(best_g.trace_fitness['perc_fit_traces'] / 100)
+        plotvars["precision"].append(best_g.precision)
+        plotvars["generalization"].append(best_g.generalization)
+        plotvars["simplicity"].append(best_g.simplicity)
+        plotvars["gen_fit"].append(best_g.fitness)
+    for name, values in plotvars.items():
+        # print(pltdata)
+        plt.plot(values)
+        plt.title(name)
+        plt.show()
+    # plt.legend(plotvars.keys())
+    # plt.rcParams["figure.figsize"] = 10, 10
+    # plt.show()
+
+plot_best_g_fitness(d)
 
 # %%
-fp = "results/data/after_fixing_extensions_12-13-2021_13-38-07/speciation_test_0___12-13-2021_13-38-07/speciation_test_0___12-13-2021_13-38-07_results.pkl"
-# fp = "results/data/after_fixing_extensions_12-13-2021_13-38-07/speciation_test_1___12-13-2021_13-45-15/speciation_test_1___12-13-2021_13-45-15_results.pkl"
-# fp = "results/data/after_fixing_extensions_12-13-2021_13-38-07/speciation_test_2___12-13-2021_13-52-40/speciation_test_2___12-13-2021_13-52-40_results.pkl"
+fp = "results/data/pruning_and_deleting_12-14-2021_13-38-23/speciation_test_0___12-14-2021_13-38-23/speciation_test_0___12-14-2021_13-38-23_results.pkl"
 # df = get_run_df()
 
 d = get_unpickled(fp)
@@ -139,14 +164,27 @@ plot_run_df(df)
 # plot_species(d)
 
 # %%
-# print_info_about_gen(pf, 10)
-# plot_run_df(df)
-plot_species(d)
+target_g = d["history"][300]["best genome"]
+
+from pm4py.objects.log.importer.xes import importer as xes_importer
+from src.neat import params, genome
+from importlib import reload
+lp = "pm_data/running_example.xes" # "pm_data/m1_log.xes"
+log = xes_importer.apply(lp)
+params.load("params/testing/default_speciation_params.json")
+
+reload(target_g)
+# target_g.trace_fitness
+target_g.evaluate_fitness(log)
+# target_g.im
+# check if trace fitness can really be this high?? somethings fukced here
+# consider getting woflan back
+
 
 # %%
-for genome in last_gen["population"]:
+for g in last_gen["population"]:
     # vg.show_graphviz(genome)
-    vg.show_graphviz(genome)
+    vg.show_graphviz(g)
 
 # %%
 
@@ -170,8 +208,7 @@ a, s = get_n_sound("results/data/12-09-2021_20-53-10_results.pkl")
 print(a)
 print(s)
 
-
-# # %%
+#  %%
 # # unused crap
 
 # for k in d:
