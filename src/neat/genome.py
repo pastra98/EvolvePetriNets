@@ -58,11 +58,16 @@ class GeneticNet:
 
         if rd.random() < params.prob_prune_extensions[mutation_rate]:
             self.prune_extensions()
-        for arc in self.arcs:
-            if rd.random() < params.prob_disable_arc[mutation_rate]:
-                del self.arcs[arc]
 
-        # TODO: consider implementing a remove_unused_transitions() method, which ofc doesnt remove tasks
+        # TODO: split this into a func
+        arcs_to_remove = []
+        for a_id, arc in self.arcs.items():
+            if rd.random() < params.prob_remove_arc[mutation_rate]:
+                if arc.source_id != "start" and arc.target_id != "end":
+                    arcs_to_remove.append(a_id)
+        for a_id in arcs_to_remove:
+            del self.arcs[a_id]
+
         self.remove_unused_nodes()
 
 
@@ -323,7 +328,7 @@ class GeneticNet:
         # genome contains all tasks, but not all are connected necessarily
         connected = self.get_connected()
         for place_id in self.places:
-            if place_id in connected:
+            if place_id in list(connected) + ["start", "end"]:
                 temp_obj_d[place_id] = PetriNet.Place(place_id)
                 net.places.add(temp_obj_d[place_id])
         for trans_id in self.transitions:
@@ -350,13 +355,11 @@ class GeneticNet:
         aligned_traces = fitnesscalc.get_aligned_traces(log, net, im, fm)
         self.trace_fitness = fitnesscalc.get_replay_fitness(aligned_traces)
         # soundness check
-
         self.is_sound = woflan.apply(net, im, fm, parameters={
             woflan.Parameters.RETURN_ASAP_WHEN_NOT_SOUND: True,
             woflan.Parameters.PRINT_DIAGNOSTICS: False,
             woflan.Parameters.RETURN_DIAGNOSTICS: False
             })
-
         # precision
         self.precision = fitnesscalc.get_precision(log, net, im, fm)
         # generealization
@@ -451,14 +454,14 @@ class GeneticNet:
         connected = self.get_connected()
         t_to_del = []
         for t in self.transitions:
-            if t not in connected or t not in innovs.tasks:
+            if t not in connected and t not in innovs.tasks:
                 t_to_del.append(t)
         for t in t_to_del:
             del self.transitions[t]
 
         p_to_del = []
         for p in self.places:
-            if p not in connected or p not in ["start", "end"]:
+            if p not in connected and p not in ["start", "end"]:
                 p_to_del.append(p)
         for p in p_to_del:
             del self.places[p]
