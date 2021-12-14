@@ -3,7 +3,6 @@ import sys, os, pprint
 from pathlib import Path
 from pm4py import view_petri_net
 
-from src.neat.genome import GeneticNet
 
 
 cwd = Path.cwd()
@@ -17,6 +16,8 @@ from IPython import get_ipython
 ipython = get_ipython()
 ipython.magic("load_ext autoreload")
 ipython.magic("autoreload 2")
+
+from src.neat.genome import GeneticNet
 
 # %%
 from neat import startconfigs, innovs, params
@@ -74,14 +75,23 @@ target_g.show_nb_graphviz()
 # target_g.place_trans_arc()
 # target_g.trans_place_arc()
 
-target_g.extend_new_place()
-target_g.extend_new_trans()
+# target_g.extend_new_place()
+# target_g.extend_new_trans()
 
-target_g.show_nb_graphviz()
+# target_g.show_nb_graphviz()
 
-target_g.prune_extensions()
+# target_g.prune_extensions()
 
-target_g.show_nb_graphviz()
+# target_g.show_nb_graphviz()
 
-target_g.evaluate_fitness(log)
+# target_g.evaluate_fitness(log)
+
 print(f"AFTER mutation fitness:\n{target_g.fitness}")
+
+# %%
+target_g: GeneticNet = test_genomes[1]
+target_g.show_nb_graphviz()
+
+for _ in range(100):
+    target_g.mutate(0)
+    target_g.show_nb_graphviz()
