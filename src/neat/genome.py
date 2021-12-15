@@ -22,6 +22,7 @@ class GeneticNet:
         Reasoning: Cannot use mutable default args, and didn't want to use *args or **kwargs
         """
         self.id = innovs.get_new_genome_id()
+        self.species_id: str = None # gets assigned by species.add_member()
         self.fitness: float = None
         # fitness measures
         self.trace_fitness: float = None # overall genetic fitness
