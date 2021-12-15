@@ -141,8 +141,7 @@ def plot_detailed_fitness(result_d):
         best_g = info_d["best genome"]
 
         plotvars["trace_fitness"]["best"].append(best_g.trace_fitness['perc_fit_traces'] / 100)
-        # TODO: HERES WHERE IM AT
-        sum(map(lambda g: g.trace_fitness["perc_fit_traces"] / 100, gen["population"])) / 100
+        sum(map(lambda g: g.trace_fitness["perc_fit_traces"]/100, info_d["population"])) / popsize
         best_g.trace_fitness['perc_fit_traces'] / 100
 
         plotvars["trace_fitness"]["population_avg"].append()
