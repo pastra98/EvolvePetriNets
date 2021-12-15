@@ -8,7 +8,7 @@ def main(conf: dict) -> None:
     exec_start_time = datetime.datetime.now()
     # create new dir for the current conf execution
     results_path = f"results/data/{conf_name}_{fs_compatible_time(exec_start_time)}"
-    os.mkdir(results_path)
+    os.makedirs(results_path)
 
     for setup in conf["setups"]:
 
