@@ -1,5 +1,8 @@
 {
-    "name": "testing",
+    "name": "woflan_dont_kill_best_species",
+    "save_reports": true,
+    "save_reduced_history_df": true,
+    "show_report_plots": false,
     "setups": [
         {
             "setupname": "speciation_test",
@@ -12,7 +15,7 @@
             },
             "stop_cond": {
                 "var": "gen",
-                "val": 60
+                "val": 150
             },
             "n_runs": 1,
             "print_gen_info": true,
