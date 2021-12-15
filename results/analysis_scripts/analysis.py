@@ -6,7 +6,7 @@ from pathlib import Path
 cwd = Path.cwd()
 
 # RUN ONLY ONCE
-if not os.getcwd().endswith("genetic_miner"):
+if not os.getcwd().endswith("EvolvePetriNets"): # rename dir on laptop to repo name as well
     sys.path.append(str(cwd.parent.parent / "src")) # src from where all the relative imports work
     os.chdir(cwd.parent.parent) # workspace level from where I execute scripts
 
@@ -34,8 +34,7 @@ def plot_run_df(df):
     }
     for name, vars in plotvars.items():
         plot = df[vars].plot(title=name)
-        fig = plot.get_figure()
-        fig.savefig(f"{name}.png")
+        plt.show()
 
     
 
@@ -161,6 +160,7 @@ def plot_detailed_fitness(result_d):
         plotvars["gen_fit"]["best"].append(best_g.fitness)
         plotvars["gen_fit"]["best"].append(best_g.fitness)
 
+    print(plotvars["trace_fitness"]["population_avg"])
     for name, values in plotvars.items():
         # print(pltdata)
         plt.plot(values)
@@ -173,7 +173,7 @@ def plot_detailed_fitness(result_d):
 plot_best_g_fitness(d)
 
 # %%
-fp = "results/data/woflan_is_back_12-14-2021_14-16-30/speciation_test_0___12-14-2021_14-16-30/speciation_test_0___12-14-2021_14-16-30_results.pkl"
+fp = "results/data/fix_best_spec_ref_12-15-2021_18-37-56/speciation_test_0___12-15-2021_18-37-56/speciation_test_0___12-15-2021_18-37-56_results.pkl"
 # fp = "results/data/pruning_and_deleting_12-14-2021_13-38-23/speciation_test_0___12-14-2021_13-38-23/speciation_test_0___12-14-2021_13-38-23_results.pkl"
 # df = get_run_df()
 
@@ -229,12 +229,42 @@ print(a)
 print(s)
 
 #  %%
-# # unused crap
+# find out why best species killed
 
-# for k in d:
-#     print(k)
-#     # print(d[k])
-#     d2 = d[k]
-#     for k2 in d2:
-#         print(k2)
-#         # print(d2[k2])
+def why_best_killed(result_d):
+
+    def get_set_of_spec(gen):
+        return set(map(lambda s: s.name, gen["species"]))
+
+    popsize = result_d["param values"]["popsize"]
+    hist = result_d["history"]
+    
+    for gen, info_d in hist.items():
+        if gen == 1:
+            prev_best_g = info_d["best genome"]
+            prev_best_s = info_d["best species"]
+        else:
+            best_g = info_d["best genome"]
+            best_s = info_d["best species"]
+            if best_g.fitness < prev_best_g.fitness:
+                print(f"\nbest genome fitness changed in gen {gen}")
+                print(f"change from {prev_best_g.fitness} to {best_g.fitness}")
+                print(f"prev best g spec: {prev_best_g.species_id}\nnew best g spec {best_g.species_id}")
+                prev_s, curr_s = get_set_of_spec(hist[gen-1]), get_set_of_spec(hist[gen])
+                diff = prev_s.difference(curr_s)
+                print(f"species killed:\n{diff}")
+                print(f"best genome spec id: {best_g.species_id}")
+                print(f"alive spec:\n {curr_s}")
+                print(f"prev spec:\n {prev_s}")
+                print(f"prev prev spec:\n {get_set_of_spec(hist[gen-2])}")
+
+            # if best_s_fit < prev_best_s_fit:
+            #     print(f"\nbest species fitness changed in gen {gen}")
+            #     print(f"change from {prev_best_s_fit} to {best_s_fit}")
+            # ...
+            prev_best_g = best_g
+            prev_best_s = best_s
+
+
+why_best_killed(d)
+# plot_run_df(df)
