@@ -1,6 +1,7 @@
 import random as rd
 from copy import copy
 from neatutils import timer
+
 from . import params, innovs, startconfigs
 from .genome import GeneticNet
 from .species import Species
@@ -85,6 +86,7 @@ class GeneticAlgorithm:
             g.evaluate_fitness(self.log)
             self.total_pop_fitness += g.fitness
         self.population.sort(key=lambda g: g.fitness, reverse=True)
+        self.best_genome = self.population[0]
         return
 
 
@@ -101,20 +103,21 @@ class GeneticAlgorithm:
                 if self.is_pop_serialized:
                     if self.is_minimal_serialization:
                         gen_info["species"] = [s.get_curr_info() for s in self.species]
+                        gen_info["best species"] = self.best_species.get_curr_info()
                     else:
                         gen_info["species"] = [copy(s) for s in self.species]
+                        gen_info["best species"] = copy(self.best_species)
                 gen_info["num total species"] = len(self.species)
                 gen_info["num new species"] = self.num_new_species
-                gen_info["best species"] = self.best_species.name
                 gen_info["best species avg fitness"] = self.best_species.avg_fitness
 
             # save info about generation in general
             if self.is_pop_serialized:
                 if self.is_minimal_serialization: # TODO really not sure if pop should still be saved
-                    gen_info["best genome"] = self.population[0].get_curr_info()
+                    gen_info["best genome"] = self.best_genome.get_info()
                     gen_info["population"] = [s.get_curr_info() for s in self.population]
                 else: # TODO this is very likely super borked
-                    gen_info["best genome"] = copy(self.population[0]) # cant use clone because we want keep fitness
+                    gen_info["best genome"] = copy(self.best_genome) # cant use clone because we want keep fitness
                     gen_info["population"] = [copy(g) for g in self.population]
 
             gen_info["num total innovations"] = self.new_innovcount
@@ -247,24 +250,27 @@ class GeneticAlgorithm:
         total_adjusted_species_avg_fitness = 0
         total_species_avg_fitness = 0
         num_dead_species = 0
+        # first update all, determine best species
         for s in self.species:
             s.update()
-            if not s.obliterate or s == self.best_species: # don't kill off best species (of previous gen at least)
+        # order the updated species by fitness, select the current best species
+        self.species.sort(key=lambda s: s.avg_fitness, reverse=True)
+        self.best_species = self.species[0]
+        # now that best species is determined, kill off stale species and update spawn amount
+        for s in self.species:
+            # don't kill off best species or species containing curr best genome
+            if (not s.obliterate) or (s == self.best_species) or (self.best_genome.species_id == s):
                 updated_species.append(s)
                 total_species_avg_fitness += s.avg_fitness
                 total_adjusted_species_avg_fitness += s.avg_fitness_adjusted 
             else:
-                num_dead_species += 1 # dont add it to pool, no more s.purge()
+                num_dead_species += 1 # dont add it to pool
         if not updated_species or total_adjusted_species_avg_fitness == 0:
             raise Exception("mass extinction")
         # calculate offspring amt based on fitness relative to the total_adjusted_species_avg_fitness
         for s in updated_species:
             s.calculate_offspring_amount(total_adjusted_species_avg_fitness)
-        # order the updated species by fitness, select the current best species, return
-        updated_species.sort(key=lambda s: s.avg_fitness, reverse=True)
-        self.best_species = updated_species[0]
         self.species = updated_species
-        return
 
 
     def find_species(self, new_genome) -> Species:
