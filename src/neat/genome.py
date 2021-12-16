@@ -50,9 +50,9 @@ class GeneticNet:
             self.place_trans_arc()
         if rd.random() < params.prob_t_t_conn[mutation_rate]:
             self.trans_trans_conn()
-        if rd.random() < params.prob_new_p[mutation_rate]:
+        if rd.random() < params.prob_new_p[mutation_rate] and len(self.transitions) > 2:
             self.extend_new_place()
-        if rd.random() < params.prob_new_empty_t[mutation_rate]:
+        if rd.random() < params.prob_new_empty_t[mutation_rate] and len(self.places) > 2:
             self.extend_new_trans()
         if rd.random() < params.prob_split_arc[mutation_rate]:
             self.split_arc()
@@ -226,10 +226,10 @@ class GeneticNet:
         # pick a trans
         if params.is_no_preference_for_tasks: # choose from all trans
             trans_id = rd.choice(list(self.transitions.keys()))
-        elif rd.random() < params.prob_pick_task_trans: # choose from tasks
-            trans_id = rd.choice(list(task_trans))
-        else: # choose from empty trans
+        elif rd.random() < params.prob_pick_empty_trans and empty_trans: # choose from empty trans (provided there are any)
             trans_id = rd.choice(list(empty_trans)) 
+        else: # choose from tasks
+            trans_id = rd.choice(list(task_trans))
         return trans_id
 
 
