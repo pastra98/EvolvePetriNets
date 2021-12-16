@@ -259,7 +259,7 @@ class GeneticAlgorithm:
         # now that best species is determined, kill off stale species and update spawn amount
         for s in self.species:
             # don't kill off best species or species containing curr best genome
-            if (not s.obliterate) or (s == self.best_species) or (self.best_genome.species_id == s):
+            if (not s.obliterate) or (s == self.best_species) or (self.best_genome.species_id == s.name):
                 updated_species.append(s)
                 total_species_avg_fitness += s.avg_fitness
                 total_adjusted_species_avg_fitness += s.avg_fitness_adjusted 
