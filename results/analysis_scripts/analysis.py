@@ -10,11 +10,19 @@ if not os.getcwd().endswith("EvolvePetriNets"): # rename dir on laptop to repo n
     sys.path.append(str(cwd.parent.parent / "src")) # src from where all the relative imports work
     os.chdir(cwd.parent.parent) # workspace level from where I execute scripts
 
+# notebook specific - autoreload modules
+from IPython import get_ipython
+ipython = get_ipython()
+ipython.magic("load_ext autoreload")
+ipython.magic("autoreload 2")
+
 # import various other shit
 import pickle as pkl
 import pandas as pd
 from src.tests import visualize_genome as vg
 import matplotlib.pyplot as plt
+from statistics import fmean
+from src import neat
 
 # %%
 # list available files
@@ -125,55 +133,38 @@ def plot_species(results_d: dict):
     plt.show()
 
 def plot_detailed_fitness(result_d):
-    popsize = result_d["param values"]["popsize"]
     hist = result_d["history"]
-    # trace_fitness, precision, generalization, simplicity, gen_fit = [], [], [], [], []
     plotvars = {
-        "trace_fitness": {"best": [], "population_avg": []},
-        "precision": {"best": [], "population_avg": []},
-        "generalization": {"best": [], "population_avg": []},
-        "simplicity": {"best": [], "population_avg": []},
-        "is_sound": {"best": [], "population_avg": []},
-        "gen_fit": {"best": [], "population_avg": []}
+        "fitness": {"best": [], "pop_avg": []},
+        "perc_fit_traces": {"best": [], "pop_avg": []},
+        "average_trace_fitness": {"best": [], "pop_avg": []},
+        "log_fitness": {"best": [], "pop_avg": []},
+        "precision": {"best": [], "pop_avg": []},
+        "generalization": {"best": [], "pop_avg": []},
+        "simplicity": {"best": [], "pop_avg": []},
+        "is_sound": {"best": [], "pop_avg": []}
     }
+    # read data into plotvars
     for info_d in hist.values():
-        best_g = info_d["best genome"]
-
-        plotvars["trace_fitness"]["best"].append(best_g.trace_fitness['perc_fit_traces'] / 100)
-        sum(map(lambda g: g.trace_fitness["perc_fit_traces"]/100, info_d["population"])) / popsize
-        best_g.trace_fitness['perc_fit_traces'] / 100
-
-        plotvars["trace_fitness"]["population_avg"].append()
-
-        plotvars["precision"]["best"].append(best_g.precision)
-        plotvars["precision"]["best"].append(best_g.precision)
-
-        plotvars["generalization"]["best"].append(best_g.generalization)
-        plotvars["generalization"]["best"].append(best_g.generalization)
-
-        plotvars["simplicity"]["best"].append(best_g.simplicity)
-        plotvars["simplicity"]["best"].append(best_g.simplicity)
-
-        plotvars["is_sound"]["best"].append(int(best_g.is_sound))
-        plotvars["is_sound"]["best"].append(int(best_g.is_sound))
-
-        plotvars["gen_fit"]["best"].append(best_g.fitness)
-        plotvars["gen_fit"]["best"].append(best_g.fitness)
-
-    print(plotvars["trace_fitness"]["population_avg"])
-    for name, values in plotvars.items():
-        # print(pltdata)
-        plt.plot(values)
-        plt.title(name)
+        best, pop = info_d["best genome"], info_d["population"]
+        for vname in plotvars:
+            plotvars[vname]["best"].append(getattr(best, vname))
+            plotvars[vname]["pop_avg"].append(fmean([getattr(g, vname) for g in pop]))
+    # iterate over plotvars to plot shit
+    for vname, d in plotvars.items():
+        for metricname, values in d.items():
+            plt.plot(values)
+        plt.legend(d.keys())
+        plt.title(vname)
         plt.show()
-    # plt.legend(plotvars.keys())
-    # plt.rcParams["figure.figsize"] = 10, 10
-    # plt.show()
+    # # plt.legend(plotvars.keys())
+    # # plt.rcParams["figure.figsize"] = 10, 10
+    # # plt.show()
 
-plot_best_g_fitness(d)
+plot_detailed_fitness(d)
 
 # %%
-fp = "results/data/fix_best_spec_ref_12-15-2021_18-37-56/speciation_test_0___12-15-2021_18-37-56/speciation_test_0___12-15-2021_18-37-56_results.pkl"
+fp = "results/data/also_deleting_tasks_now_12-17-2021_12-42-52/speciation_test_1___12-17-2021_12-48-22/speciation_test_1___12-17-2021_12-48-22_results.pkl"
 # fp = "results/data/pruning_and_deleting_12-14-2021_13-38-23/speciation_test_0___12-14-2021_13-38-23/speciation_test_0___12-14-2021_13-38-23_results.pkl"
 # df = get_run_df()
 
@@ -184,7 +175,7 @@ plot_run_df(df)
 # plot_species(d)
 
 # %%
-target_g = d["history"][300]["best genome"]
+# target_g = d["history"][300]["best genome"]
 
 from pm4py.objects.log.importer.xes import importer as xes_importer
 from src.neat import params, genome
@@ -201,70 +192,126 @@ target_g.evaluate_fitness(log)
 # consider getting woflan back
 
 
-# %%
-for g in last_gen["population"]:
-    # vg.show_graphviz(genome)
-    vg.show_graphviz(g)
-
-# %%
-
-def get_n_sound(picklename):
-    with open(picklename, "rb") as f:
-        d = pkl.load(f)
-    sounds = 0
-    all = 0
-    for gen, info_dict in d["speciation_params_ga_params"].items():
-        if gen != "time took":
-            if int(gen) > 0:
-                pop = info_dict["population"]
-                for g in pop:
-                    if g["is_sound"]:
-                        sounds += 1
-                    all += 1
-    return all, sounds
-
-a, s = get_n_sound("results/data/12-09-2021_20-53-10_results.pkl")
-
-print(a)
-print(s)
-
 #  %%
 # find out why best species killed
 
-def why_best_killed(result_d):
+# def why_best_killed(result_d):
 
-    def get_set_of_spec(gen):
-        return set(map(lambda s: s.name, gen["species"]))
+#     def get_set_of_spec(gen):
+#         return set(map(lambda s: s.name, gen["species"]))
 
-    popsize = result_d["param values"]["popsize"]
-    hist = result_d["history"]
+#     popsize = result_d["param values"]["popsize"]
+#     hist = result_d["history"]
     
-    for gen, info_d in hist.items():
-        if gen == 1:
-            prev_best_g = info_d["best genome"]
-            prev_best_s = info_d["best species"]
-        else:
-            best_g = info_d["best genome"]
-            best_s = info_d["best species"]
-            if best_g.fitness < prev_best_g.fitness:
-                print(f"\nbest genome fitness changed in gen {gen}")
-                print(f"change from {prev_best_g.fitness} to {best_g.fitness}")
-                print(f"prev best g spec: {prev_best_g.species_id}\nnew best g spec {best_g.species_id}")
-                prev_s, curr_s = get_set_of_spec(hist[gen-1]), get_set_of_spec(hist[gen])
-                diff = prev_s.difference(curr_s)
-                print(f"species killed:\n{diff}")
-                print(f"best genome spec id: {best_g.species_id}")
-                print(f"alive spec:\n {curr_s}")
-                print(f"prev spec:\n {prev_s}")
-                print(f"prev prev spec:\n {get_set_of_spec(hist[gen-2])}")
+#     for gen, info_d in hist.items():
+#         if gen == 1:
+#             prev_best_g = info_d["best genome"]
+#             prev_best_s = info_d["best species"]
+#         else:
+#             best_g = info_d["best genome"]
+#             best_s = info_d["best species"]
+#             if best_g.fitness < prev_best_g.fitness:
+#                 print(f"\nbest genome fitness changed in gen {gen}")
+#                 print(f"change from {prev_best_g.fitness} to {best_g.fitness}")
+#                 print(f"prev best g spec: {prev_best_g.species_id}\nnew best g spec {best_g.species_id}")
+#                 prev_s, curr_s = get_set_of_spec(hist[gen-1]), get_set_of_spec(hist[gen])
+#                 diff = prev_s.difference(curr_s)
+#                 print(f"species killed:\n{diff}")
+#                 print(f"best genome spec id: {best_g.species_id}")
+#                 print(f"alive spec:\n {curr_s}")
+#                 print(f"prev spec:\n {prev_s}")
+#                 print(f"prev prev spec:\n {get_set_of_spec(hist[gen-2])}")
 
-            # if best_s_fit < prev_best_s_fit:
-            #     print(f"\nbest species fitness changed in gen {gen}")
-            #     print(f"change from {prev_best_s_fit} to {best_s_fit}")
-            # ...
-            prev_best_g = best_g
-            prev_best_s = best_s
+#             # if best_s_fit < prev_best_s_fit:
+#             #     print(f"\nbest species fitness changed in gen {gen}")
+#             #     print(f"change from {prev_best_s_fit} to {best_s_fit}")
+#             # ...
+#             prev_best_g = best_g
+#             prev_best_s = best_s
 
 
-why_best_killed(d)
-# plot_run_df(df)
+# why_best_killed(d)
+# # plot_run_df(df)
+
+# def get_n_sound(picklename):
+#     with open(picklename, "rb") as f:
+#         d = pkl.load(f)
+#     sounds = 0
+#     all = 0
+#     for gen, info_dict in d["speciation_params_ga_params"].items():
+#         if gen != "time took":
+#             if int(gen) > 0:
+#                 pop = info_dict["population"]
+#                 for g in pop:
+#                     if g["is_sound"]:
+#                         sounds += 1
+#                     all += 1
+#     return all, sounds
+
+# a, s = get_n_sound("results/data/12-09-2021_20-53-10_results.pkl")
+
+# print(a)
+# print(s)
+
+# %%
+# perc_fit_traces cant be right??!!!
+from src.neat.genome import GeneticNet
+from pm4py.algo.evaluation.replay_fitness import algorithm as replay_fitness_evaluator
+from pm4py import view_petri_net
+from pm4py.objects.log.importer.xes import importer as xes_importer
+import pprint as pp
+
+lp = "pm_data/running_example.xes" # "pm_data/m1_log.xes"
+log = xes_importer.apply(lp)
+
+
+best_g: GeneticNet = d["history"][100]["best genome"]
+# best_g.evaluate_fitness(log)
+
+best_g.show_nb_graphviz()
+
+net, im, fm = best_g.build_petri()
+# view_petri_net(net, im, fm)
+
+from pm4py.algo.conformance.tokenreplay import algorithm as token_replay
+
+# replayed_traces = token_replay.apply(log, net, im, fm)
+
+# tracel = []
+# for t in log:
+#     tracel.append(" -> ".join([e["concept:name"] for e in t]))
+# for t, fit in zip(tracel, replayed_traces):
+#     print(t)
+#     pp.pprint(fit)
+
+# parameters_tbr = {
+#     token_replay.Variants.TOKEN_REPLAY.value.Parameters.DISABLE_VARIANTS: True,
+#     token_replay.Variants.TOKEN_REPLAY.value.Parameters.ENABLE_PLTR_FITNESS: True,
+#     token_replay.Variants.TOKEN_REPLAY.value.Parameters.CONSIDER_REMAINING_IN_FITNESS: False
+# }
+
+# tbr_tuple = token_replay.apply(log, net, im, fm, parameters=parameters_tbr)
+# replayed_traces, place_fitness, trans_fitness, unwanted_activities = tbr_tuple
+
+
+fit = replay_fitness_evaluator.apply(
+    log, net, im, fm,
+    # parameters=parameters_tbr,
+    variant=replay_fitness_evaluator.Variants.TOKEN_BASED
+)
+
+pp.pprint(fit)
+
+# # ---------- ALIGNMENTS SHIT ----------
+# from pm4py.algo.conformance.alignments.petri_net import algorithm as aligner
+
+# alignments = aligner.apply_log(log, net, im, fm)
+# total_cost = 0
+# total_fit = 0
+# for alignment in alignments:
+#     pp.pprint(alignment)
+#     total_fit += alignment["fitness"]
+#     total_cost += alignment["cost"]
+# print(f"total alignments: {len(alignments)}")
+# print(f"fitness fraction: {total_fit / len(alignments)}")
+# print(f"cost fraction {total_cost / len(alignments)}")
