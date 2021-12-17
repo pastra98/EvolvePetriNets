@@ -100,6 +100,14 @@ def traces_with_concurrency(log):
     # end traces loop ----------------------------------------------------------
     return new_genomes
 
+def generate_n_random_genomes(n_genomes, log):
+    # could also add randos here
+    new_genomes = []
+    for _ in range(n_genomes):
+        pass
+    return new_genomes
+
+
 # logpath = "../pm_data/m1_log.xes"
 # logpath = "../pm_data/BPI_Challenge_2012.xes"
 # logpath = "../pm_data/pdc_2016_6.xes"
