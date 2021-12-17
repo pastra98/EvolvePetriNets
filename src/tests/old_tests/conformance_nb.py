@@ -66,8 +66,7 @@ if use_alignments:
     print(f"total alignments: {len(alignments)}")
     print(f"fitness fraction: {total_fit / len(alignments)}")
     print(f"cost fraction {total_cost / len(alignments)}")
-#token based
-else:
+else: # token based
     fit_start = process_time() 
     # fitness eval
     fitness = replay_fitness_evaluator.apply(
