@@ -18,52 +18,51 @@
     "old_penalty": 0.8,
     "youth_bonus": 1,
     "random_mating": true,
-    "perc_fit_traces_weight": 1.0,
+    "perc_fit_traces_weight": 2.0,
+    "average_trace_fitness_weight": 1.0,
+    "log_fitness_weight": 1.0,
     "soundness_weight": 0.5,
     "precision_weight": 0.3,
     "generalization_weight": 0.3,
     "simplicity_weight": 0.3,
     "prob_t_p_arc": [
-        0.6,
-        0.9
+        0.2,
+        0.4
     ],
     "prob_p_t_arc": [
-        0.6,
-        0.9
+        0.2,
+        0.4
     ],
     "prob_t_t_conn": [
-        0.3,
-        0.6
+        0.1,
+        0.3
     ],
     "prob_new_p": [
-        0.1,
-        0.3
+        0.2,
+        0.4
     ],
     "prob_new_empty_t": [
-        0.1,
-        0.3
+        0.2,
+        0.4
     ],
     "prob_split_arc": [
-        0.2,
-        0.5
+        0.1,
+        0.3
     ],
     "prob_increase_arcs": [
         0.0,
         0.0
     ],
     "prob_remove_arc": [
-        0.05,
-        0.2
+        0.2,
+        0.4
     ],
     "prob_prune_extensions": [
-        0.08,
-        0.2
-    ],
-    "is_no_preference_for_tasks": true,
-    "prob_pick_task_trans": [
-        0.5,
+        0.1,
         0.5
     ],
+    "is_no_preference_for_tasks": false,
+    "prob_pick_empty_trans": 0.3,
     "num_trys_make_conn": 20,
     "prevent_chaining": true,
     "num_trys_split_arc": 10
