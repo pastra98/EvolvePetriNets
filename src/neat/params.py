@@ -67,7 +67,11 @@ random_mating: bool
 # -------------------- selection strategy: TRUNCATION
 
 # ---------- FITNESS CHECK
+# stuff that is extracted from alignment info
 perc_fit_traces_weight: float
+average_trace_fitness_weight: float
+log_fitness_weight: float
+# other fitness measures
 soundness_weight: float
 precision_weight: float
 generalization_weight: float
