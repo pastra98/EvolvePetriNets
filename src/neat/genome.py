@@ -3,6 +3,7 @@ import itertools
 
 from graphviz import Digraph
 
+from pm4py import fitness_alignments
 from pm4py.objects.petri_net.obj import PetriNet, Marking
 from pm4py.objects.petri_net.utils.petri_utils import add_arc_from_to
 
@@ -25,7 +26,9 @@ class GeneticNet:
         self.species_id: str = None # gets assigned by species.add_member()
         self.fitness: float = None
         # fitness measures
-        self.trace_fitness: float = None # overall genetic fitness
+        self.perc_fit_traces: float = None
+        self.average_trace_fitness: float = None
+        self.log_fitness: float = None
         self.is_sound: bool = None
         self.precision: float = None
         self.generalization: float = None
@@ -56,19 +59,11 @@ class GeneticNet:
             self.extend_new_trans()
         if rd.random() < params.prob_split_arc[mutation_rate]:
             self.split_arc()
-
         if rd.random() < params.prob_prune_extensions[mutation_rate]:
             self.prune_extensions()
-
-        # TODO: split this into a func
-        arcs_to_remove = []
-        for a_id, arc in self.arcs.items():
-            if rd.random() < params.prob_remove_arc[mutation_rate]:
-                if arc.source_id != "start" and arc.target_id != "end":
-                    arcs_to_remove.append(a_id)
-        for a_id in arcs_to_remove:
-            del self.arcs[a_id]
-
+        # remove arcs, this calculates probabilities for arcs one at a time
+        self.remove_arcs(mutation_rate)
+        # remove nodes that are no longer connected
         self.remove_unused_nodes()
 
 
@@ -248,6 +243,19 @@ class GeneticNet:
                     for arc_id in arcs_to_ext:
                         del self.arcs[arc_id]
 
+
+    def remove_arcs(self, mutation_rate: int, arcs_to_remove=None) -> None:
+        if not arcs_to_remove: # if nothing in arguments, generate list
+            arcs_to_remove = []
+            for a_id, arc in self.arcs.items():
+                if rd.random() < params.prob_remove_arc[mutation_rate]:
+                    if arc.source_id != "start" and arc.target_id != "end":
+                        arcs_to_remove.append(a_id)
+        # delete arcs in arcs to remove
+        for a_id in arcs_to_remove:
+            del self.arcs[a_id]
+
+
 # ------------------------------------------------------------------------------
 # REPRODUCTION RELATED STUFF ---------------------------------------------------
 # ------------------------------------------------------------------------------
@@ -351,10 +359,38 @@ class GeneticNet:
 
 
     def evaluate_fitness(self, log) -> None:
+        # remove nodes that are no longer connected (again, just to make sure)
+        self.remove_unused_nodes()
+################################################################################
+        mufu1 = False
+        mufu2 = False
+        for arc in self.arcs.values():
+            if arc.source_id == "start" and arc.target_id == "register request":
+                mufu1 = True
+            if arc.source_id == "register request" and arc.target_id == "end":
+                mufu2 = True
+        if mufu1 and mufu2 and len(self.get_connected()) < 3:
+            breakpoint()
+################################################################################
         net, im, fm = self.build_petri()
         # fitness eval
         aligned_traces = fitnesscalc.get_aligned_traces(log, net, im, fm)
-        self.trace_fitness = fitnesscalc.get_replay_fitness(aligned_traces)
+
+        trace_fitness = fitnesscalc.get_replay_fitness(aligned_traces)
+        self.perc_fit_traces = trace_fitness["perc_fit_traces"] / 100
+        self.average_trace_fitness = trace_fitness["average_trace_fitness"]
+        self.log_fitness = trace_fitness["log_fitness"]
+
+        # try:
+        #     trace_fitness = fitness_alignments(log, net, im, fm)
+        #     self.perc_fit_traces = trace_fitness["percFitTraces"] / 100
+        #     self.average_trace_fitness = trace_fitness["averageFitness"]
+        #     self.log_fitness = 0
+        # except:
+        #     self.perc_fit_traces = 0
+        #     self.average_trace_fitness = 0
+        #     self.log_fitness = 0
+
         # soundness check
         self.is_sound = woflan.apply(net, im, fm, parameters={
             woflan.Parameters.RETURN_ASAP_WHEN_NOT_SOUND: True,
@@ -369,12 +405,16 @@ class GeneticNet:
         self.simplicity = simplicity_evaluator.apply(net)
         # some preliminary fitness measure
         self.fitness = (
-            + params.perc_fit_traces_weight * (self.trace_fitness["perc_fit_traces"] / 100)
+            + params.perc_fit_traces_weight * (self.perc_fit_traces / 100)
             + params.soundness_weight * int(self.is_sound)
             + params.precision_weight * self.precision
             + params.generalization_weight * self.generalization
             + params.simplicity_weight * self.simplicity
         )
+# ################################################################################
+#         if len(self.transitions) < 6:
+#             self.fitness = 0
+# ################################################################################
         if self.fitness <= 0:
             raise Exception("Fitness below 0 should not be possible!!!")
         return
@@ -455,7 +495,8 @@ class GeneticNet:
         connected = self.get_connected()
         t_to_del = []
         for t in self.transitions:
-            if t not in connected and t not in innovs.tasks:
+            # if t not in connected and t not in innovs.tasks:
+            if t not in connected:
                 t_to_del.append(t)
         for t in t_to_del:
             del self.transitions[t]
