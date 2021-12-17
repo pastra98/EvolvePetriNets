@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import pandas as pd
+from statistics import fmean
 import traceback
 
 # stuff in here should expect inputs from ga.get_ga_final_info()
@@ -8,10 +9,11 @@ import traceback
 # TODO: really not sure how to deal with multiple plots
 
 def save_report(
-    ga_info: dict,
-    savedir: str,
-    show_plots: bool,
-    save_df: bool) -> None:
+        ga_info: dict,
+        savedir: str,
+        show_plots: bool,
+        save_df: bool
+    ) -> None:
     """saves some plots in the specified dir
     """
 
@@ -23,6 +25,7 @@ def save_report(
     species_plot(full_history, savedir=savedir, show=show_plots)
     history_plots(reduced_history_df, savedir=savedir, show=show_plots)
     best_genome_gviz(full_history, savedir=savedir, show=show_plots)
+    plot_detailed_fitness(full_history, savedir=savedir, show=show_plots)
 
     run_report(full_history, savedir=savedir)
 
@@ -100,6 +103,38 @@ def best_genome_gviz(full_history, savedir: str, show: bool) -> None:
                 gviz.view(f"{savedir}/best_genome.png")
     except:
         print(f"couldn't save gviz in\n{savedir}")
+
+
+def plot_detailed_fitness(full_history, savedir: str, show: bool) -> None:
+    plotvars = {
+        "fitness": {"best": [], "pop_avg": []},
+        "perc_fit_traces": {"best": [], "pop_avg": []},
+        "average_trace_fitness": {"best": [], "pop_avg": []},
+        "log_fitness": {"best": [], "pop_avg": []},
+        "precision": {"best": [], "pop_avg": []},
+        "generalization": {"best": [], "pop_avg": []},
+        "simplicity": {"best": [], "pop_avg": []},
+        "is_sound": {"best": [], "pop_avg": []}
+    }
+    # read data into plotvars
+    for info_d in full_history.values():
+        best, pop = info_d["best genome"], info_d["population"]
+        for vname in plotvars:
+            plotvars[vname]["best"].append(getattr(best, vname))
+            plotvars[vname]["pop_avg"].append(fmean([getattr(g, vname) for g in pop]))
+    # iterate over plotvars to plot shit
+    for vname, d in plotvars.items():
+        fig, ax = plt.subplots()
+        for metricname, values in d.items():
+            ax.plot(values)
+        ax.legend(d.keys())
+        plt.title(vname)
+        try:
+            fig.savefig(f"{savedir}/{vname}.png")
+        except:
+            print(f"could not save in the given path\n{savedir}")
+        if show:
+            plt.show()
 
 
 def run_report(full_history, savedir: str) -> None:
