@@ -23,7 +23,7 @@ def footprints(log, visualize=True, printit=True):
 def generate_n_traces_with_concurrency(n_genomes, log):
     base_genomes = traces_with_concurrency(log)
     # could also add randos here
-    new_genomes = []
+    new_genomes = [] # TODO: fix this, this is also broken!!
     while len(new_genomes) < n_genomes:
         for new_genome in base_genomes:
             new_genomes.append(new_genome.clone())
@@ -103,8 +103,14 @@ def traces_with_concurrency(log):
 def generate_n_random_genomes(n_genomes, log):
     # could also add randos here
     new_genomes = []
+
+    # stuff in here later moved to params
+    n_initial_conn = 10
+
     for _ in range(n_genomes):
+        # add some trans-trans connections and such
         pass
+        
     return new_genomes
 
 
