@@ -165,7 +165,7 @@ class GeneticAlgorithm:
         # if using speciation, generate initial set of spec, place genomes there
         if params.selection_strategy == "speciation":
             for g in initial_pop:
-                found_species = self.find_species(g)
+                found_species = self.find_and_add_to_species(g)
                 self.best_species = found_species # just to initialize best species to a species for allowing comparison
         # set initial pop
         self.population = initial_pop
@@ -225,7 +225,7 @@ class GeneticAlgorithm:
                 if baby.get_compatibility_score(s.representative) > params.species_boundary:
                     # if the baby is too different, find an existing species to change
                     # into. If no compatible species is found, a new one is made and returned
-                    found_species = self.find_species(baby)
+                    found_species = self.find_and_add_to_species(baby)
                 else:
                     # If the baby is still within the species of it's parents, add it as member
                     s.add_member(baby)
@@ -268,7 +268,7 @@ class GeneticAlgorithm:
         self.species = updated_species
 
 
-    def find_species(self, new_genome) -> Species:
+    def find_and_add_to_species(self, new_genome) -> Species:
         """Tries to find a species to which the given genome is similar enough to be
         added as a member. If no compatible species is found, a new one is made. Returns
         the species (but the genome still needs to be added as a member).
@@ -297,7 +297,7 @@ class GeneticAlgorithm:
                 s = self.species[i]
             baby = s.elite_spawn_with_mutations()
             if baby.get_compatibility_score(s.representative) > params.species_boundary:
-                found_species = self.find_species(baby)
+                found_species = self.find_and_add_to_species(baby)
             else:
                 s.add_member(baby)
             new_genomes.append(baby)
