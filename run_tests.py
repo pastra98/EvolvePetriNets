@@ -77,7 +77,7 @@ from src.neat import params
 rsp.save_new_params(
     old_name="params/testing/default_speciation_params.json",
     new_name="params/testing/default_speciation_params.json",
-    )
+)
 
 # %% ---------------------------------------------------------------------------
 # ---------- PRINTING VERBOSE FITNESS ----------
