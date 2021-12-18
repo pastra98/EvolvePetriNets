@@ -142,7 +142,8 @@ def plot_detailed_fitness(result_d):
         "precision": {"best": [], "pop_avg": []},
         "generalization": {"best": [], "pop_avg": []},
         "simplicity": {"best": [], "pop_avg": []},
-        "is_sound": {"best": [], "pop_avg": []}
+        "is_sound": {"best": [], "pop_avg": []},
+        "fraction_used_trans": {"best": [], "pop_avg": []}
     }
     # read data into plotvars
     for info_d in hist.values():
@@ -164,12 +165,11 @@ def plot_detailed_fitness(result_d):
 plot_detailed_fitness(d)
 
 # %%
-fp = "results/data/also_deleting_tasks_now_12-17-2021_12-42-52/speciation_test_1___12-17-2021_12-48-22/speciation_test_1___12-17-2021_12-48-22_results.pkl"
-# fp = "results/data/pruning_and_deleting_12-14-2021_13-38-23/speciation_test_0___12-14-2021_13-38-23/speciation_test_0___12-14-2021_13-38-23_results.pkl"
-# df = get_run_df()
+fp = "results/data/fraction_used_trans_12-17-2021_20-29-38/speciation_test_0___12-17-2021_20-29-38/speciation_test_0___12-17-2021_20-29-38_results.pkl"
 
 d = get_unpickled(fp)
 df = pickle_to_df(d)
+plot_species(d)
 
 plot_run_df(df)
 # plot_species(d)
@@ -254,7 +254,10 @@ target_g.evaluate_fitness(log)
 # print(s)
 
 # %%
-# perc_fit_traces cant be right??!!!
+################################################################################
+########### PERC_FIT_TRACES CANT BE RIGHT??!!! #################################
+################################################################################
+
 from src.neat.genome import GeneticNet
 from pm4py.algo.evaluation.replay_fitness import algorithm as replay_fitness_evaluator
 from pm4py import view_petri_net
@@ -315,3 +318,14 @@ pp.pprint(fit)
 # print(f"total alignments: {len(alignments)}")
 # print(f"fitness fraction: {total_fit / len(alignments)}")
 # print(f"cost fraction {total_cost / len(alignments)}")
+
+# %%
+################################################################################
+########### SPECIES PLOT MUST BE WRONG ?? ######################################
+################################################################################
+
+for gen, info in d["history"].items():
+    s_members = 0
+    for s in info["species"]:
+        s_members += s.num_members
+    print(s_members)
