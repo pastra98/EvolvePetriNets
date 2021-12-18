@@ -34,6 +34,7 @@ class GeneticNet:
         self.generalization: float = None
         self.simplicity: float = None
         self.fraction_used_trans: float = None
+        self.fraction_tasks: float = None
         # make Transition genes for every task saved in innovs and add to genome
         task_trans = {t: GTrans(t, True) for t in innovs.tasks}
         self.transitions = transitions | task_trans
@@ -365,10 +366,12 @@ class GeneticNet:
         self.log_fitness = trace_fitness["log_fitness"]
         # get fraction of task trans represented in genome
         my_task_trans = [t for t in self.transitions.values() if t.is_task]
-        try:
-            self.fraction_used_trans = len(my_task_trans) / len(innovs.tasks) # TODO: scale this (anteil grundwert hundertstel)
-        except:
+        if my_task_trans:
+            self.fraction_used_trans = len(my_task_trans) / len(innovs.tasks)
+            self.fraction_tasks = len(my_task_trans) / len(self.transitions)
+        else:
             self.fraction_used_trans = 0
+            self.fraction_tasks = 0
         # soundness check
         self.is_sound = woflan.apply(net, im, fm, parameters={
             woflan.Parameters.RETURN_ASAP_WHEN_NOT_SOUND: True,
@@ -384,11 +387,14 @@ class GeneticNet:
         # some preliminary fitness measure
         self.fitness = (
             + params.perc_fit_traces_weight * (self.perc_fit_traces / 100)
+            + params.average_trace_fitness_weight * self.average_trace_fitness
+            + params.log_fitness_weight * self.log_fitness
             + params.soundness_weight * int(self.is_sound)
             + params.precision_weight * self.precision
             + params.generalization_weight * self.generalization
             + params.simplicity_weight * self.simplicity
             + params.fraction_used_trans_weight * self.fraction_used_trans
+            + params.fraction_tasks_weight * self.fraction_tasks
         )
         if self.fitness <= 0:
             raise Exception("Fitness below 0 should not be possible!!!")
