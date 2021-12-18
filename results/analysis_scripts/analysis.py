@@ -131,7 +131,7 @@ def plot_species2(results_d: dict):
         pop_sizes.append(s_sizes)
     ##
     fig, ax = plt.subplots()
-    ax.stackplot(list(hist.keys()), *pop_sizes, labels=list(s_dict.keys()))
+    ax.stackplot(list(hist.keys()), *pop_sizes, labels=list(s_dict.keys()), edgecolor="black")
     # Shrink current axis's height by 10% on the bottom
     box = ax.get_position()
     ax.set_position([box.x0, box.y0 + box.height * 0.1, box.width, box.height * 0.9])
@@ -209,11 +209,11 @@ def plot_detailed_fitness(result_d):
     # # plt.rcParams["figure.figsize"] = 10, 10
     # # plt.show()
 
-plot_species(d)
+# plot_species(d)
 plot_species2(d)
 
 # %%
-fp = "results/data/fraction_used_trans_12-17-2021_20-29-38/speciation_test_0___12-17-2021_20-29-38/speciation_test_0___12-17-2021_20-29-38_results.pkl"
+fp = "results/data/much_higher_boundary_12-18-2021_15-47-58/speciation_test_0___12-18-2021_15-47-58/speciation_test_0___12-18-2021_15-47-58_results.pkl"
 
 d = get_unpickled(fp)
 df = pickle_to_df(d)
