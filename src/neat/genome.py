@@ -33,6 +33,7 @@ class GeneticNet:
         self.precision: float = None
         self.generalization: float = None
         self.simplicity: float = None
+        self.fraction_used_trans: float = None
         # make Transition genes for every task saved in innovs and add to genome
         task_trans = {t: GTrans(t, True) for t in innovs.tasks}
         self.transitions = transitions | task_trans
@@ -313,12 +314,6 @@ class GeneticNet:
         return distance
 
 
-    def crossover(self, other_genome):
-        """TODO: need to implement
-        """
-        return self.clone()
-
-
     def clone(self):
         """returns a deepcopy
         """
@@ -361,42 +356,25 @@ class GeneticNet:
     def evaluate_fitness(self, log) -> None:
         # remove nodes that are no longer connected (again, just to make sure)
         self.remove_unused_nodes()
-################################################################################
-        mufu1 = False
-        mufu2 = False
-        for arc in self.arcs.values():
-            if arc.source_id == "start" and arc.target_id == "register request":
-                mufu1 = True
-            if arc.source_id == "register request" and arc.target_id == "end":
-                mufu2 = True
-        if mufu1 and mufu2 and len(self.get_connected()) < 3:
-            breakpoint()
-################################################################################
         net, im, fm = self.build_petri()
         # fitness eval
         aligned_traces = fitnesscalc.get_aligned_traces(log, net, im, fm)
-
         trace_fitness = fitnesscalc.get_replay_fitness(aligned_traces)
         self.perc_fit_traces = trace_fitness["perc_fit_traces"] / 100
         self.average_trace_fitness = trace_fitness["average_trace_fitness"]
         self.log_fitness = trace_fitness["log_fitness"]
-
-        # try:
-        #     trace_fitness = fitness_alignments(log, net, im, fm)
-        #     self.perc_fit_traces = trace_fitness["percFitTraces"] / 100
-        #     self.average_trace_fitness = trace_fitness["averageFitness"]
-        #     self.log_fitness = 0
-        # except:
-        #     self.perc_fit_traces = 0
-        #     self.average_trace_fitness = 0
-        #     self.log_fitness = 0
-
+        # get fraction of task trans represented in genome
+        my_task_trans = [t for t in self.transitions.values() if t.is_task]
+        try:
+            self.fraction_used_trans = len(my_task_trans) / len(innovs.tasks) # TODO: scale this (anteil grundwert hundertstel)
+        except:
+            self.fraction_used_trans = 0
         # soundness check
         self.is_sound = woflan.apply(net, im, fm, parameters={
             woflan.Parameters.RETURN_ASAP_WHEN_NOT_SOUND: True,
             woflan.Parameters.PRINT_DIAGNOSTICS: False,
             woflan.Parameters.RETURN_DIAGNOSTICS: False
-            })
+        })
         # precision
         self.precision = fitnesscalc.get_precision(log, net, im, fm)
         # generealization
@@ -410,11 +388,8 @@ class GeneticNet:
             + params.precision_weight * self.precision
             + params.generalization_weight * self.generalization
             + params.simplicity_weight * self.simplicity
+            + params.fraction_used_trans_weight * self.fraction_used_trans
         )
-# ################################################################################
-#         if len(self.transitions) < 6:
-#             self.fitness = 0
-# ################################################################################
         if self.fitness <= 0:
             raise Exception("Fitness below 0 should not be possible!!!")
         return
