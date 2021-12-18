@@ -76,6 +76,8 @@ soundness_weight: float
 precision_weight: float
 generalization_weight: float
 simplicity_weight: float
+fraction_used_trans_weight: float
+fraction_tasks_weight: float
 
 # ---------- MUTATIONS GENERAL
 """
