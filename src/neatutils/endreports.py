@@ -66,11 +66,14 @@ def history_plots(reduced_history_df, savedir: str, show: bool) -> None:
 def species_plot(full_history, savedir: str, show: bool):
     s_dict = {}
     for gen, info in full_history.items():
-        for s in info["species"]: # list of all species objects (assuming != minimal serialize)
-            if s.name in s_dict:
-                s_dict[s.name][gen] = s.num_members
+        for g in info["population"]:
+            s_id = g.species_id
+            if not s_id in s_dict:
+                s_dict[s_id] = {gen: 1}
+            elif not gen in s_dict[s_id]:
+                s_dict[s_id][gen] = 1
             else:
-                s_dict[s.name] = {gen: s.num_members}
+                s_dict[s_id][gen] += 1
     total_gens = len(full_history)
     pop_sizes = []
     for s, gens in s_dict.items():
@@ -81,9 +84,18 @@ def species_plot(full_history, savedir: str, show: bool):
         if (last_appear := list(gens.keys())[-1]) < total_gens:
             s_sizes += [0] * (total_gens - last_appear)
         pop_sizes.append(s_sizes)
+    ##
     fig, ax = plt.subplots()
-    ax.stackplot(list(full_history.keys()), *pop_sizes, labels=list(s_dict.keys()))
-    ax.legend(loc='upper left')
+    ax.stackplot(list(full_history.keys()), *pop_sizes, labels=list(s_dict.keys()), edgecolor="black")
+    # Shrink current axis's height by 10% on the bottom
+    box = ax.get_position()
+    ax.set_position([box.x0, box.y0 + box.height * 0.1, box.width, box.height * 0.9])
+    ax.legend(
+        loc="upper center",
+        ncol=int(len(s_dict)/8),
+        bbox_to_anchor=(0.5, -0.05),
+        fancybox=True, shadow=True
+    )
     plt.rcParams["figure.figsize"] = (20,20)
     try:
         fig.savefig(f"{savedir}/species_plot.png")
@@ -115,7 +127,8 @@ def plot_detailed_fitness(full_history, savedir: str, show: bool) -> None:
         "generalization": {"best": [], "pop_avg": []},
         "simplicity": {"best": [], "pop_avg": []},
         "is_sound": {"best": [], "pop_avg": []},
-        "fraction_used_trans": {"best": [], "pop_avg": []}
+        "fraction_used_trans": {"best": [], "pop_avg": []},
+        "fraction_tasks": {"best": [], "pop_avg": []}
     }
     # read data into plotvars
     for info_d in full_history.values():
