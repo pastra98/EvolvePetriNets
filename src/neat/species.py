@@ -11,7 +11,7 @@ class Species:
         self.representative = None
         self.leader = None
         self.alive_members = []
-        self.num_members: int
+        self.num_members: int = 0
         self.pool = []
         self.expected_offspring = 0
         self.spawn_count = 0 # number of spawns the species got during the last generation it was active
@@ -97,29 +97,6 @@ class Species:
         return self.leader.clone()
 
 
-    def mate_spawn(self) -> GeneticNet:
-        """Chooses to members from the pool and produces a baby via crossover. Baby
-        then gets mutated and returned.
-        """
-        # if random mating, pick 2 random unique parent genomes for crossing over.
-        if params.random_mating:
-            mom, dad = rd.sample(self.pool, k=2)
-        # else just go through every member of the pool, possibly multiple times and
-        # breed genomes sorted by their fitness. Genomes with fitness scores next to each
-        # other are therefore picked as mates, the exception being the first and last one.
-        else:
-            pool_index = self.spawn_count % (len(self.pool) - 1)
-            mom = self.pool[pool_index]
-            # ensure that second parent is not out of pool bounds
-            dad = self.pool[-1] if pool_index == 0 else self.pool[pool_index + 1]
-        if mom == dad: raise Exception("woops, this shouldn't happen lol")
-        # now that the parents are determined, produce a baby and mutate it
-        baby = dad.crossover(mom)
-        baby.mutate(self.curr_mutation_rate)
-        self.spawn_count += 1
-        return baby
-
-
     def asex_spawn(self) -> GeneticNet:
         """Copy a member from the pool, mutates it, and returns it.
         """
@@ -129,6 +106,15 @@ class Species:
         # if more spawns than pool size, start again
         else:
             baby = self.pool[self.spawn_count % len(self.pool)].clone()
+        baby.mutate(self.curr_mutation_rate)
+        self.spawn_count += 1
+        return baby
+
+
+    def elite_spawn_with_mutations(self) -> GeneticNet:
+        """Returns a copy of the species leader, mutates it and increases spawn count
+        """
+        baby = self.elite_spawn()
         baby.mutate(self.curr_mutation_rate)
         self.spawn_count += 1
         return baby
