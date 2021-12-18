@@ -21,6 +21,7 @@ import pickle as pkl
 import pandas as pd
 from src.tests import visualize_genome as vg
 import matplotlib.pyplot as plt
+import matplotlib as mpl
 from statistics import fmean
 from src import neat
 
@@ -106,6 +107,44 @@ def pickle_to_df(picklef):
     return df.set_index("gen")
 
 
+def plot_species2(results_d: dict):
+    s_dict = {}
+    hist = results_d["history"]
+    for gen, info in hist.items():
+        for g in info["population"]:
+            s_id = g.species_id
+            if not s_id in s_dict:
+                s_dict[s_id] = {gen: 1}
+            elif not gen in s_dict[s_id]:
+                s_dict[s_id][gen] = 1
+            else:
+                s_dict[s_id][gen] += 1
+    total_gens = len(hist)
+    pop_sizes = []
+    for s, gens in s_dict.items():
+        s_sizes = []
+        if (first_appear := list(gens.keys())[0]) > 1:
+            s_sizes = [0] * (first_appear - 1)
+        s_sizes += gens.values()
+        if (last_appear := list(gens.keys())[-1]) < total_gens:
+            s_sizes += [0] * (total_gens - last_appear)
+        pop_sizes.append(s_sizes)
+    ##
+    fig, ax = plt.subplots()
+    ax.stackplot(list(hist.keys()), *pop_sizes, labels=list(s_dict.keys()))
+    # Shrink current axis's height by 10% on the bottom
+    box = ax.get_position()
+    ax.set_position([box.x0, box.y0 + box.height * 0.1, box.width, box.height * 0.9])
+    ax.legend(
+        loc="upper center",
+        ncol=int(len(s_dict)/8),
+        bbox_to_anchor=(0.5, -0.05),
+        fancybox=True, shadow=True
+    )
+    plt.rcParams["figure.figsize"] = (20,20)
+    plt.show()
+
+
 def plot_species(results_d: dict):
     s_dict = {}
     hist = results_d["history"]
@@ -128,7 +167,15 @@ def plot_species(results_d: dict):
     ##
     fig, ax = plt.subplots()
     ax.stackplot(list(hist.keys()), *pop_sizes, labels=list(s_dict.keys()))
-    ax.legend(loc='upper left')
+    # Shrink current axis's height by 10% on the bottom
+    box = ax.get_position()
+    ax.set_position([box.x0, box.y0 + box.height * 0.1, box.width, box.height * 0.9])
+    ax.legend(
+        loc="upper center",
+        ncol=int(len(s_dict)/8),
+        bbox_to_anchor=(0.5, -0.05),
+        fancybox=True, shadow=True
+    )
     plt.rcParams["figure.figsize"] = (20,20)
     plt.show()
 
@@ -162,7 +209,8 @@ def plot_detailed_fitness(result_d):
     # # plt.rcParams["figure.figsize"] = 10, 10
     # # plt.show()
 
-plot_detailed_fitness(d)
+plot_species(d)
+plot_species2(d)
 
 # %%
 fp = "results/data/fraction_used_trans_12-17-2021_20-29-38/speciation_test_0___12-17-2021_20-29-38/speciation_test_0___12-17-2021_20-29-38_results.pkl"
@@ -324,8 +372,19 @@ pp.pprint(fit)
 ########### SPECIES PLOT MUST BE WRONG ?? ######################################
 ################################################################################
 
-for gen, info in d["history"].items():
-    s_members = 0
-    for s in info["species"]:
-        s_members += s.num_members
-    print(s_members)
+# for gen, info in d["history"].items():
+#     # print(all([g.species_id for g in info["population"]]))
+#     # print(len(info["population"]))
+#     # if len(info["population"]) != 100:
+#     #     print(80*"-")
+#     s_members = 0
+#     s_num = 0
+#     for s in info["species"]:
+#         s_num += s.num_members
+#         if not s.obliterate:
+#             s_members += len(s.alive_members)
+#     print(f"{s_members} - {s_num} diff: {s_members - s_num}")
+
+
+plot_species(d)
+plot_species2(d)
