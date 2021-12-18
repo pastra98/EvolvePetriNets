@@ -166,7 +166,6 @@ class GeneticAlgorithm:
         if params.selection_strategy == "speciation":
             for g in initial_pop:
                 found_species = self.find_species(g)
-                found_species.add_member(g)
                 self.best_species = found_species # just to initialize best species to a species for allowing comparison
         # set initial pop
         self.population = initial_pop
@@ -227,7 +226,6 @@ class GeneticAlgorithm:
                     # if the baby is too different, find an existing species to change
                     # into. If no compatible species is found, a new one is made and returned
                     found_species = self.find_species(baby)
-                    found_species.add_member(baby)
                 else:
                     # If the baby is still within the species of it's parents, add it as member
                     s.add_member(baby)
@@ -261,7 +259,7 @@ class GeneticAlgorithm:
                 total_species_avg_fitness += s.avg_fitness
                 total_adjusted_species_avg_fitness += s.avg_fitness_adjusted 
             else:
-                num_dead_species += 1 # dont add it to pool
+                num_dead_species += 1 # dont add it to updated species
         if not updated_species or total_adjusted_species_avg_fitness == 0:
             raise Exception("mass extinction")
         # calculate offspring amt based on fitness relative to the total_adjusted_species_avg_fitness
@@ -285,6 +283,7 @@ class GeneticAlgorithm:
         # new genome matches no current species -> make a new one
         if not found_species:
             found_species = self.make_new_species(new_genome)
+        found_species.add_member(new_genome)
         return found_species
 
 
@@ -299,7 +298,6 @@ class GeneticAlgorithm:
             baby = s.elite_spawn_with_mutations()
             if baby.get_compatibility_score(s.representative) > params.species_boundary:
                 found_species = self.find_species(baby)
-                found_species.add_member(baby)
             else:
                 s.add_member(baby)
             new_genomes.append(baby)
