@@ -215,16 +215,13 @@ class GeneticAlgorithm:
             # spawn all the new members of a species
             for _ in range(s.num_to_spawn):
                 baby: GeneticNet = None
-                # first clone the species leader for elitism
+                # if elitism, spawn clone of the species leader
                 if not spawned_elite and params.elitism:
                     baby = s.elite_spawn()
                     spawned_elite = True
-                # if at least 2 member and prob_asex, spawn asex baby
-                elif len(s.pool) < 2 or rd.random() < params.prob_asex:
-                    baby = s.asex_spawn()
-                # else produce produce a crossed-over genome
+                # spawn asex baby
                 else:
-                    baby = s.mate_spawn()
+                    baby = s.asex_spawn()
                 # check if baby should speciate away from it's current species
                 if baby.get_compatibility_score(s.representative) > params.species_boundary:
                     # if the baby is too different, find an existing species to change
@@ -238,7 +235,7 @@ class GeneticAlgorithm:
                 new_genomes.append(baby)
         # if all the current species didn't provide enough offspring, get some more
         if params.popsize - num_spawned > 0:
-            new_genomes += self.make_hybrids(params.popsize - num_spawned)
+            new_genomes += self.get_more_mutated_leaders(params.popsize - num_spawned)
         self.population = new_genomes
         return
 
@@ -291,8 +288,22 @@ class GeneticAlgorithm:
         return found_species
 
 
-    def make_hybrids(self, num) -> list:
-        return []
+    def get_more_mutated_leaders(self, num) -> list:
+        # iterate over species leaders, but mutate them
+        new_genomes = []
+        for i in range(num):
+            if i + 1 > len(self.species):
+                s = self.species[i % len(self.species)]
+            else:
+                s = self.species[i]
+            baby = s.elite_spawn_with_mutations()
+            if baby.get_compatibility_score(s.representative) > params.species_boundary:
+                found_species = self.find_species(baby)
+                found_species.add_member(baby)
+            else:
+                s.add_member(baby)
+            new_genomes.append(baby)
+        return new_genomes
 
 
     def make_new_species(self, founding_member: GeneticNet) -> Species:
