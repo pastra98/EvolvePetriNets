@@ -248,7 +248,7 @@ target_g.evaluate_fitness(log)
 #     def get_set_of_spec(gen):
 #         return set(map(lambda s: s.name, gen["species"]))
 
-#     popsize = result_d["param values"]["popsize"]
+#     popsize = result_d["param_values"]["popsize"]
 #     hist = result_d["history"]
     
 #     for gen, info_d in hist.items():

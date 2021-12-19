@@ -1,10 +1,11 @@
 import matplotlib.pyplot as plt
 import pandas as pd
 from statistics import fmean
+from math import ceil
 import traceback
 
 # stuff in here should expect inputs from ga.get_ga_final_info()
-# :   {"history": self.history, "param values": params.get_curr_curr_dict()}
+# :   {"history": self.history, "param_values": params.get_curr_curr_dict()}
 
 # TODO: really not sure how to deal with multiple plots
 
@@ -20,7 +21,7 @@ def save_report(
     full_history = ga_info["history"]
     reduced_history_df = get_reduced_history_df(full_history)
     if save_df:
-        reduced_history_df.to_csv()
+        reduced_history_df.to_csv(f"{savedir}/history.csv")
 
     species_plot(full_history, savedir=savedir, show=show_plots)
     history_plots(reduced_history_df, savedir=savedir, show=show_plots)
@@ -61,6 +62,7 @@ def history_plots(reduced_history_df, savedir: str, show: bool) -> None:
             print(f"could not save in the given path\n{savedir}")
         if show:
             plt.show()
+    plt.close("all")
 
 
 def species_plot(full_history, savedir: str, show: bool):
@@ -92,7 +94,7 @@ def species_plot(full_history, savedir: str, show: bool):
     ax.set_position([box.x0, box.y0 + box.height * 0.1, box.width, box.height * 0.9])
     ax.legend(
         loc="upper center",
-        ncol=int(len(s_dict)/8),
+        ncol=ceil(len(s_dict)/8),
         bbox_to_anchor=(0.5, -0.05),
         fancybox=True, shadow=True
     )
@@ -103,6 +105,7 @@ def species_plot(full_history, savedir: str, show: bool):
         print(f"could not save in the given path\n{savedir}")
     if show:
         plt.show()
+    plt.close("all")
 
 
 def best_genome_gviz(full_history, savedir: str, show: bool) -> None:
@@ -149,6 +152,7 @@ def plot_detailed_fitness(full_history, savedir: str, show: bool) -> None:
             print(f"could not save in the given path\n{savedir}")
         if show:
             plt.show()
+    plt.close("all")
 
 
 def run_report(full_history, savedir: str) -> None:

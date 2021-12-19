@@ -113,10 +113,10 @@ class GeneticAlgorithm:
 
             # save info about generation in general
             if self.is_pop_serialized:
-                if self.is_minimal_serialization: # TODO really not sure if pop should still be saved
-                    gen_info["best genome"] = self.best_genome.get_info()
+                if self.is_minimal_serialization:
+                    gen_info["best genome"] = copy(self.best_genome)
                     gen_info["population"] = [s.get_curr_info() for s in self.population]
-                else: # TODO this is very likely super borked
+                else:
                     gen_info["best genome"] = copy(self.best_genome) # cant use clone because we want keep fitness
                     gen_info["population"] = [copy(g) for g in self.population]
 
@@ -173,9 +173,14 @@ class GeneticAlgorithm:
     
 
     def get_ga_final_info(self) -> dict:
-        """Returns dict of history along with dict of param values
+        """Returns dict of history along with dict of param_values and max_fitnesss
         """ 
-        return {"history": self.history, "param values": params.get_curr_curr_dict()}
+        results = {
+            "history": self.history,
+            "param_values": params.get_curr_curr_dict(),
+            "max_fitness": self.best_genome.fitness,
+        }
+        return results
 
 # ------------------------------------------------------------------------------
 # POPULATION UPDATES -----------------------------------------------------------
