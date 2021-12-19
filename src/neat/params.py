@@ -43,6 +43,14 @@ start_config: str
 popsize: int
 selection_strategy: str # "speciation" / "roulette" / "truncation"
 
+# -------------------- start config: random
+initial_tp_gauss_dist: list[float, float]
+initial_pt_gauss_dist: list[float, float]
+initial_tt_gauss_dist: list[float, float]
+initial_pe_gauss_dist: list[float, float]
+initial_te_gauss_dist: list[float, float]
+initial_as_gauss_dist: list[float, float]
+
 # -------------------- selection strategy: SPECIATION
 species_boundary: float
 coeff_disjoint: float

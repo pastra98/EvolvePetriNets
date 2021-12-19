@@ -158,8 +158,8 @@ class GeneticAlgorithm:
         """ 
         if params.start_config == "concurrent_traces":
             initial_pop = startconfigs.generate_n_traces_with_concurrency(params.popsize, self.log)
-        elif params.start_config == "blabla":
-            raise NotImplementedError() # make other type of startconfig
+        elif params.start_config == "random":
+            initial_pop = startconfigs.generate_n_random_genomes(params.popsize, self.log)
         else:
             raise NotImplementedError()
         # if using speciation, generate initial set of spec, place genomes there

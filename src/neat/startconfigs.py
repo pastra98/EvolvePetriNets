@@ -1,7 +1,8 @@
+from random import gauss
 from pm4py.algo.discovery.footprints import algorithm as footprints_discovery
 from pm4py.visualization.footprints import visualizer as fp_visualizer
 
-from . import netobj, innovs, genome
+from . import netobj, innovs, genome, params
 
 def get_trace_str(trace):
     tr_events = []
@@ -101,16 +102,27 @@ def traces_with_concurrency(log):
     return new_genomes
 
 def generate_n_random_genomes(n_genomes, log):
-    # could also add randos here
+    #
+    fp_log = footprints(log, visualize=False, printit=False)
+    task_list = list(fp_log["activities"])
+    innovs.set_tasks(task_list)
+    #
     new_genomes = []
-
-    # stuff in here later moved to params
-    n_initial_conn = 10
-
     for _ in range(n_genomes):
-        # add some trans-trans connections and such
-        pass
-        
+        gen_net = genome.GeneticNet(dict(), dict(), dict())
+        for _ in range(int(abs(gauss(*params.initial_tp_gauss_dist)))):
+            gen_net.trans_place_arc()
+        for _ in range(int(abs(gauss(*params.initial_pt_gauss_dist)))):
+            gen_net.place_trans_arc()
+        for _ in range(int(abs(gauss(*params.initial_tt_gauss_dist)))):
+            gen_net.trans_trans_conn()
+        for _ in range(int(abs(gauss(*params.initial_pe_gauss_dist)))):
+            gen_net.extend_new_place()
+        for _ in range(int(abs(gauss(*params.initial_te_gauss_dist)))):
+            gen_net.extend_new_trans()
+        for _ in range(int(abs(gauss(*params.initial_as_gauss_dist)))):
+            gen_net.split_arc()
+        new_genomes.append(gen_net)
     return new_genomes
 
 
