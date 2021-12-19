@@ -1,6 +1,6 @@
 {
-    "start_config": "concurrent_traces",
-    "popsize": 100,
+    "start_config": "random",
+    "popsize": 300,
     "selection_strategy": "speciation",
     "initial_tp_gauss_dist": [
         2.0,
