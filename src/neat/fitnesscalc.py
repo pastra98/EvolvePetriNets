@@ -20,6 +20,14 @@ class Parameters(Enum):
     CLEANING_TOKEN_FLOOD = "cleaning_token_flood"
     MULTIPROCESSING = "multiprocessing"
 
+################################################################################
+# monkeypatch pulp shit
+from pm4py.algo.analysis.woflan.place_invariants import utility
+from pm4py.algo.analysis.woflan import algorithm as woflan
+import neatutils.monkeypatch_pulp as mp_pulp
+utility.transform_basis = mp_pulp.transform_basis
+woflan.transform_basis = mp_pulp.transform_basis
+################################################################################
 
 def get_replay_fitness(aligned_traces):
     """
