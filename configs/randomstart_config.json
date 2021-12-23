@@ -15,7 +15,7 @@
             },
             "stop_cond": {
                 "var": "gen",
-                "val": 4000
+                "val": 100
             },
             "n_runs": 4,
             "send_gen_info_to_console": false,
