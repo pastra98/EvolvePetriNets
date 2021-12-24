@@ -451,19 +451,8 @@ class GeneticNet:
     def get_curr_info(self) -> dict:
         """Used for serialization when not wanting to save the entire object
         """
-        info_d = {}
-        info_d["id"] = self.id
-        info_d["fitness"] = self.fitness
-        info_d["trace_fitness"] = self.trace_fitness
-        info_d["is_sound"] = self.is_sound
-        info_d["precision"] = self.precision
-        info_d["generalization"] = self.generalization
-        info_d["simplicity"] = self.simplicity
-        info_d["transitions"] = self.transitions
-        info_d["places"] = self.places
-        info_d["arcs"] = self.arcs
-        return info_d
-
+        discard = ["transitions", "places", "arcs"]
+        return {var: val for var, val in vars(self).items() if var not in discard}
 
     def show_nb_graphviz(self) -> None:
         from IPython.core.display import display, Image
