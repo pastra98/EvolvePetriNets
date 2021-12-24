@@ -114,10 +114,10 @@ class GeneticAlgorithm:
             # save info about generation in general
             if self.is_pop_serialized:
                 if self.is_minimal_serialization:
-                    gen_info["best genome"] = copy(self.best_genome)
-                    gen_info["population"] = [s.get_curr_info() for s in self.population]
+                    gen_info["best genome"] = self.best_genome.get_curr_info()
+                    gen_info["population"] = [g.get_curr_info() for g in self.population]
                 else:
-                    gen_info["best genome"] = copy(self.best_genome) # cant use clone because we want keep fitness
+                    gen_info["best genome"] = copy(self.best_genome)
                     gen_info["population"] = [copy(g) for g in self.population]
 
             gen_info["num total innovations"] = self.new_innovcount
@@ -178,6 +178,7 @@ class GeneticAlgorithm:
         results = {
             "history": self.history,
             "param_values": params.get_curr_curr_dict(),
+            "best_genome": self.best_genome,
             "max_fitness": self.best_genome.fitness,
         }
         return results
