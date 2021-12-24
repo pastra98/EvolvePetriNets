@@ -44,7 +44,7 @@ def main(conf: dict) -> None:
             # update results of this run with times
             run_end = datetime.datetime.now()
             run_result |= {"start": run_start, "end": run_end, "time": run_end - run_start}
-            main_logger.info(f"{80*'/'}\nRun finished at {run_end}, dumping results in pickle file!")
+            main_logger.info(f"{80*'/'}\nRun finished at {run_end}")
             # write results of run to pkl file
             if "EXCEPTION" in run_result:
                 run_name += "___EXCEPTION"
@@ -58,9 +58,12 @@ def main(conf: dict) -> None:
                 )
                 run_fitness_dict[run_name] = run_result["max_fitness"]
             results_name = f"{run_dir}/{run_name}_results.pkl"
-            with open(results_name, "wb") as f:
-                pickle.dump(run_result, f)
-            main_logger.info(f"File saved as:\n{results_name}")
+            if setup["dump_pickle"]:
+                main_logger.info("dumping results in pickle")
+                with open(results_name, "wb") as f:
+                    pickle.dump(run_result, f)
+                main_logger.info(f"File saved as:\n{results_name}")
+            del run_result
     
     # info about overall execution (may put log in there) TODO: dump output log here
     exec_end_time = datetime.datetime.now()
@@ -103,6 +106,7 @@ def run_setup(setup: logging.Logger, logger):
         if gen_info[stopvar] == stopval: # TODO probably will have to think about other operators
             logger.info(f"{setup['setupname']} reached {stopvar} of {stopval}")
             result = curr_ga.get_ga_final_info()
+            del curr_ga
             return result
 
 
