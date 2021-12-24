@@ -213,7 +213,7 @@ def plot_detailed_fitness(result_d):
 plot_species2(d)
 
 # %%
-fp = "results/data/much_higher_boundary_12-18-2021_15-47-58/speciation_test_0___12-18-2021_15-47-58/speciation_test_0___12-18-2021_15-47-58_results.pkl"
+fp = "results/data/test_save_df_12-24-2021_14-42-54/speciation_test_0___12-24-2021_14-42-54/speciation_test_0___12-24-2021_14-42-54_results.pkl"
 
 d = get_unpickled(fp)
 df = pickle_to_df(d)
@@ -388,3 +388,25 @@ pp.pprint(fit)
 
 plot_species(d)
 plot_species2(d)
+
+# %%
+# test feather
+
+def get_species_df(full_history):
+    l = []
+    for gen, info_d in full_history.items():
+        for s in info_d["species"]:
+            del s["alive_member_ids"]
+            l.append(s | {"gen": gen})
+    return pd.DataFrame(l)
+
+def get_population_df(full_history):
+    l = []
+    for gen, info_d in full_history.items():
+        for g in info_d["population"]:
+            l.append(g | {"gen": gen})
+    return pd.DataFrame(l)
+
+
+df = get_population_df(d["history"])
+df
