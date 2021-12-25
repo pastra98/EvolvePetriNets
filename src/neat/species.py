@@ -67,7 +67,6 @@ class Species:
             # pool is a reference to the alive members of the last gen
             # If a species reaches selection_threshold, not every member gets in the pool
             if len(self.alive_members) > params.selection_threshold:
-                # self.pool = alive_members.slice(0, int(alive_members.size()*Params.spawn_cutoff))
                 self.pool = self.alive_members[:int(len(self.alive_members)*params.spawn_cutoff)]
             else:
                 self.pool = self.alive_members
