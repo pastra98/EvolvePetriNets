@@ -1,3 +1,4 @@
+import numpy as np
 import random as rd
 from copy import copy
 from neatutils import timer
@@ -200,7 +201,6 @@ class GeneticAlgorithm:
 
         self.new_innovcount = len(innovs.arcs)
         if self.is_timed: self.timer.stop("pop_update", self.curr_gen)
-        return
 
 # SPECIATION -------------------------------------------------------------------
 
@@ -324,13 +324,40 @@ class GeneticAlgorithm:
 # ROULETTE ---------------------------------------------------------------------
 
     def roulette_pop_update(self) -> None:
-        """
+        """perform roulette wheel selection
         """ 
-        return
+        def roulette_select(pop, probs) -> GeneticNet:
+            chosen_genome = np.random.choice(pop, p=probs)
+            return chosen_genome.clone()
+
+        fitnesses = [g.fitness for g in self.population]
+        fit_sum = sum(fitnesses)
+        probabilities = [fit / fit_sum for fit in fitnesses]
+
+        new_genomes = []
+        for _ in range(params.popsize - 1): # elitism: keep a slot for best g
+            new_g = roulette_select(self.population, probabilities)
+            new_g.mutate()
+            new_genomes.append(new_g)
+
+        new_genomes.append(self.best_genome.clone()) # append unmutated best g
+        self.population = new_genomes
 
 # TRUNCATION -------------------------------------------------------------------
 
     def truncation_pop_update(self) -> None:
         """
         """ 
-        return
+        new_genomes = []
+        pool = self.population[:params.popsize*params.spawn_cutoff]
+
+        for i in range(params.popsize - 1): # elitism: keep a slot for best g
+            if i < len(pool):
+                new_g = pool[i].clone()
+            else:
+                new_g = pool[i % len(pool)].clone()
+            new_g.mutate()
+            new_genomes.append(new_g)
+
+        new_genomes.append(self.best_genome.clone()) # add best g w.o. mutation
+        self.population = new_genomes

@@ -1,7 +1,7 @@
 {
     "start_config": "concurrent_traces",
     "popsize": 100,
-    "selection_strategy": "speciation",
+    "selection_strategy": "roulette",
     "initial_tp_gauss_dist": [
         2.0,
         0.5

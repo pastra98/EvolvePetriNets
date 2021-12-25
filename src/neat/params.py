@@ -62,7 +62,7 @@ enough_gens_to_change_things: int
 update_species_rep: bool
 leader_is_rep: bool
 selection_threshold: int
-spawn_cutoff: float
+spawn_cutoff: float # actually also used by truncation_pop_update
 elitism: bool
 prob_asex: float
 
