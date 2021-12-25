@@ -1,4 +1,4 @@
-import cProfile, sys, os, json, traceback, datetime, pickle, pprint
+import cProfile, sys, os, json, traceback, datetime, pickle, pprint, gc
 from pm4py.objects.log.importer.xes import importer as xes_importer
 from neat import ga
 from neatutils import endreports
@@ -63,7 +63,9 @@ def main(conf: dict) -> None:
                 with open(results_name, "wb") as f:
                     pickle.dump(run_result, f)
                 main_logger.info(f"File saved as:\n{results_name}")
+
             del run_result
+            gc.collect()
     
     # info about overall execution (may put log in there) TODO: dump output log here
     exec_end_time = datetime.datetime.now()
