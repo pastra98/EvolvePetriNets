@@ -4,10 +4,10 @@ from statistics import fmean
 from math import ceil
 import traceback
 
-# stuff in here should expect inputs from ga.get_ga_final_info()
-# :   {"history": self.history, "param_values": params.get_curr_curr_dict()}
+import gc
+import importlib
+import matplotlib
 
-# TODO: really not sure how to deal with multiple plots
 
 def save_report(
         ga_info: dict,
@@ -17,21 +17,27 @@ def save_report(
     ) -> None:
     """saves some plots in the specified dir
     """
+    # plt.ioff() # turn interactive off, hopfully saves mem
+    matplotlib.use('Agg')
 
     full_history = ga_info["history"]
-    reduced_history_df = get_reduced_history_df(full_history)
-    if save_df:
-        reduced_history_df.to_csv(f"{savedir}/history.csv")
+    best_genome = ga_info["best_genome"]
+    plotting_history_df = get_plotting_history_df(full_history)
+    if save_df: # only works with minimal serialization lolz
+        fixup_history_df(plotting_history_df).to_feather(f"{savedir}/history.feather")
+        get_species_df(full_history).to_feather(f"{savedir}/species.feather")
+        get_population_df(full_history).to_feather(f"{savedir}/population.feather")
 
     species_plot(full_history, savedir=savedir, show=show_plots)
-    history_plots(reduced_history_df, savedir=savedir, show=show_plots)
-    best_genome_gviz(full_history, savedir=savedir, show=show_plots)
+    history_plots(plotting_history_df, savedir=savedir, show=show_plots)
+    best_genome_gviz(best_genome, savedir=savedir, show=show_plots)
     plot_detailed_fitness(full_history, savedir=savedir, show=show_plots)
 
     run_report(full_history, savedir=savedir)
+    gc.collect()
 
 
-def get_reduced_history_df(history: dict):
+def get_plotting_history_df(history: dict):
     """expects the history from a run
     """
     dlist = []
@@ -43,33 +49,41 @@ def get_reduced_history_df(history: dict):
         d |= {k: times[k] for k in times}
         dlist.append(d)
     df = pd.DataFrame(dlist)
-    return df.set_index("gen")
+    df.reset_index(inplace=True)
+    return df
 
 
-def history_plots(reduced_history_df, savedir: str, show: bool) -> None:
+def history_plots(plotting_history_df, savedir: str, show: bool) -> None:
     plotvars = {
         "fitness" : ["best species avg fitness", "best genome fitness", "avg pop fitness"],
         "times" : ["pop_update", "evaluate_curr_generation"],
         "species num" : ["num total species"],
         "innovs" : ["num new innovations"],
     }
+    plt.rcParams["figure.figsize"] = (60,20)
     for name, vars in plotvars.items():
-        plot = reduced_history_df[vars].plot(title=name)
+        plot = plotting_history_df[vars].plot(title=name)
         fig = plot.get_figure()
         try:
             fig.savefig(f"{savedir}/{name}.png")
         except:
             print(f"could not save in the given path\n{savedir}")
-        if show:
-            plt.show()
+        # if show:
+        #     plt.show()
+        fig.clf()
+        del fig
     plt.close("all")
+    gc.collect()
 
 
 def species_plot(full_history, savedir: str, show: bool):
     s_dict = {}
     for gen, info in full_history.items():
         for g in info["population"]:
-            s_id = g.species_id
+            if isinstance(g, dict):
+                s_id = g["species_id"]
+            else:
+                s_id = g.species_id
             if not s_id in s_dict:
                 s_dict[s_id] = {gen: 1}
             elif not gen in s_dict[s_id]:
@@ -98,24 +112,27 @@ def species_plot(full_history, savedir: str, show: bool):
         bbox_to_anchor=(0.5, -0.05),
         fancybox=True, shadow=True
     )
-    plt.rcParams["figure.figsize"] = (20,20)
+    plt.rcParams["figure.figsize"] = (60,20)
     try:
         fig.savefig(f"{savedir}/species_plot.png")
     except:
         print(f"could not save in the given path\n{savedir}")
-    if show:
-        plt.show()
+    # if show:
+    #     plt.show()
+    fig.clf()
+    del fig
     plt.close("all")
+    gc.collect()
 
 
-def best_genome_gviz(full_history, savedir: str, show: bool) -> None:
-    gviz = list(full_history.values())[-1]["best genome"].get_graphviz()
+def best_genome_gviz(best_genome, savedir: str, show: bool) -> None:
+    gviz = best_genome.get_graphviz()
     try:
         gviz.format = "png"
         with open(f"{savedir}/best_genome.png", "wb") as img:
             img.write(gviz.pipe())
-            if show:
-                gviz.view(f"{savedir}/best_genome.png")
+            # if show:
+            #     gviz.view(f"{savedir}/best_genome.png")
     except:
         print(f"couldn't save gviz in\n{savedir}")
 
@@ -137,8 +154,12 @@ def plot_detailed_fitness(full_history, savedir: str, show: bool) -> None:
     for info_d in full_history.values():
         best, pop = info_d["best genome"], info_d["population"]
         for vname in plotvars:
-            plotvars[vname]["best"].append(getattr(best, vname))
-            plotvars[vname]["pop_avg"].append(fmean([getattr(g, vname) for g in pop]))
+            try: # object
+                plotvars[vname]["best"].append(getattr(best, vname))
+                plotvars[vname]["pop_avg"].append(fmean([getattr(g, vname) for g in pop]))
+            except: # dict
+                plotvars[vname]["best"].append(best[vname])
+                plotvars[vname]["pop_avg"].append(fmean([g[vname] for g in pop]))
     # iterate over plotvars to plot shit
     for vname, d in plotvars.items():
         fig, ax = plt.subplots()
@@ -150,8 +171,11 @@ def plot_detailed_fitness(full_history, savedir: str, show: bool) -> None:
             fig.savefig(f"{savedir}/{vname}.png")
         except:
             print(f"could not save in the given path\n{savedir}")
-        if show:
-            plt.show()
+        # if show:
+        #     plt.show()
+        fig.clf()
+        del fig
+        gc.collect()
     plt.close("all")
 
 
@@ -164,3 +188,29 @@ def run_report(full_history, savedir: str) -> None:
     except:
         print(f"couldn't save report in\n{savedir}")
         print(traceback.format_exc())
+
+def fixup_history_df(df):
+    try: # in case we have object
+        df["best species"] = df["best species"].apply(lambda bs: bs.name)
+    except: # in case we have dict
+        df["best species"] = df["best species"].apply(lambda bs: bs["name"])
+    return df
+
+
+def get_species_df(full_history):
+    # only works with minimal serialization right now
+    l = []
+    for gen, info_d in full_history.items():
+        for s in info_d["species"]:
+            del s["alive_member_ids"]
+            l.append(s | {"gen": gen})
+    return pd.DataFrame(l)
+
+
+def get_population_df(full_history):
+    # only works with minimal serialization right now
+    l = []
+    for gen, info_d in full_history.items():
+        for g in info_d["population"]:
+            l.append(g | {"gen": gen})
+    return pd.DataFrame(l)
