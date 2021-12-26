@@ -338,7 +338,7 @@ class GeneticAlgorithm:
         new_genomes = []
         for _ in range(params.popsize - 1): # elitism: keep a slot for best g
             new_g = roulette_select(self.population, probabilities)
-            new_g.mutate()
+            new_g.mutate(1)
             new_genomes.append(new_g)
 
         new_genomes.append(self.best_genome.clone()) # append unmutated best g
@@ -350,14 +350,14 @@ class GeneticAlgorithm:
         """
         """ 
         new_genomes = []
-        pool = self.population[:params.popsize*params.spawn_cutoff]
+        pool = self.population[:int(params.popsize*params.spawn_cutoff)]
 
         for i in range(params.popsize - 1): # elitism: keep a slot for best g
             if i < len(pool):
                 new_g = pool[i].clone()
             else:
                 new_g = pool[i % len(pool)].clone()
-            new_g.mutate()
+            new_g.mutate(1)
             new_genomes.append(new_g)
 
         new_genomes.append(self.best_genome.clone()) # add best g w.o. mutation
