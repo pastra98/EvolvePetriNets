@@ -60,12 +60,12 @@ def history_plots(plotting_history_df, savedir: str, show: bool) -> None:
         "species num" : ["num total species"],
         "innovs" : ["num new innovations"],
     }
-    plt.rcParams["figure.figsize"] = (60,20)
+    plt.rcParams["figure.figsize"] = (15,5)
     for name, vars in plotvars.items():
         plot = plotting_history_df[vars].plot(title=name)
         fig = plot.get_figure()
         try:
-            fig.savefig(f"{savedir}/{name}.png")
+            fig.savefig(f"{savedir}/{name}.png", dpi=300)
         except:
             print(f"could not save in the given path\n{savedir}")
         # if show:
@@ -112,9 +112,9 @@ def species_plot(full_history, savedir: str, show: bool):
         bbox_to_anchor=(0.5, -0.05),
         fancybox=True, shadow=True
     )
-    plt.rcParams["figure.figsize"] = (60,20)
+    plt.rcParams["figure.figsize"] = (15,5)
     try:
-        fig.savefig(f"{savedir}/species_plot.png")
+        fig.savefig(f"{savedir}/species_plot.png", dpi=300)
     except:
         print(f"could not save in the given path\n{savedir}")
     # if show:
@@ -168,7 +168,7 @@ def plot_detailed_fitness(full_history, savedir: str, show: bool) -> None:
         ax.legend(d.keys())
         plt.title(vname)
         try:
-            fig.savefig(f"{savedir}/{vname}.png")
+            fig.savefig(f"{savedir}/{vname}.png", dpi=300)
         except:
             print(f"could not save in the given path\n{savedir}")
         # if show:
