@@ -231,10 +231,10 @@ class GeneticNet:
 
 
     def prune_extensions(self) -> None:
+        source_nodes = map(lambda a: a.source_id, self.arcs.values())
         for ext_info in innovs.extensions.values():
             arc_id, node_id, ntype = ext_info["arc"], ext_info["node"], ext_info["ntype"]
             if arc_id in self.arcs:
-                source_nodes = map(lambda a: a.source_id, self.arcs.values())
                 if node_id not in source_nodes:
                     # delete node, delete arc
                     if ntype == GTrans: del self.transitions[node_id]
