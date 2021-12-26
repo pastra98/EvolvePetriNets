@@ -12,6 +12,7 @@ from pm4py.objects.petri_net.obj import PetriNet, Marking
 
 from collections import Counter
 from math import sqrt
+from functools import cache, cached_property
 
 class Parameters(Enum):
     ACTIVITY_KEY = constants.PARAMETER_CONSTANT_ACTIVITY_KEY
@@ -64,6 +65,7 @@ def get_replay_fitness(aligned_traces):
             "percentage_of_fitting_traces": perc_fit_traces }
 
 
+@cache
 def get_aligned_traces(log, petri_net, initial_marking, final_marking):
     parameters_tr = {token_replay.Parameters.ACTIVITY_KEY: DEFAULT_NAME_KEY,
                      token_replay.Parameters.CONSIDER_REMAINING_IN_FITNESS: True,

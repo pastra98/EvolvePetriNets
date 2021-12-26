@@ -12,6 +12,7 @@ from pm4py.algo.evaluation.simplicity import algorithm as simplicity_evaluator
 
 from . import params, innovs, fitnesscalc
 from .netobj import GArc, GPlace, GTrans
+from functools import cache, cached_property
 
 
 class GeneticNet:
@@ -404,6 +405,7 @@ class GeneticNet:
 # MISC STUFF -------------------------------------------------------------------
 # ------------------------------------------------------------------------------
 
+    @cache
     def get_connected(self) -> set:
         # get set of all nodes that are connected to the network via arcs
         connected = [(a.source_id, a.target_id) for a in self.arcs.values()]
