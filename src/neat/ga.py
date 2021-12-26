@@ -15,6 +15,7 @@ class GeneticAlgorithm:
             is_minimal_serialization=False,
             is_pop_serialized=True,
             is_timed=True)-> None:
+
         self.history = {}
         self.params_name = params_name
         self.log = log
