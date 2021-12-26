@@ -42,7 +42,7 @@
     "old_penalty": 0.8,
     "youth_bonus": 1.4,
     "random_mating": true,
-    "perc_fit_traces_weight": 3.0,
+    "perc_fit_traces_weight": 4.0,
     "average_trace_fitness_weight": 0.0,
     "log_fitness_weight": 1.0,
     "soundness_weight": 2.0,
