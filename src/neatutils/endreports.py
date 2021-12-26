@@ -25,8 +25,11 @@ def save_report(
     plotting_history_df = get_plotting_history_df(full_history)
     if save_df: # only works with minimal serialization lolz
         fixup_history_df(plotting_history_df).to_feather(f"{savedir}/history.feather")
-        get_species_df(full_history).to_feather(f"{savedir}/species.feather")
         get_population_df(full_history).to_feather(f"{savedir}/population.feather")
+        try:
+            get_species_df(full_history).to_feather(f"{savedir}/species.feather")
+        except:
+            pass # not possible to make species df bc. not using speciation
 
     species_plot(full_history, savedir=savedir, show=show_plots)
     history_plots(plotting_history_df, savedir=savedir, show=show_plots)
@@ -190,10 +193,11 @@ def run_report(full_history, savedir: str) -> None:
         print(traceback.format_exc())
 
 def fixup_history_df(df):
-    try: # in case we have object
-        df["best species"] = df["best species"].apply(lambda bs: bs.name)
-    except: # in case we have dict
-        df["best species"] = df["best species"].apply(lambda bs: bs["name"])
+    if "best species" in df.columns:
+        try: # in case we have object
+            df["best species"] = df["best species"].apply(lambda bs: bs.name)
+        except: # in case we have dict
+            df["best species"] = df["best species"].apply(lambda bs: bs["name"])
     return df
 
 
