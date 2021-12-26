@@ -10,7 +10,7 @@ def run_setup(setup, results_path) -> dict:
     setup_path = f"{results_path}/{setup['setupname']}"
     os.makedirs(setup_path)
     setup_logger = nl.get_logger(setup_path, setup["setupname"], True)
-    for run in range(1, setup["n_runs"]):
+    for run in range(1, setup["n_runs"]+1):
 
         # create a dir for the current run, along with subdir for reports
         run_start = datetime.datetime.now()
