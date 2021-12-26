@@ -4,7 +4,7 @@ def fs_compatible_time(dt) -> str:
     return dt.strftime('%m-%d-%Y_%H-%M-%S')
 
 
-def setup_logger(log_path: str, logname: str, send_to_console: bool) -> logging.Logger:
+def get_logger(log_path: str, logname: str, send_to_console: bool) -> logging.Logger:
     # set up main logger for the entire execution
     logger = logging.getLogger(logname)
     logger.setLevel(logging.DEBUG) # root level of logger, handlers cannot go deeper, default for all handlers

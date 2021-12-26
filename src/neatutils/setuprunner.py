@@ -1,25 +1,25 @@
-import cProfile, sys, os, json, traceback, datetime, pickle, pprint
+import cProfile, os, json, traceback, datetime, pickle, pprint, gc, logging
 from pm4py.objects.log.importer.xes import importer as xes_importer
 
 from . import endreports as er
 from . import neatlogger as nl
-import logging
-
 from neat import ga
 
-def run_setup(setup, results_path):
+def run_setup(setup, results_path) -> dict:
     setup_fitness_dict = {}
     setup_path = f"{results_path}/{setup['setupname']}"
-    os.makedir(setup_path)
-    setup_logger = nl.setup_logger(setup_path, setup["setupname"], True)
-    for run in range(setup["n_runs"]):
-        # setup run_logger, use setup config to determine if send to console
-        run_logger = nl.setup_logger(run_dir, run_name, setup["send_gen_info_to_console"])
+    os.makedirs(setup_path)
+    setup_logger = nl.get_logger(setup_path, setup["setupname"], True)
+    for run in range(1, setup["n_runs"]):
+
         # create a dir for the current run, along with subdir for reports
         run_start = datetime.datetime.now()
-        run_name = f"{setup['setupname']}_{run}___{nl.fs_compatible_time(run_start)}"
+        run_name = f"{run}_{nl.fs_compatible_time(run_start)}"
         run_dir = f"{setup_path}/{run_name}"
         os.makedirs(f"{run_dir}/reports")
+
+        # setup run_logger, use setup config to determine if send to console
+        run_logger = nl.get_logger(run_dir, run_name, setup["send_gen_info_to_console"])
 
         # run the current setup once, profile if enabled in setup, save result
         setup_logger.info(f"\n{80*'-'}\n{run_start}: loading new ga with params {setup['parampath']}\n")
@@ -40,7 +40,7 @@ def run_setup(setup, results_path):
         # update results of this run with times
         run_end = datetime.datetime.now()
         run_result |= {"start": run_start, "end": run_end, "time": run_end - run_start}
-        setup_logger.info(f"{80*'/'}\nRun finished at {run_end}, dumping results in pickle file!")
+        setup_logger.info(f"{80*'/'}\nRun finished at {run_end}")
         # write results of run to pkl file
         if "EXCEPTION" in run_result:
             run_name += "___EXCEPTION"
@@ -53,15 +53,28 @@ def run_setup(setup, results_path):
                 setup["save_reduced_history_df"]
             )
             setup_fitness_dict[run_name] = run_result["max_fitness"]
-        results_name = f"{run_dir}/{run_name}_results.pkl"
-        with open(results_name, "wb") as f:
-            pickle.dump(run_result, f)
-        setup_logger.info(f"File saved as:\n{results_name}")
+
+        if setup["save_params"]:
+            params_name = f"{run_dir}/{run_name}_params.json"
+            with open(params_name, "w") as f:
+                json.dump(run_result["param_values"], f, indent=4)
+
+        if setup["dump_pickle"]:
+            results_name = f"{run_dir}/{run_name}_results.pkl"
+            setup_logger.info(f"Dumping results in pickle file!")
+            with open(results_name, "wb") as f:
+                pickle.dump(run_result, f)
+            setup_logger.info(f"File saved as:\n{results_name}")
+
+        del run_result
+        gc.collect()
     
     # write setup results to file
+    setup_fitness_dict = {k: v for k, v in sorted(setup_fitness_dict.items(), key=lambda item: item[1])}
     with open(f"{setup_path}/execution_report.txt", "w") as f:
-        d = {k: v for k, v in sorted(setup_fitness_dict.items(), key=lambda item: item[1])}
-        json.dump(d, fp=f, indent=4)
+        json.dump(setup_fitness_dict, fp=f, indent=4)
+
+    return setup_fitness_dict
 
 
 def run_ga(setup: logging.Logger, logger):
