@@ -68,8 +68,8 @@
             "dump_pickle": false
         },
         {
-            "setupname": "speciation_1",
-            "parampath": "params/running_example/random_speciation_1.json",
+            "setupname": "speciation_4",
+            "parampath": "params/running_example/random_speciation_4.json",
             "logpath": "pm_data/running_example.xes",
             "ga_kwargs": {
                 "is_pop_serialized": true,
@@ -90,8 +90,8 @@
             "dump_pickle": false
         },
         {
-            "setupname": "speciation_2",
-            "parampath": "params/running_example/random_speciation_2.json",
+            "setupname": "speciation_5",
+            "parampath": "params/running_example/random_speciation_5.json",
             "logpath": "pm_data/running_example.xes",
             "ga_kwargs": {
                 "is_pop_serialized": true,
@@ -112,8 +112,8 @@
             "dump_pickle": false
         },
         {
-            "setupname": "speciation_3",
-            "parampath": "params/running_example/random_speciation_3.json",
+            "setupname": "speciation_6",
+            "parampath": "params/running_example/random_speciation_6.json",
             "logpath": "pm_data/running_example.xes",
             "ga_kwargs": {
                 "is_pop_serialized": true,
