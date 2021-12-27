@@ -181,7 +181,7 @@ class GeneticAlgorithm:
             "history": self.history,
             "param_values": params.get_curr_curr_dict(),
             "best_genome": self.best_genome,
-            "max_fitness": self.best_genome.fitness,
+            "max_fitness": self.best_genome.fitness
         }
         return results
 
