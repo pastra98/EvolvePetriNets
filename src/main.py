@@ -7,6 +7,7 @@ from pm4py.objects.log.importer.xes import importer as xes_importer
 
 from neatutils import neatlogger as nl
 from neatutils.setuprunner import run_setup
+import pandas as pd
 
 
 def main(conf: dict) -> None:
@@ -19,21 +20,28 @@ def main(conf: dict) -> None:
     main_logger = nl.get_logger(results_path, "main", True)
     main_logger.info(f"Execution started at: {exec_start_time}")
 
-    args = [(setup, results_path) for setup in conf["setups"]]
+    argslist = []
+    for setup in conf["setups"]:
+        for run_nr, args in enumerate([[setup, results_path]] * setup["n_runs"], start=1):
+            argslist.append(tuple([run_nr, main_logger, *args]))
+
     with Pool() as p:
-        setup_fitnesses = p.starmap(run_setup, args)
+        setup_fitnesses = p.starmap(run_setup, argslist)
 
     # info about overall execution (may put log in there) TODO: dump output log here
     exec_end_time = datetime.datetime.now()
     dur = exec_end_time - exec_start_time
     main_logger.info(f"Execution finished at: {exec_end_time}\nTime: {dur}")
+    main_logger.info("saving final fitness report")
 
-    fit_list = list(zip([s["setupname"] for s in conf["setups"]], setup_fitnesses))
-    fit_list.sort(key=lambda t: list(t[1].values())[0])
+    # make the final reports
+    df = pd.DataFrame(setup_fitnesses)
+    df.to_feather(f"{results_path}/final_report_df.feather")
     with open(f"{results_path}/execution_report.txt", "w") as f:
-        f.write(f"{exec_start_time}\n{exec_end_time}\n{dur}\n")
-        json.dump(fit_list, fp=f, indent=4)
-
+        f.write(f"times:\nstart: {exec_start_time}\nend: {exec_end_time}\nduration: {dur}\n")
+        f.write("\nsorted by fitness:\n" + str(df.sort_values(by="max_fitness")))
+        f.write("\nreport grouped by setup:\n" + str(df[["setupname", "max_fitness"]].groupby("setupname").describe()))
+    main_logger.info("Data successfully saved, quitting all processes")
 
 
 if __name__ == "__main__":
