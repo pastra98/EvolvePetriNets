@@ -18,7 +18,7 @@ def save_report(
     """
 
     matplotlib.use('Agg')
-    use_species = ga_info["selection_strategy"] == "speciation"
+    use_species = ga_info["param_values"]["selection_strategy"] == "speciation"
 
     full_history = ga_info["history"]
     best_genome = ga_info["best_genome"]
@@ -63,12 +63,13 @@ def get_plotting_history_df(history: dict):
 
 def history_plots(plotting_history_df, use_species: bool, savedir: str) -> None:
     plotvars = {
-        "fitness" : ["best species avg fitness", "best genome fitness", "avg pop fitness"],
+        "fitness" : ["best genome fitness", "avg pop fitness"],
         "times" : ["pop_update", "evaluate_curr_generation"],
         "innovs" : ["num new innovations"],
     }
     if use_species:
         plotvars["species num"] = ["num total species"]
+        plotvars["fitness"].append("best species avg fitness")
     plt.rcParams["figure.figsize"] = (15,5)
     for name, vars in plotvars.items():
         plot = plotting_history_df[vars].plot(title=name)
