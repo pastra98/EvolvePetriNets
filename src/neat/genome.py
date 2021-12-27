@@ -12,8 +12,7 @@ from pm4py.algo.evaluation.simplicity import algorithm as simplicity_evaluator
 
 from . import params, innovs, fitnesscalc
 from .netobj import GArc, GPlace, GTrans
-from functools import cache, cached_property
-
+import traceback
 
 class GeneticNet:
     def __init__(self, transitions: dict, places: dict, arcs: dict) -> None:
@@ -50,24 +49,28 @@ class GeneticNet:
 # ------------------------------------------------------------------------------
 
     def mutate(self, mutation_rate):
-        if rd.random() < params.prob_t_p_arc[mutation_rate]:
-            self.trans_place_arc()
-        if rd.random() < params.prob_p_t_arc[mutation_rate]:
-            self.place_trans_arc()
-        if rd.random() < params.prob_t_t_conn[mutation_rate]:
-            self.trans_trans_conn()
-        if rd.random() < params.prob_new_p[mutation_rate] and len(self.transitions) > 2:
-            self.extend_new_place()
-        if rd.random() < params.prob_new_empty_t[mutation_rate] and len(self.places) > 2:
-            self.extend_new_trans()
-        if rd.random() < params.prob_split_arc[mutation_rate]:
-            self.split_arc()
-        if rd.random() < params.prob_prune_extensions[mutation_rate]:
-            self.prune_extensions()
-        # remove arcs, this calculates probabilities for arcs one at a time
-        self.remove_arcs(mutation_rate)
-        # remove nodes that are no longer connected
-        self.remove_unused_nodes()
+        try:
+            if rd.random() < params.prob_t_p_arc[mutation_rate]:
+                self.trans_place_arc()
+            if rd.random() < params.prob_p_t_arc[mutation_rate]:
+                self.place_trans_arc()
+            if rd.random() < params.prob_t_t_conn[mutation_rate]:
+                self.trans_trans_conn()
+            if rd.random() < params.prob_new_p[mutation_rate] and len(self.transitions) > 2:
+                self.extend_new_place()
+            if rd.random() < params.prob_new_empty_t[mutation_rate] and len(self.places) > 2:
+                self.extend_new_trans()
+            if rd.random() < params.prob_split_arc[mutation_rate]:
+                self.split_arc()
+            if rd.random() < params.prob_prune_extensions[mutation_rate]:
+                self.prune_extensions()
+            # remove arcs, this calculates probabilities for arcs one at a time
+            self.remove_arcs(mutation_rate)
+            # remove nodes that are no longer connected
+            self.remove_unused_nodes()
+        except:
+            print(traceback.format_exc()) # TODO: meh, aint got not time to do logging here
+
 
 
     def place_trans_arc(self, place_id=None, trans_id=None) -> None:
@@ -405,7 +408,6 @@ class GeneticNet:
 # MISC STUFF -------------------------------------------------------------------
 # ------------------------------------------------------------------------------
 
-    @cache
     def get_connected(self) -> set:
         # get set of all nodes that are connected to the network via arcs
         connected = [(a.source_id, a.target_id) for a in self.arcs.values()]
