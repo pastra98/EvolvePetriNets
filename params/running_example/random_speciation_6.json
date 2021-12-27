@@ -37,7 +37,7 @@
     "spawn_cutoff": 0.7,
     "elitism": true,
     "prob_asex": 0.25,
-    "allowed_gens_no_improvement": 10000,
+    "allowed_gens_no_improvement": 100,
     "old_age": 30,
     "old_penalty": 0.8,
     "youth_bonus": 1.4,
