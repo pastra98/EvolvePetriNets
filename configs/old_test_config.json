@@ -18,7 +18,6 @@
             "send_gen_info_to_console": false,
             "is_profiled": false,
             "save_reduced_history_df": true,
-            "show_report_plots": false,
             "save_reports": true,
             "save_params": true,
             "dump_pickle": false
