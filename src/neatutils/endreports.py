@@ -114,7 +114,7 @@ def species_plot(full_history, savedir: str):
     # Shrink current axis's height by 10% on the bottom
     box = ax.get_position()
     ax.set_position([box.x0, box.y0 + box.height * 0.1, box.width, box.height * 0.9])
-    ax.legend(
+    legend = ax.legend(
         loc="upper center",
         ncol=ceil(len(s_dict)/8),
         bbox_to_anchor=(0.5, -0.05),
@@ -122,7 +122,11 @@ def species_plot(full_history, savedir: str):
     )
     plt.rcParams["figure.figsize"] = (15,5)
     try:
-        fig.savefig(f"{savedir}/species_plot.png", dpi=300)
+        fig.savefig(
+            f"{savedir}/species_plot.png",
+            bbox_extra_artists=(legend,),
+            bbox_inches='tight',
+            dpi=300)
     except:
         print(f"could not save in the given path\n{savedir}")
     fig.clf()
