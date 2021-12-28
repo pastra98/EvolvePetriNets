@@ -54,10 +54,13 @@ def run_setup(run_nr, main_logger, setup, results_path) -> dict:
             setup["save_reduced_history_df"]
         )
 
-    if setup["save_params"]:
-        params_name = f"{run_dir}/{run_name}_params.json"
-        with open(params_name, "w") as f:
-            json.dump(run_result["param_values"], f, indent=4)
+    try:
+        if setup["save_params"]:
+            params_name = f"{run_dir}/{run_name}_params.json"
+            with open(params_name, "w") as f:
+                json.dump(run_result["param_values"], f, indent=4)
+    except:
+        run_logger.exception("Error while trying to save params")
 
     if setup["dump_pickle"]:
         results_name = f"{run_dir}/{run_name}_results.pkl"
