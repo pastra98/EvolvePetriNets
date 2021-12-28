@@ -235,19 +235,40 @@ class GeneticNet:
 
 
     def prune_extensions(self) -> None:
-        source_nodes = map(lambda a: a.source_id, self.arcs.values())
-        for ext_info in innovs.extensions.values():
-            arc_id, node_id, ntype = ext_info["arc"], ext_info["node"], ext_info["ntype"]
-            if arc_id in self.arcs:
-                if node_id not in source_nodes:
-                    # delete node, delete arc
-                    if ntype == GTrans: del self.transitions[node_id]
-                    elif ntype == GPlace: del self.places[node_id]
-                    del self.arcs[arc_id]
-                    # delete all arcs pointing to extension (they shouldnt exist, don't know why still here) 
-                    arcs_to_ext = [a.id for a in self.arcs.values() if a.target_id == node_id]
-                    for arc_id in arcs_to_ext:
+        use_innovs = False
+        if use_innovs:
+            source_nodes = map(lambda a: a.source_id, self.arcs.values())
+            for ext_info in innovs.extensions.values():
+                arc_id, node_id, ntype = ext_info["arc"], ext_info["node"], ext_info["ntype"]
+                if arc_id in self.arcs:
+                    if node_id not in source_nodes:
+                        # delete node, delete arc
+                        if ntype == GTrans: del self.transitions[node_id]
+                        elif ntype == GPlace: del self.places[node_id]
                         del self.arcs[arc_id]
+                        # delete all arcs pointing to extension (they shouldnt exist, don't know why still here) 
+                        arcs_to_ext = [a.id for a in self.arcs.values() if a.target_id == node_id]
+                        for arc_id in arcs_to_ext:
+                            del self.arcs[arc_id]
+        else:
+            # wow this is a shit
+            arcs_pointing_to_target = {}
+            source_nodes = []
+            target_nodes = []
+            for arc in self.arcs.values():
+                source_nodes.append(arc.source_id)
+                target_nodes.append(arc.target_id)
+                if arc.target_id in arcs_pointing_to_target:
+                    arcs_pointing_to_target[arc.target_id].append(arc.id)
+                else:
+                    arcs_pointing_to_target[arc.target_id] = [arc.id]
+            for node_id in set(target_nodes).difference(set(source_nodes+["end"])): # make sure end node is not removed
+                for arc_id in arcs_pointing_to_target[node_id]:
+                    del self.arcs[arc_id]
+                if node_id in self.transitions:
+                    del self.transitions[node_id]
+                else:
+                    del self.places[node_id]
 
 
     def remove_arcs(self, mutation_rate: int, arcs_to_remove=None) -> None:
