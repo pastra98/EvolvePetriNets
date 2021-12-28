@@ -70,7 +70,8 @@ def run_setup(run_nr, main_logger, setup, results_path) -> dict:
     return {
         "setupname": setup['setupname'],
         "run_nr": run_nr,
-        "max_fitness": run_result['max_fitness']
+        "max_fitness": run_result['max_fitness'],
+        "Exceptions": "EXCEPTION" in run_result
     }
 
 
