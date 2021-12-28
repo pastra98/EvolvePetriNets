@@ -421,7 +421,7 @@ class GeneticNet:
             + params.fraction_used_trans_weight * self.fraction_used_trans
             + params.fraction_tasks_weight * self.fraction_tasks
         )
-        if self.fitness <= 0:
+        if self.fitness < 0:
             raise Exception("Fitness below 0 should not be possible!!!")
         return
 
