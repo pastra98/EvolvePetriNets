@@ -1,0 +1,45 @@
+start_config: str
+popsize: int
+selection_strategy: str # "speciation" / "roulette" / "truncation"
+initial_tp_gauss_dist
+initial_pt_gauss_dist
+initial_tt_gauss_dist
+initial_pe_gauss_dist
+initial_te_gauss_dist
+initial_as_gauss_dist
+species_boundary: float
+coeff_disjoint: float
+coeff_excess: float
+coeff_matched: float
+enough_gens_to_change_things: int
+update_species_rep: bool
+leader_is_rep: bool
+selection_threshold: int
+spawn_cutoff: float # actually also used by truncation_pop_update
+prob_asex: float
+allowed_gens_no_improvement: int
+old_age: int
+old_penalty: float
+youth_bonus: float
+perc_fit_traces_weight: float
+average_trace_fitness_weight: float
+log_fitness_weight: float
+soundness_weight: float
+precision_weight: float
+generalization_weight: float
+simplicity_weight: float
+fraction_used_trans_weight: float
+fraction_tasks_weight: float
+prob_t_p_arc: list[float, float]
+prob_p_t_arc: list[float, float]
+prob_t_t_conn: list[float, float]
+prob_new_p: list[float, float]
+prob_new_empty_t: list[float, float]
+prob_split_arc: list[float, float]
+prob_increase_arcs: list[float, float]
+prob_remove_arc: list[float, float]
+prob_prune_extensions: list[float, float]
+is_no_preference_for_tasks: bool # if this is True, prob pick_tasks_trans is ignored
+prob_pick_empty_trans: float # probability of picking a task transition
+num_trys_make_conn: int
+num_trys_split_arc: int

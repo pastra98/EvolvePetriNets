@@ -1,9 +1,9 @@
 {
-    "name": "test_mproc",
+    "name": "test_extension_pruning",
     "setups": [
         {
             "setupname": "roulette",
-            "parampath": "params/running_example/random_roulette_1.json",
+            "parampath": "params/testing/roulette_test.json",
             "logpath": "pm_data/running_example.xes",
             "ga_kwargs": {
                 "is_pop_serialized": true,
@@ -12,9 +12,9 @@
             },
             "stop_cond": {
                 "var": "gen",
-                "val": 5
+                "val": 1000
             },
-            "n_runs": 3,
+            "n_runs": 2,
             "send_gen_info_to_console": false,
             "is_profiled": false,
             "save_reduced_history_df": true,
@@ -24,7 +24,7 @@
         },
         {
             "setupname": "speciation_1",
-            "parampath": "params/running_example/random_speciation_4.json",
+            "parampath": "params/testing/speciation_test.json",
             "logpath": "pm_data/running_example.xes",
             "ga_kwargs": {
                 "is_pop_serialized": true,
@@ -33,9 +33,9 @@
             },
             "stop_cond": {
                 "var": "gen",
-                "val": 5
+                "val": 1000
             },
-            "n_runs": 3,
+            "n_runs": 2,
             "send_gen_info_to_console": false,
             "is_profiled": false,
             "save_reduced_history_df": true,
@@ -45,7 +45,7 @@
         },
         {
             "setupname": "truncation_1",
-            "parampath": "params/running_example/random_truncation_1.json",
+            "parampath": "params/testing/truncation_test.json",
             "logpath": "pm_data/running_example.xes",
             "ga_kwargs": {
                 "is_pop_serialized": true,
@@ -54,9 +54,9 @@
             },
             "stop_cond": {
                 "var": "gen",
-                "val": 5
+                "val": 1000
             },
-            "n_runs": 3,
+            "n_runs": 2,
             "send_gen_info_to_console": false,
             "is_profiled": false,
             "save_reduced_history_df": true,

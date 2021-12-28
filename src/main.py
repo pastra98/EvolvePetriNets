@@ -39,7 +39,7 @@ def main(conf: dict) -> None:
     df.to_feather(f"{results_path}/final_report_df.feather")
     with open(f"{results_path}/execution_report.txt", "w") as f:
         f.write(f"times:\nstart: {exec_start_time}\nend: {exec_end_time}\nduration: {dur}\n")
-        f.write("\nsorted by fitness:\n" + str(df.sort_values(by="max_fitness")))
+        f.write("\nsorted by fitness:\n" + str(df.sort_values(by="max_fitness", ascending=False)))
         f.write("\nreport grouped by setup:\n" + str(df[["setupname", "max_fitness"]].groupby("setupname").describe()))
     main_logger.info("Data successfully saved, quitting all processes")
 
