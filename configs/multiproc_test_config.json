@@ -23,7 +23,7 @@
             "dump_pickle": false
         },
         {
-            "setupname": "speciation_1",
+            "setupname": "speciation",
             "parampath": "params/testing/speciation_test.json",
             "logpath": "pm_data/running_example.xes",
             "ga_kwargs": {
@@ -44,7 +44,7 @@
             "dump_pickle": false
         },
         {
-            "setupname": "truncation_1",
+            "setupname": "truncation",
             "parampath": "params/testing/truncation_test.json",
             "logpath": "pm_data/running_example.xes",
             "ga_kwargs": {

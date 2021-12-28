@@ -42,6 +42,7 @@
     "old_penalty": 0.8,
     "youth_bonus": 1.4,
     "random_mating": true,
+
     "perc_fit_traces_weight": 4.0,
     "average_trace_fitness_weight": 0.0,
     "log_fitness_weight": 1.0,
@@ -51,6 +52,7 @@
     "simplicity_weight": 0.3,
     "fraction_used_trans_weight": 3.0,
     "fraction_tasks_weight": 0,
+
     "prob_t_p_arc": [
         0.1,
         0.3
