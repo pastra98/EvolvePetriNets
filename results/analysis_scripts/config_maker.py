@@ -31,15 +31,6 @@ import pprint as pp
 
 # %%
 # read a params file into memory
-from src.neat import params
-import importlib
-importlib.reload(params)
-
-def save_new_params(old_name, new_name, save_current=True):
-    params.load(old_name)
-    print(params.popsize)
-    params.new_param_json(new_name, save_current=True)
-
 
 # %%
 # make a new config folder
@@ -81,3 +72,100 @@ def compare_params(p1: dict, p2: dict):
         if p1[key] != p2[key]:
             changed[key] = {"p1": p1[key], "p2": p2[key]}
     pp.pprint(changed, indent=4, depth=1)
+
+# %%
+# fitness func on 5 variations
+
+from src.neat import params
+import importlib
+import json
+
+importlib.reload(params)
+
+base_fp = "configs/improve_fitness/base_config.json"
+
+with open(base_fp, "r") as f:
+    base = json.load(f)
+
+base
+
+all_weights = [
+    "perc_fit_traces_weight", "average_trace_fitness_weight", "log_fitness_weight",
+    "soundness_weight", "precision_weight", "generalization_weight", "simplicity_weight",
+    "fraction_used_trans_weight", "fraction_tasks_weight"
+]
+
+# "perc_fit_traces_weight", 
+# "average_trace_fitness_weight", 
+# "log_fitness_weight", 
+# "soundness_weight", 
+# "fraction_used_trans_weight", 
+
+# %%
+import itertools
+import json
+from copy import copy
+
+possible = [0, 0.5, 1]
+all_combis = [list(p) for p in itertools.product(possible, repeat=5)]
+final = []
+for l in all_combis:
+    append = True
+    if not l.count(0) in [4,5] and not l.count(1) == 5 and not l.count(0.5) == 5:
+        final.append(l)
+
+changeparams = [
+    "perc_fit_traces_weight", 
+    "average_trace_fitness_weight", 
+    "log_fitness_weight", 
+    "soundness_weight", 
+    "fraction_used_trans_weight", 
+]
+
+with open("configs/improve_fitness/base_config.json", "r") as f:
+    base = json.load(f)
+
+savedir = "configs/improve_fitness/params"
+final_params = []
+for values in final:
+    new_params = copy(base)
+    for ppath, value in zip(changeparams, values):
+        new_params[ppath] = value
+    fname = savedir + "/" + "_".join([str(v).replace(".", "") for v in values]) + ".json"
+    final_params.append(fname)
+    with open(fname, "w") as f:
+        json.dump(new_params, f, indent=4)
+
+# %%
+base_config = {
+    "setupname": "",
+    "parampath": "",
+    "logpath": "pm_data/running_example.xes",
+    "ga_kwargs": {
+        "is_pop_serialized": True,
+        "is_minimal_serialization": True,
+        "is_timed": True
+    },
+    "stop_cond": {
+        "var": "gen",
+        "val": 1000
+    },
+    "n_runs": 2,
+    "send_gen_info_to_console": False,
+    "is_profiled": False,
+    "save_reduced_history_df": True,
+    "save_reports": True,
+    "save_params": True,
+    "dump_pickle": False
+}
+
+plist = []
+for ppath in final_params:
+    cfg = copy(base_config)
+    cfg["setupname"] = ppath.split("/")[-1].rstrip(".json")
+    cfg["parampath"] = ppath
+    plist.append(cfg)
+
+final_cfg = {"name": "test_top5_fitness", "setups": plist}
+with open("configs/improve_fitness/crazy_config.json", "w") as f:
+    json.dump(final_cfg, f, indent=4)
