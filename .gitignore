@@ -12,3 +12,4 @@ pm_data/
 *.sol
 *.code-workspace
 *nohup.out
+.tar.gz
