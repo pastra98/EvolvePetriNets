@@ -1,6 +1,9 @@
+# %%
 import sys # syspath fuckery to run from same location as main
 import os # set cwd to same as project cwd from vscode
 from pathlib import Path
+
+from pm4py.algo.conformance.alignments.petri_net.variants.state_equation_a_star import PARAM_SYNC_COST_FUNCTION
 
 cwd = Path.cwd()
 
@@ -28,6 +31,7 @@ import pprint as pp
 import json
 import PIL
 
+# %%
 def rate_results(dir_to_analyze: str = None):
     def save_and_quit(rating_d):
         with open(dir_to_analyze + "/rating.txt", "w") as f:
