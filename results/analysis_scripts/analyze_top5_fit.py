@@ -13,7 +13,7 @@ if not os.getcwd().endswith("EvolvePetriNets"): # rename dir on laptop to repo n
     os.chdir(cwd.parent.parent) # workspace level from where I execute scripts
 
 # notebook specific - autoreload modules
-from IPython import get_ipython
+from IPython import get_ipython, display
 ipython = get_ipython()
 ipython.magic("load_ext autoreload")
 ipython.magic("autoreload 2")
@@ -77,3 +77,12 @@ def rate_results(dir_to_analyze: str = None):
 rate_results("results/data/test_top5_fitness_12-28-2021_21-12-03")
 
 # %%
+ratings_df = pd.read_json("results/data/test_top5_fitness_12-28-2021_21-12-03/rating.txt", typ='series').to_frame()
+ratings_df["full_path"] = ratings_df.index
+ratings_df["rating"] = ratings_df[0]
+ratings_df.reset_index(inplace=True)
+ratings_df.drop(["index", 0], axis=1, inplace=True)
+ratings_df[["params", "run"]] = ratings_df["full_path"].str.split("/", expand=True)[[3, 4]]
+ratings_df["run"] = ratings_df["run"].str[0]
+ratings_df.sort_values(by="rating", ascending=False, inplace=True)
+ratings_df

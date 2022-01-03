@@ -28,26 +28,51 @@ import matplotlib as mpl
 from src import neat
 from copy import copy
 import pprint as pp
+import json
 
-# %%
-# read a params file into memory
 
 # %%
 # make a new config folder
-class config():
-    def __init__(self, name: str):
+class Config():
+    def __init__(self, name: str, save_to: str):
         self.name = name
+        self.save_to = save_to
         self.base_params = {}
+        self.base_cfg = {
+            "logpath": "pm_data/running_example.xes",
+            "ga_kwargs": {
+                "is_pop_serialized": True,
+                "is_minimal_serialization": True,
+                "is_timed": True
+            },
+            "stop_cond": {
+                "var": "gen",
+                "val": 1000
+            },
+            "send_gen_info_to_console": False,
+            "is_profiled": False,
+            "save_reduced_history_df": True,
+            "save_reports": True,
+            "save_params": True,
+            "dump_pickle": False
+        }
     
-    def set_base_params():
-        pass
+    def set_base_params(self, fp_list):
+        for fp in fp_list:
+            self.add_base_param(fp)
 
-    def add_base_param():
-        pass
+    def add_base_param(self, fp: str):
+        with open(fp) as f:
+            name = fp.split("/")[-1].rstrip(".json")
+            self.base_params[name] = {"base": json.load(f)}
 
     def get_overview(self):
         for base_param_name in self.base_params:
-            pass
+            print(f"\n{base_param_name}\nchanging values:")
+            for change_val in self.base_params[base_param_name]:
+                if change_val != "base":
+                    print(f"{change_val} - new values:")
+                    print(self.base_params[base_param_name][change_val]["values"])
     
     def new_param_list(self, base_params_name: str, param_to_change: str, new_values: list) -> list:
         if base_params_name in self.base_params:
@@ -57,7 +82,7 @@ class config():
 
         param_list = []
         for val in new_values:
-            param_copy = copy(base)
+            param_copy = copy(base["base"])
             param_copy[param_to_change] = val
             param_list.append(param_copy)
 
@@ -66,12 +91,63 @@ class config():
             "params": param_list
         }
 
-def compare_params(p1: dict, p2: dict):
-    changed = {}
-    for key in p1:
-        if p1[key] != p2[key]:
-            changed[key] = {"p1": p1[key], "p2": p2[key]}
-    pp.pprint(changed, indent=4, depth=1)
+    def param_list_for_all_bases(self, param_to_change: str, new_values: list):
+        for bp_name in self.base_params:
+            self.new_param_list(bp_name, param_to_change, new_values)
+
+    def save_config(self, n_runs: int):
+        saves = {}
+        for bp_name in self.base_params:
+            bp_dict = self.base_params[bp_name]
+            for p in bp_dict:
+                if p == "base":
+                    saves[bp_name] = bp_dict[p]
+                else:
+                    cp_dict = bp_dict[p]
+                    for i, cp in enumerate(cp_dict["params"]):
+                        val = cp_dict["values"][i]
+                        saves[f"{bp_name}_{p}_{val}"] = cp
+        final_cfg = {}
+        final_cfg["name"] = self.name
+        final_cfg["setups"] = []
+        for savename, params in saves.items():
+            ppath = f"{self.save_to}/params/{savename}.json"
+            with open(ppath, "w") as f:
+                json.dump(params, f, indent=4)
+            new_setup = copy(self.base_cfg)
+            new_setup["setupname"] = savename
+            new_setup["parampath"] = ppath
+            new_setup["n_runs"] = n_runs
+            final_cfg["setups"].append(new_setup)
+        with open(f"{self.save_to}/config.json", "w") as f:
+            json.dump(final_cfg, f, indent=4)
+
+# def compare_params(p1: dict, p2: dict):
+#     changed = {}
+#     for key in p1:
+#         if p1[key] != p2[key]:
+#             changed[key] = {"p1": p1[key], "p2": p2[key]}
+#     pp.pprint(changed, indent=4, depth=1)
+
+# setup config for 2x, 3x, 4x
+x_cfg = Config("improve_fitness_2", "configs/improve_fitness_2")
+bp_paths = [
+    "configs/improve_fitness_2/base1x.json",
+    "configs/improve_fitness_2/base2x.json",
+    "configs/improve_fitness_2/base3x.json",
+    "configs/improve_fitness_2/base4x.json"
+]
+x_cfg.set_base_params(bp_paths)
+
+# set param lists for all
+x_cfg.param_list_for_all_bases("perc_fit_traces_weight", [.5, 1, 1.5])
+x_cfg.param_list_for_all_bases("soundness_weight", [.5, 1, 1.5])
+x_cfg.param_list_for_all_bases("precision_weight", [.5, 1, 1.5])
+x_cfg.param_list_for_all_bases("generalization_weight", [.5, 1, 1.5])
+x_cfg.param_list_for_all_bases("simplicity_weight", [.5, 1, 1.5])
+x_cfg.param_list_for_all_bases("fraction_tasks_weight", [.5, 1, 1.5])
+# save with two runs (should be 152 total, for 76 configs)
+x_cfg.save_config(2)
 
 # %%
 # fitness func on 5 variations
