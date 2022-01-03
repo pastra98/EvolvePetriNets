@@ -437,7 +437,7 @@ class GeneticNet:
 
     def get_graphviz(self) -> Digraph:
         # parameter stuff, TODO: think about where to put this
-        fsize = "20"
+        fsize = "12"
         tcol = "yellow"
         pcol = "lightblue"
         ahead = "normal"
