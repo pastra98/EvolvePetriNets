@@ -1,0 +1,26 @@
+{
+    "name": "single_thread_test",
+    "setups": [
+        {
+            "setupname": "roulette",
+            "parampath": "params/testing/roulette_test.json",
+            "logpath": "pm_data/running_example.xes",
+            "ga_kwargs": {
+                "is_pop_serialized": true,
+                "is_minimal_serialization": true,
+                "is_timed": true
+            },
+            "stop_cond": {
+                "var": "gen",
+                "val": 10
+            },
+            "n_runs": 1,
+            "send_gen_info_to_console": false,
+            "is_profiled": false,
+            "save_reduced_history_df": true,
+            "save_reports": true,
+            "save_params": true,
+            "dump_pickle": false
+        }
+    ]
+}
