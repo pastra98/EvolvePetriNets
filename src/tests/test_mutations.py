@@ -95,3 +95,15 @@ target_g.show_nb_graphviz()
 for _ in range(100):
     target_g.mutate(0)
     target_g.show_nb_graphviz()
+
+# %%
+target_g = test_genomes[4]
+target_g.evaluate_fitness(log)
+
+print(f"log_fitness: {target_g.log_fitness}")
+print(f"is_sound: {target_g.is_sound}")
+print(f"precision: {target_g.precision}")
+print(f"generalization: {target_g.generalization}")
+print(f"simplicity: {target_g.simplicity}")
+print(f"fraction_used_trans: {target_g.fraction_used_trans}")
+print(f"fraction_tasks: {target_g.fraction_tasks}")
