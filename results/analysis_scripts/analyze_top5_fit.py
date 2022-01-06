@@ -13,7 +13,7 @@ if not os.getcwd().endswith("EvolvePetriNets"): # rename dir on laptop to repo n
     os.chdir(cwd.parent.parent) # workspace level from where I execute scripts
 
 # notebook specific - autoreload modules
-from IPython import get_ipython, display
+from IPython import get_ipython
 ipython = get_ipython()
 ipython.magic("load_ext autoreload")
 ipython.magic("autoreload 2")
@@ -29,9 +29,17 @@ from src import neat
 from copy import copy
 import pprint as pp
 import json
+
 import PIL
+from IPython.display import Image
+from matplotlib.pyplot import imshow
+import numpy as np
+
 
 # %%
+ipython.magic("matplotlib inline")
+
+
 def rate_results(dir_to_analyze: str = None):
     def save_and_quit(rating_d):
         with open(dir_to_analyze + "/rating.txt", "w") as f:
@@ -47,34 +55,35 @@ def rate_results(dir_to_analyze: str = None):
     print(last_visit)
     for r_nr in [1,2]:
         for root, dirs, files in os.walk(dir_to_analyze):
-            # print(root)
             for file in files:
-                imgpath = os.path.join(root, file)
+                root = root.replace("\\", "/")
+                imgpath = f"{root}/{file}"
                 if last_visit:
                     reached_lv = last_visit == imgpath
                 if (root.endswith("reports") and
-                    root.split("\\")[-2].startswith(f"{r_nr}_") and
+                    root.split("/")[-2].startswith(f"{r_nr}_") and
                     file.endswith("best_genome.png") and
                     reached_lv):
-                    i += 1
                     print(imgpath)
+                    i += 1
                     last_visit = None
-                    with PIL.Image.open(imgpath) as im:
-                        display(im)
-                        while (usr_in := input("Quality of model: ")) not in ["1","2","3","4","exit"]:
-                            print("rating must be 1, 2, 3 or 4")
-                        if usr_in in ["1","2","3","4"]:
-                            ratings[imgpath] = int(usr_in)
-                            print(usr_in)
-                            print(f"evaluated: {i}")
-                        elif usr_in == "exit":
-                            save_and_quit(ratings)
-                            return
+                    im = Image(imgpath)
+                    display(im)
+                    del im
+                    while (usr_in := input("Quality of model: ")) not in ["1","2","3","4","exit"]:
+                        print("rating must be 1, 2, 3 or 4")
+                    if usr_in in ["1","2","3","4"]:
+                        ratings[imgpath] = int(usr_in)
+                        print(usr_in)
+                        print(f"evaluated: {i}")
+                    elif usr_in == "exit":
+                        save_and_quit(ratings)
+                        return
     print("Reached the end, saving results and exiting")
     save_and_quit(ratings)
 
 
-rate_results("results/data/test_top5_fitness_12-28-2021_21-12-03")
+rate_results("results/data/improve_fitness_2_01-03-2022_16-20-30")
 
 # %%
 ratings_df = pd.read_json("results/data/test_top5_fitness_12-28-2021_21-12-03/rating.txt", typ='series').to_frame()
