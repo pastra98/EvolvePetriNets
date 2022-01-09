@@ -309,7 +309,7 @@ target_g.evaluate_fitness(log)
 from src.neat.genome import GeneticNet
 from pm4py.algo.evaluation.replay_fitness import algorithm as replay_fitness_evaluator
 from pm4py import view_petri_net
-from pm4py.objects.log.importer.xes import importer as xes_importer
+from pm4py.objects.log.importer.xes import xes_importer
 import pprint as pp
 
 lp = "pm_data/running_example.xes" # "pm_data/m1_log.xes"
