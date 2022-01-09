@@ -1,30 +1,30 @@
 {
     "start_config": "random",
-    "popsize": 500,
+    "popsize": 1000,
     "selection_strategy": "roulette",
     "log_splices": {
         "1": [1, 3],
-        "500": [1, 2, 3, 5],
-        "2000": [0, 1, 2, 3, 4, 5]
+        "1000": [1, 2, 3, 5],
+        "9999999999": [0, 1, 2, 3, 4, 5]
     },
     "initial_tp_gauss_dist": [
-        2.0,
+        1.0,
         0.5
     ],
     "initial_pt_gauss_dist": [
-        2.0,
+        1.0,
         0.5
     ],
     "initial_tt_gauss_dist": [
-        4.0,
+        2.0,
         1.0
     ],
     "initial_pe_gauss_dist": [
-        2.0,
+        1.0,
         0.5
     ],
     "initial_te_gauss_dist": [
-        2.0,
+        1.0,
         0.5
     ],
     "initial_as_gauss_dist": [
@@ -35,7 +35,7 @@
     "coeff_disjoint": 1.2,
     "coeff_excess": 1.4,
     "coeff_matched": 0.5,
-    "enough_gens_to_change_things": 10,
+    "enough_gens_to_change_things": 10000,
     "update_species_rep": true,
     "leader_is_rep": true,
     "selection_threshold": 30,
@@ -47,37 +47,37 @@
     "old_penalty": 0.8,
     "youth_bonus": 1.4,
     "random_mating": true,
-    "perc_fit_traces_weight": 0.0,
-    "average_trace_fitness_weight": 2.0,
-    "log_fitness_weight": 0.0,
+    "perc_fit_traces_weight": 0,
+    "average_trace_fitness_weight": 2,
+    "log_fitness_weight": 0,
     "soundness_weight": 0.5,
-    "precision_weight": 0.2,
-    "generalization_weight": 0.2,
+    "precision_weight": 0.0,
+    "generalization_weight": 0.0,
     "simplicity_weight": 0.0,
-    "fraction_used_trans_weight": 2.0,
-    "fraction_tasks_weight": 0.5,
+    "fraction_used_trans_weight": 2,
+    "fraction_tasks_weight": 1.5,
     "prob_t_p_arc": [
-        0.1,
-        0.3
+        0.05,
+        0.1
     ],
     "prob_p_t_arc": [
-        0.1,
-        0.3
+        0.05,
+        0.1
     ],
     "prob_t_t_conn": [
         0.05,
         0.2
     ],
     "prob_new_p": [
-        0.2,
+        0.05,
         0.3
     ],
     "prob_new_empty_t": [
-        0.2,
+        0.05,
         0.3
     ],
     "prob_split_arc": [
-        0.0,
+        0.05,
         0.2
     ],
     "prob_increase_arcs": [
@@ -89,7 +89,7 @@
         0.3
     ],
     "prob_prune_extensions": [
-        0.5,
+        0.1,
         0.4
     ],
     "is_no_preference_for_tasks": false,
@@ -98,3 +98,4 @@
     "prevent_chaining": true,
     "num_trys_split_arc": 10
 }
+
