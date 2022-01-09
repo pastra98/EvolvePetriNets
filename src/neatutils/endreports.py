@@ -7,6 +7,7 @@ import traceback
 import gc
 import importlib
 import matplotlib
+import pickle
 
 
 def save_report(
@@ -39,6 +40,7 @@ def save_report(
         species_plot(full_history, savedir=savedir)
     history_plots(plotting_history_df, use_species, savedir=savedir)
     best_genome_gviz(best_genome, savedir=savedir)
+    pickle_best_genome(best_genome, savedir=savedir)
     plot_detailed_fitness(full_history, savedir=savedir)
 
     run_report(full_history, savedir=savedir)
@@ -144,6 +146,12 @@ def best_genome_gviz(best_genome, savedir: str) -> None:
     except:
         print(f"couldn't save gviz in\n{savedir}")
 
+def pickle_best_genome(best_genome, savedir: str) -> None:
+    try:
+        with open(f"{savedir}/best_genome.pkl", "wb") as f:
+            pickle.dump(best_genome, f)
+    except:
+        print(f"couldn't save best_genome in\n{savedir}")
 
 def plot_detailed_fitness(full_history, savedir: str) -> None:
     plotvars = {
