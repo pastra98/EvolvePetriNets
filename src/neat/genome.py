@@ -51,6 +51,9 @@ class GeneticNet:
 
     def mutate(self, mutation_rate):
         try:
+            # remove arcs, this calculates probabilities for arcs one at a time
+            self.remove_arcs(mutation_rate)
+            # perform single mutations
             if rd.random() < params.prob_t_p_arc[mutation_rate]:
                 self.trans_place_arc()
             if rd.random() < params.prob_p_t_arc[mutation_rate]:
@@ -65,8 +68,6 @@ class GeneticNet:
                 self.split_arc()
             if rd.random() < params.prob_prune_extensions[mutation_rate]:
                 self.prune_extensions()
-            # remove arcs, this calculates probabilities for arcs one at a time
-            self.remove_arcs(mutation_rate)
             # remove nodes that are no longer connected
             self.remove_unused_nodes()
         except:
