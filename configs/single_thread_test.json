@@ -12,9 +12,9 @@
             },
             "stop_cond": {
                 "var": "gen",
-                "val": 10
+                "val": 1000
             },
-            "n_runs": 1,
+            "n_runs": 8,
             "send_gen_info_to_console": false,
             "is_profiled": false,
             "save_reduced_history_df": true,
