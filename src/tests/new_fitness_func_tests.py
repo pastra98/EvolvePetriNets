@@ -77,7 +77,6 @@ def transition_execution_quality(replay):
     for trace in replay:
         bad = set([t.label for t in trace["transitions_with_problems"]])
         ok = set([t.label for t in trace["activated_transitions"]])
-        # print(set(bad).intersection(set(all)))
         score = (
             len(bad.intersection(ok)) * t_exec_scoring[0] +
             len(ok.difference(bad)) * t_exec_scoring[1]
