@@ -58,12 +58,12 @@ a_net, a_im, a_fm = alpha_miner.apply(log)
 
 # load best genome
 # best_g = get_unpickled("results/data/single_thread_test_01-08-2022_21-05-59/roulette/1_01-08-2022_21-05-59/reports/best_genome.pkl")
-best_g = get_unpickled("results/data/single_thread_test_01-09-2022_00-19-58/roulette/3_01-09-2022_00-19-58/reports/best_genome.pkl")
+# best_g = get_unpickled("results/data/single_thread_test_01-09-2022_00-19-58/roulette/3_01-09-2022_00-19-58/reports/best_genome.pkl")
 # best_g.show_nb_graphviz()
-g_net, g_im, g_fm = best_g.build_petri()
+# g_net, g_im, g_fm = best_g.build_petri()
 
 a_replayed_tr = get_replayed_tr(log, a_net, a_im, a_fm)
-g_replayed_tr = get_replayed_tr(log, g_net, g_im, g_fm)
+# g_replayed_tr = get_replayed_tr(log, g_net, g_im, g_fm)
 
 # for tr, r_tr in zip(log, a_replayed_tr):
 #     events = [e["concept:name"] for e in tr]
@@ -86,4 +86,37 @@ def transition_execution_quality(replay):
     print(total_quality)
     return total_quality
 
-transition_execution_quality(g_replayed_tr)
+transition_execution_quality(a_replayed_tr)
+
+# %%
+# test mining with reduced log
+from pm4py import view_petri_net
+from copy import copy
+from pm4py.algo.discovery.inductive import algorithm as inductive_miner 
+
+def get_trace_str(trace):
+    tr_events = []
+    for event in trace:
+        tr_events.append(event["concept:name"])
+    return " -> ".join(tr_events)
+
+
+splice_d = {
+    1: (1, 3),
+    250: (1, 2, 3, 5),
+    750: (0, 1, 2, 3, 4, 5)
+}
+
+gen = 262
+s_l = list(filter(lambda g: g <= gen, splice_d.keys()))[-1]
+
+# spliced_log = copy(log)
+# spliced_log._list = [spliced_log._list[i] for i in splice_d[gen]]
+
+# for trace in spliced_log:
+#     print(get_trace_str(trace))
+
+# # get alpha model
+# # a_net, a_im, a_fm = alpha_miner.apply(log)
+# a_net, a_im, a_fm = inductive_miner.apply(spliced_log)
+# view_petri_net(a_net, a_im, a_fm)
