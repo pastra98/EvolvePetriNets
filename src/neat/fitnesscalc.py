@@ -187,3 +187,17 @@ def get_precision(log: EventLog, net: PetriNet, marking: Marking, final_marking:
         precision = 1 - float(sum_ee) / float(sum_at)
 
     return precision
+
+
+def transition_execution_quality(replay):
+    t_exec_scoring = .2, .8
+    total_quality = 0
+    for trace in replay:
+        bad = set([t.label for t in trace["transitions_with_problems"]])
+        ok = set([t.label for t in trace["activated_transitions"]])
+        score = (
+            len(bad.intersection(ok)) * t_exec_scoring[0] +
+            len(ok.difference(bad)) * t_exec_scoring[1]
+        )
+        total_quality += score
+    return total_quality

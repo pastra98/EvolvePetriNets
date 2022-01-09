@@ -164,7 +164,8 @@ def plot_detailed_fitness(full_history, savedir: str) -> None:
         "simplicity": {"best": [], "pop_avg": []},
         "is_sound": {"best": [], "pop_avg": []},
         "fraction_used_trans": {"best": [], "pop_avg": []},
-        "fraction_tasks": {"best": [], "pop_avg": []}
+        "fraction_tasks": {"best": [], "pop_avg": []},
+        "execution_score": {"best": [], "pop_avg": []}
     }
     # read data into plotvars
     for info_d in full_history.values():
