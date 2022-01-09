@@ -137,6 +137,8 @@ class GeneticNet:
 
 
     def extend_new_trans(self, place_id=None) -> str:
+        if len(self.places) <= 2:
+            return
         if not place_id:
             for _try in range(params.num_trys_make_conn):
                 place_id = rd.choice([p for p in self.places if p not in ["start", "end"]])
@@ -421,6 +423,9 @@ class GeneticNet:
             + params.fraction_used_trans_weight * self.fraction_used_trans
             + params.fraction_tasks_weight * self.fraction_tasks
         )
+
+        # self.fitness = fitnesscalc.transition_execution_quality(aligned_traces)
+
         if self.fitness < 0:
             raise Exception("Fitness below 0 should not be possible!!!")
         return
