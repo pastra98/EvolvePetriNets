@@ -185,6 +185,8 @@ class GeneticNet:
 
 
     def split_arc(self):
+        if not self.arcs:
+            return
         for _try in range(params.num_trys_split_arc):
             arc_to_split = rd.choice(list(self.arcs.values()))
             all_nodes = self.places | self.transitions
