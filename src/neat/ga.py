@@ -341,10 +341,7 @@ class GeneticAlgorithm:
 
         fitnesses = [g.fitness for g in self.population]
         fit_sum = sum(fitnesses)
-        if fit_sum > 0:
-            probabilities = [fit / fit_sum for fit in fitnesses]
-        else:
-            probabilities = [0.1] * len(fitnesses) # this should really only happen in the first couple of gens
+        probabilities = [fit / fit_sum for fit in fitnesses]
 
         new_genomes = []
         for _ in range(params.popsize - 10): # elitism: keep a slot for best g
