@@ -6,6 +6,7 @@ from neatutils import timer
 from . import params, innovs, startconfigs
 from .genome import GeneticNet
 from .species import Species
+from copy import copy
 
 class GeneticAlgorithm:
     def __init__(
@@ -82,10 +83,17 @@ class GeneticAlgorithm:
 
 
     def evaluate_curr_genomes(self) -> None:
-        # this is where multithreading magic will happen - i.e. this will need a rewrite
+        # if log is spliced according to params, pass spliced log for curr gen here
+        if params.log_splices:
+            s_gen = list(filter(lambda g: int(g) <= self.curr_gen, params.log_splices.keys()))[-1]
+            log = copy(self.log)
+            log._list = [log._list[int(i)] for i in params.log_splices[s_gen]]
+        else:
+            log = self.log
+        # calc fitness for every genome
         self.total_pop_fitness = 0
         for g in self.population:
-            g.evaluate_fitness(self.log)
+            g.evaluate_fitness(log)
             self.total_pop_fitness += g.fitness
         self.population.sort(key=lambda g: g.fitness, reverse=True)
         self.best_genome = self.population[0]
@@ -336,12 +344,15 @@ class GeneticAlgorithm:
         probabilities = [fit / fit_sum for fit in fitnesses]
 
         new_genomes = []
-        for _ in range(params.popsize - 1): # elitism: keep a slot for best g
+        for _ in range(params.popsize - 10): # elitism: keep a slot for best g
             new_g = roulette_select(self.population, probabilities)
             new_g.mutate(1)
             new_genomes.append(new_g)
 
-        new_genomes.append(self.best_genome.clone()) # append unmutated best g
+        for i, g in enumerate(self.population):
+            new_genomes.append(g.clone()) # append unmutated top g's
+            if i == 9:
+                break
         self.population = new_genomes
 
 # TRUNCATION -------------------------------------------------------------------
