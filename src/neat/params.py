@@ -42,6 +42,7 @@ def get_curr_curr_dict() -> dict:
 start_config: str
 popsize: int
 selection_strategy: str # "speciation" / "roulette" / "truncation"
+log_splices: dict
 
 # -------------------- start config: random
 initial_tp_gauss_dist: list[float, float]
@@ -86,6 +87,7 @@ generalization_weight: float
 simplicity_weight: float
 fraction_used_trans_weight: float
 fraction_tasks_weight: float
+t_exec_scoring_weight: list
 
 # ---------- MUTATIONS GENERAL
 """
