@@ -30,6 +30,8 @@ from pm4py.objects.petri_net.obj import PetriNet, Marking
 from collections import Counter
 from math import sqrt
 
+from . import params
+
 class Parameters(Enum):
     ACTIVITY_KEY = constants.PARAMETER_CONSTANT_ACTIVITY_KEY
     ATTRIBUTE_KEY = constants.PARAMETER_CONSTANT_ATTRIBUTE_KEY
@@ -190,14 +192,13 @@ def get_precision(log: EventLog, net: PetriNet, marking: Marking, final_marking:
 
 
 def transition_execution_quality(replay):
-    t_exec_scoring = .2, .8
     total_quality = 0
     for trace in replay:
         bad = set([t.label for t in trace["transitions_with_problems"]])
         ok = set([t.label for t in trace["activated_transitions"]])
         score = (
-            len(bad.intersection(ok)) * t_exec_scoring[0] +
-            len(ok.difference(bad)) * t_exec_scoring[1]
+            len(bad) * params.t_exec_scoring_weight[0] +
+            len(ok.difference(bad)) * params.t_exec_scoring_weight[1]
         )
         total_quality += score
     return total_quality
