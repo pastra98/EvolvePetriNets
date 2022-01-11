@@ -81,18 +81,13 @@ spliced_log._list = [spliced_log._list[i] for i in splice_d[s_l]]
 for trace in spliced_log:
     print(get_trace_str(trace))
 
-# %%
-
 # get inductive model
 a_net, a_im, a_fm = inductive_miner.apply(spliced_log)
 
 # load best genome
-best_g = get_unpickled("results/data/few_mutations_and_exec_01-09-2022_22-09-24/supersimple/4_01-09-2022_22-09-24/reports/best_genome.pkl")
+best_g = get_unpickled("results/data/only_tt_and_supersimple_01-10-2022_23-08-26/supersimple/1_01-10-2022_23-08-26/reports/best_genome.pkl")
 g_net, g_im, g_fm = best_g.build_petri()
 
-# get replays of spliced log
-a_replayed_tr = fitnesscalc.get_aligned_traces(spliced_log, a_net, a_im, a_fm)
-g_replayed_tr = fitnesscalc.get_aligned_traces(spliced_log, g_net, g_im, g_fm)
 
 def transition_execution_quality(replay):
     t_exec_scoring = 1, 10
@@ -108,16 +103,22 @@ def transition_execution_quality(replay):
     return total_quality
 
 print("inductive results")
+a_replayed_tr = fitnesscalc.get_aligned_traces(spliced_log, a_net, a_im, a_fm)
 view_petri_net(a_net, a_im, a_fm)
 print(f"inductive fitness results\n{fitnesscalc.get_replay_fitness(a_replayed_tr)}")
 print(f"exec quality: {transition_execution_quality(a_replayed_tr)}")
 print(f"inductive replay\n{pp.pformat(a_replayed_tr)}\n")
+print(f"generalization: {fitnesscalc.get_generalization(a_net, a_replayed_tr)}")
+print(f"precision: {fitnesscalc.get_precision(spliced_log, a_net, a_im, a_fm)}")
 
 print("genetic results")
+g_replayed_tr = fitnesscalc.get_aligned_traces(spliced_log, g_net, g_im, g_fm)
 view_petri_net(g_net, g_im, g_fm)
 print(f"genetic fitness results\n{fitnesscalc.get_replay_fitness(g_replayed_tr)}")
 print(f"exec quality: {transition_execution_quality(g_replayed_tr)}")
 print(f"genetic replay\n{pp.pformat(g_replayed_tr)}\n")
+print(f"generalization: {fitnesscalc.get_generalization(g_net, g_replayed_tr)}")
+print(f"precision: {fitnesscalc.get_precision(spliced_log, g_net, g_im, g_fm)}")
 
 # %%
 
