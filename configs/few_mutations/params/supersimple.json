@@ -4,32 +4,32 @@
     "selection_strategy": "roulette",
     "log_splices": {
         "1": [1, 3],
-        "99999999": [1, 2, 3, 5],
-        "99999999999": [0, 1, 2, 3, 4, 5]
+        "9999999": [1, 2, 3, 5],
+        "9999999999": [0, 1, 2, 3, 4, 5]
     },
     "initial_tp_gauss_dist": [
-        1.0,
-        0.5
+        0.0,
+        0.0
     ],
     "initial_pt_gauss_dist": [
-        1.0,
-        0.5
+        0.0,
+        0.0
     ],
     "initial_tt_gauss_dist": [
         2.0,
         1.0
     ],
     "initial_pe_gauss_dist": [
-        1.0,
-        0.5
+        0.0,
+        0.0
     ],
     "initial_te_gauss_dist": [
-        1.0,
-        0.5
+        0.0,
+        0.0
     ],
     "initial_as_gauss_dist": [
-        1.0,
-        0.5
+        0.0,
+        0.0
     ],
     "species_boundary": 1.8,
     "coeff_disjoint": 1.2,
@@ -47,47 +47,47 @@
     "old_penalty": 0.8,
     "youth_bonus": 1.4,
     "random_mating": true,
-    "perc_fit_traces_weight": 0,
-    "average_trace_fitness_weight": 2,
+    "perc_fit_traces_weight": 2,
+    "average_trace_fitness_weight": 0,
     "log_fitness_weight": 0,
-    "soundness_weight": 1.5,
+    "soundness_weight": 1,
     "precision_weight": 0.0,
     "generalization_weight": 0.0,
     "simplicity_weight": 0.0,
-    "fraction_used_trans_weight": 2,
-    "fraction_tasks_weight": 1.5,
+    "fraction_used_trans_weight": 0,
+    "fraction_tasks_weight": 0,
     "t_exec_scoring_weight": [0, 0],
     "prob_t_p_arc": [
-        0.05,
-        0.1
+        0,
+        0
     ],
     "prob_p_t_arc": [
-        0.05,
-        0.1
+        0,
+        0
     ],
     "prob_t_t_conn": [
-        0.05,
-        0.2
+        1,
+        0
     ],
     "prob_new_p": [
-        0.0,
-        0.3
+        0,
+        0
     ],
     "prob_new_empty_t": [
-        0.0,
-        0.3
+        0,
+        0
     ],
     "prob_split_arc": [
-        0.05,
-        0.2
+        0,
+        0
     ],
     "prob_increase_arcs": [
         0.0,
         0.0
     ],
     "prob_remove_arc": [
-        0.1,
-        0.3
+        0.2,
+        0
     ],
     "prob_prune_extensions": [
         0.1,
