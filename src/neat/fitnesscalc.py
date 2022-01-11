@@ -87,6 +87,8 @@ def get_aligned_traces(log, petri_net, initial_marking, final_marking):
     parameters_tr = {token_replay.Parameters.ACTIVITY_KEY: DEFAULT_NAME_KEY,
                      token_replay.Parameters.CONSIDER_REMAINING_IN_FITNESS: True,
                      token_replay.Parameters.CLEANING_TOKEN_FLOOD: False,
+                     token_replay.Parameters.TRY_TO_REACH_FINAL_MARKING_THROUGH_HIDDEN: True,
+                     token_replay.Parameters.WALK_THROUGH_HIDDEN_TRANS: True,
                      token_replay.Parameters.SHOW_PROGRESS_BAR: False}
 
     aligned_traces = executor.apply(
