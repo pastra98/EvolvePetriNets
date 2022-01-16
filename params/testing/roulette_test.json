@@ -56,6 +56,7 @@
     "simplicity_weight": 0.0,
     "fraction_used_trans_weight": 2.0,
     "fraction_tasks_weight": 0.5,
+    "t_exec_scoring_weight": [0, 0],
     "prob_t_p_arc": [
         0.1,
         0.3
