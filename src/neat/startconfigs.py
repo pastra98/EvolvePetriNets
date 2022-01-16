@@ -124,6 +124,18 @@ def generate_n_random_genomes(n_genomes, log):
         for _ in range(int(abs(gauss(*params.initial_as_gauss_dist)))):
             gen_net.split_arc()
         new_genomes.append(gen_net)
+        ## hacky shit
+        for sa in list(fp_log["start_activities"]):
+            gen_net.place_trans_arc("start", sa)
+        # for ea in list(fp_log["end_activities"]):
+        #     gen_net.trans_place_arc(ea, "end")
+
+        ### even hackier shit
+        gen_net.trans_place_arc("pay compensation", "end")
+        ### even hackier shit
+
+        ## hacky shit
+
     return new_genomes
 
 
