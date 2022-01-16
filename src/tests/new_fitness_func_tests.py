@@ -27,7 +27,7 @@ from pm4py.algo.discovery.footprints import algorithm as footprints_discovery
 from pm4py.visualization.footprints import visualizer as fp_visualizer
 from pm4py import view_petri_net
 
-from src.neat import fitnesscalc
+from src.neat import fitnesscalc, innovs, netobj, genome, params
 
 from copy import copy
 import pprint as pp
@@ -85,7 +85,13 @@ for trace in spliced_log:
 a_net, a_im, a_fm = inductive_miner.apply(spliced_log)
 
 # load best genome
-best_g = get_unpickled("results/data/only_tt_and_supersimple_01-10-2022_23-08-26/supersimple/1_01-10-2022_23-08-26/reports/best_genome.pkl")
+# best_g = get_unpickled("results/data/only_tt_and_supersimple_01-10-2022_23-08-26/supersimple/1_01-10-2022_23-08-26/reports/best_genome.pkl")
+
+best_g = get_unpickled("results/data/hacked_fitness_fm_supersimple_only_tt_precion_generalization_both_01-11-2022_17-57-32/supersimple_generalization/1_01-11-2022_17-57-32/reports/best_genome.pkl")
+print(f"run 1 best g fit: {best_g.fitness}")
+# best_g = get_unpickled("results/data/hacked_fitness_fm_supersimple_only_tt_precion_generalization_both_01-11-2022_17-57-32/supersimple_generalization/2_01-11-2022_17-57-32/reports/best_genome.pkl")
+# print(f"run 2 best g fit: {best_g.fitness}")
+
 g_net, g_im, g_fm = best_g.build_petri()
 
 
@@ -121,20 +127,55 @@ print(f"generalization: {fitnesscalc.get_generalization(g_net, g_replayed_tr)}")
 print(f"precision: {fitnesscalc.get_precision(spliced_log, g_net, g_im, g_fm)}")
 
 # %%
-
-g_replayed_tr = get_replayed_tr(spliced_log, g_net, g_im, g_fm)
-fit = fitnesscalc.get_replay_fitness(g_replayed_tr)
-print(fit)
-view_petri_net(g_net, g_fm, g_im)
-best_g.fitness
-# print(best_g.average_trace_fitness)
-# print(best_g.perc_fit_traces)
-# print(best_g.log_fitness)
-
-# %%
 # investigate population
 import pandas as pd
 pop: pd.DataFrame
 pop = pd.read_feather("results/data/few_mutations_and_exec_01-09-2022_22-09-24/supersimple/1_01-09-2022_22-09-24/reports/population.feather")
 
 pop[pop["gen"]==2000].sort_values(by="fitness", ascending=False)
+
+# %%
+for trace in spliced_log:
+    print(get_trace_str(trace))
+
+best_g: genome.GeneticNet
+# fucking with a loaded best genome
+best_g = get_unpickled("results/data/hacked_fitness_fm_supersimple_only_tt_precion_generalization_both_01-11-2022_17-57-32/supersimple_generalization/1_01-11-2022_17-57-32/reports/best_genome.pkl")
+# best_g = get_unpickled("results/data/hacked_fitness_fm_supersimple_only_tt_precion_generalization_both_01-11-2022_17-57-32/supersimple_generalization/2_01-11-2022_17-57-32/reports/best_genome.pkl")
+# print(f"run 2 best g fit: {best_g.fitness}")
+
+decide_t = netobj.GTrans("decide", True)
+pay_t = netobj.GTrans("pay compensation", True)
+
+best_g.transitions["decide"] = decide_t
+best_g.transitions["pay compensation"] = pay_t
+
+best_g.place_trans_arc("start", "register request")
+best_g.trans_trans_conn("check ticket", "decide")
+best_g.trans_trans_conn("examine casually", "decide")
+best_g.trans_trans_conn("decide", "pay compensation")
+best_g.trans_place_arc("pay compensation", "end")
+# del best_g.arcs[105]
+# del best_g.arcs[106]
+# del best_g.arcs[71]
+# del best_g.arcs[72]
+
+net, im, fm = best_g.build_petri()
+replayed_tr = fitnesscalc.get_aligned_traces(spliced_log, net, im, fm)
+
+
+best_g.show_nb_graphviz()
+best_g.evaluate_fitness(spliced_log)
+print(f"new g fit: {best_g.fitness}")
+
+print(f"genetic fitness results\n{fitnesscalc.get_replay_fitness(replayed_tr)}")
+print(f"exec quality: {fitnesscalc.transition_execution_quality(replayed_tr)}")
+print(f"genetic replay\n{pp.pformat(replayed_tr)}\n")
+print(f"generalization: {fitnesscalc.get_generalization(net, replayed_tr)}")
+print(f"precision: {fitnesscalc.get_precision(spliced_log, net, im, fm)}")
+
+# %%
+# footprint testing
+from pm4py.algo.discovery.footprints import algorithm as footprints_discovery
+fp_log = footprints_discovery.apply(log, variant=footprints_discovery.Variants.ENTIRE_EVENT_LOG)
+fp_log
