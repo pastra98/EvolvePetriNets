@@ -417,7 +417,7 @@ class GeneticNet:
         self.simplicity = simplicity_evaluator.apply(net)
         # execution score
         self.execution_score = fitnesscalc.transition_execution_quality(aligned_traces)
-        # some preliminary fitness measure
+
         self.fitness = (
             + params.perc_fit_traces_weight * (self.perc_fit_traces / 100)
             + params.average_trace_fitness_weight * self.average_trace_fitness
@@ -430,6 +430,7 @@ class GeneticNet:
             + params.fraction_tasks_weight * self.fraction_tasks
             + self.execution_score
         )
+
         if self.fitness < 0:
             raise Exception("Fitness below 0 should not be possible!!!")
         return
