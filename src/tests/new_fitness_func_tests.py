@@ -58,6 +58,9 @@ log = xes_importer.apply(lp)
 
 # %%
 # reduce the log
+# from pm4py.algo.evaluation.replay_fitness import algorithm as replay_fitness
+# from pm4py.algo.conformance.alignments.petri_net import algorithm as alignments
+
 
 def get_trace_str(trace):
     tr_events = []
@@ -87,7 +90,7 @@ a_net, a_im, a_fm = inductive_miner.apply(spliced_log)
 # load best genome
 # best_g = get_unpickled("results/data/only_tt_and_supersimple_01-10-2022_23-08-26/supersimple/1_01-10-2022_23-08-26/reports/best_genome.pkl")
 
-best_g = get_unpickled("results/data/hacked_fitness_fm_supersimple_only_tt_precion_generalization_both_01-11-2022_17-57-32/supersimple_generalization/1_01-11-2022_17-57-32/reports/best_genome.pkl")
+best_g = get_unpickled("results/data/squared_precision_avg_fit_few_mutations_fixed_start_end_01-16-2022_14-27-09/ss12/2_01-16-2022_14-27-09/reports/best_genome.pkl")
 print(f"run 1 best g fit: {best_g.fitness}")
 # best_g = get_unpickled("results/data/hacked_fitness_fm_supersimple_only_tt_precion_generalization_both_01-11-2022_17-57-32/supersimple_generalization/2_01-11-2022_17-57-32/reports/best_genome.pkl")
 # print(f"run 2 best g fit: {best_g.fitness}")
@@ -112,19 +115,28 @@ print("inductive results")
 a_replayed_tr = fitnesscalc.get_aligned_traces(spliced_log, a_net, a_im, a_fm)
 view_petri_net(a_net, a_im, a_fm)
 print(f"inductive fitness results\n{fitnesscalc.get_replay_fitness(a_replayed_tr)}")
-print(f"exec quality: {transition_execution_quality(a_replayed_tr)}")
+# print(f"exec quality: {transition_execution_quality(a_replayed_tr)}")
 print(f"inductive replay\n{pp.pformat(a_replayed_tr)}\n")
 print(f"generalization: {fitnesscalc.get_generalization(a_net, a_replayed_tr)}")
 print(f"precision: {fitnesscalc.get_precision(spliced_log, a_net, a_im, a_fm)}")
+
+# a_align_tr = alignments.apply_log(spliced_log, a_net, a_im, a_fm)
+# a_align_fit = replay_fitness.evaluate(a_align_tr, variant=replay_fitness.Variants.ALIGNMENT_BASED)
+# print(a_align_fit)
+
 
 print("genetic results")
 g_replayed_tr = fitnesscalc.get_aligned_traces(spliced_log, g_net, g_im, g_fm)
 view_petri_net(g_net, g_im, g_fm)
 print(f"genetic fitness results\n{fitnesscalc.get_replay_fitness(g_replayed_tr)}")
-print(f"exec quality: {transition_execution_quality(g_replayed_tr)}")
+# print(f"exec quality: {transition_execution_quality(g_replayed_tr)}")
 print(f"genetic replay\n{pp.pformat(g_replayed_tr)}\n")
 print(f"generalization: {fitnesscalc.get_generalization(g_net, g_replayed_tr)}")
 print(f"precision: {fitnesscalc.get_precision(spliced_log, g_net, g_im, g_fm)}")
+
+# g_align_tr = alignments.apply_log(spliced_log, g_net, g_im, g_fm)
+# g_align_fit = replay_fitness.evaluate(g_align_tr, variant=replay_fitness.Variants.ALIGNMENT_BASED)
+# print(g_align_fit)
 
 # %%
 # investigate population
