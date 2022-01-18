@@ -179,3 +179,17 @@ print(f"precision: {fitnesscalc.get_precision(spliced_log, net, im, fm)}")
 from pm4py.algo.discovery.footprints import algorithm as footprints_discovery
 fp_log = footprints_discovery.apply(log, variant=footprints_discovery.Variants.ENTIRE_EVENT_LOG)
 fp_log
+
+# %%
+best_g = get_unpickled("results/data/forced_start_end_hacked__supersimple_only_tt_precion_generalization_both_01-11-2022_22-33-07/supersimple_both/2_01-12-2022_02-55-59/reports/best_genome.pkl ")
+net, im, fm = best_g.build_petri()
+view_petri_net(net, im, fm)
+best_g.show_nb_graphviz()
+# %%
+from pm4py.algo.simulation.playout.petri_net import algorithm as simulator
+simulated_log = simulator.apply(net, im, fm)
+
+
+# %%
+for t in simulated_log[:20]:
+    print(get_trace_str(t))
