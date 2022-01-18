@@ -420,17 +420,17 @@ class GeneticNet:
 
         self.fitness = (
             + params.perc_fit_traces_weight * (self.perc_fit_traces / 100)
-            + params.average_trace_fitness_weight * self.average_trace_fitness
+            + params.average_trace_fitness_weight * (self.average_trace_fitness**2)
             + params.log_fitness_weight * self.log_fitness
             + params.soundness_weight * int(self.is_sound)
-            + params.precision_weight * self.precision
+            + params.precision_weight * (self.precision**2)
             + params.generalization_weight * self.generalization
             + params.simplicity_weight * self.simplicity
             + params.fraction_used_trans_weight * self.fraction_used_trans
             + params.fraction_tasks_weight * self.fraction_tasks
             + self.execution_score
         )
-
+        
         if self.fitness < 0:
             raise Exception("Fitness below 0 should not be possible!!!")
         return
