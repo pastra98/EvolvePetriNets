@@ -350,7 +350,10 @@ class GeneticAlgorithm:
             new_genomes.append(new_g)
 
         for i, g in enumerate(self.population):
-            new_genomes.append(g.clone()) # append unmutated top g's
+            new_elite = g.clone() # append unmutated top g
+            if i > 0: # mutate all other tops
+                new_elite.mutate(1)
+            new_genomes.append(new_elite)
             if i == 9:
                 break
         self.population = new_genomes
