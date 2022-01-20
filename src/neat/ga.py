@@ -343,8 +343,9 @@ class GeneticAlgorithm:
         fit_sum = sum(fitnesses)
         probabilities = [fit / fit_sum for fit in fitnesses]
 
+        n_elites = 100
         new_genomes = []
-        for _ in range(params.popsize - 10): # elitism: keep a slot for best g
+        for _ in range(params.popsize - n_elites): # elitism: keep a slot for best g
             new_g = roulette_select(self.population, probabilities)
             new_g.mutate(1)
             new_genomes.append(new_g)
@@ -354,7 +355,7 @@ class GeneticAlgorithm:
             if i > 0: # mutate all other tops
                 new_elite.mutate(1)
             new_genomes.append(new_elite)
-            if i == 9:
+            if i == n_elites - 1:
                 break
         self.population = new_genomes
 
