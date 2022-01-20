@@ -424,8 +424,8 @@ class GeneticNet:
             + params.log_fitness_weight * self.log_fitness
             + params.soundness_weight * int(self.is_sound)
             + params.precision_weight * (self.precision**2)
-            + params.generalization_weight * self.generalization
-            + params.simplicity_weight * self.simplicity
+            + params.generalization_weight * (self.generalization**2)
+            + params.simplicity_weight * (self.simplicity**2)
             + params.fraction_used_trans_weight * self.fraction_used_trans
             + params.fraction_tasks_weight * self.fraction_tasks
             + self.execution_score
