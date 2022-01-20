@@ -53,7 +53,7 @@
     "soundness_weight": 1,
     "precision_weight": 1,
     "generalization_weight": 1,
-    "simplicity_weight": 0,
+    "simplicity_weight": 2,
     "fraction_used_trans_weight": 0,
     "fraction_tasks_weight": 0,
     "t_exec_scoring_weight": [0.1, 1],
