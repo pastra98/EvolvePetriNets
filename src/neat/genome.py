@@ -167,23 +167,21 @@ class GeneticNet:
             for _try in range(params.num_trys_make_conn):
                 source_id = self.pick_trans_with_preference()
                 target_id = self.pick_trans_with_preference()
-                place_id = innovs.check_trans_to_trans(source_id, target_id)
-                if place_id not in self.places and source_id != target_id: # check if valid
+                a1_id, p_id, a2_id = innovs.check_trans_to_trans(source_id, target_id)
+                if p_id not in self.places and source_id != target_id: # check if valid
                     break
                 else:
-                    place_id = None
+                    p_id = None
         else:
-            place_id = innovs.check_trans_to_trans(source_id, target_id)
-            if place_id in self.places:
+            a1_id, p_id, a2_id = innovs.check_trans_to_trans(source_id, target_id)
+            if p_id in self.places:
                 print("trans-trans-conn already made")
                 return
-        if place_id:
-            self.places[place_id] = GPlace(place_id)
-            arc1_id = innovs.check_arc(source_id, place_id)
-            self.arcs[arc1_id] = GArc(arc1_id, source_id, place_id)
-            arc2_id = innovs.check_arc(place_id, target_id)
-            self.arcs[arc2_id] = GArc(arc2_id, place_id, target_id)
-            return
+        if p_id:
+            self.arcs[a1_id] = GArc(a1_id, source_id, p_id)
+            self.places[p_id] = GPlace(p_id)
+            self.arcs[a2_id] = GArc(a2_id, p_id, target_id)
+            return 
 
 
     def split_arc(self):

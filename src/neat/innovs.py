@@ -36,9 +36,12 @@ def check_trans_to_trans(source_id, target_id):
     if (source_id, target_id) in trans:
         return trans[(source_id, target_id)]
     else:
-        new_id = store_new_node(GPlace)
-        trans[(source_id, target_id)] = new_id
-        return new_id
+        new_place_id = store_new_node(GPlace)
+        # should do check arc instead of directly adding
+        arc1_id = check_arc(source_id, new_place_id)
+        arc2_id = check_arc(new_place_id, target_id)
+        trans[(source_id, target_id)] = (arc1_id, new_place_id, arc2_id)
+        return trans[(source_id, target_id)]
 
 
 def check_extension(extend_from_id: str) -> dict:
