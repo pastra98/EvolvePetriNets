@@ -69,7 +69,6 @@ def rate_results(dir_to_analyze: str = None):
                     last_visit = None
                     im = Image(imgpath)
                     display(im)
-                    del im
                     while (usr_in := input("Quality of model: ")) not in ["1","2","3","4","exit"]:
                         print("rating must be 1, 2, 3 or 4")
                     if usr_in in ["1","2","3","4"]:
@@ -83,10 +82,10 @@ def rate_results(dir_to_analyze: str = None):
     save_and_quit(ratings)
 
 
-rate_results("results/data/improve_fitness_2_01-03-2022_16-20-30")
+rate_results("results/data/speciation_harder_01-20-2022_21-07-32")
 
 # %%
-ratings_df = pd.read_json("results/data/test_top5_fitness_12-28-2021_21-12-03/rating.txt", typ='series').to_frame()
+ratings_df = pd.read_json("results/data/speciation_harder_01-20-2022_21-07-32/rating.txt", typ='series').to_frame()
 ratings_df["full_path"] = ratings_df.index
 ratings_df["rating"] = ratings_df[0]
 ratings_df.reset_index(inplace=True)
