@@ -34,8 +34,8 @@ class GeneticAlgorithm:
         self.best_genome = None
         self.total_pop_fitness = None
         self.avg_pop_fitness = None
-        self.old_innovcount = 0
-        self.new_innovcount = 0
+        self.old_innovnum = 0
+        self.new_innovnum = 0
         
         # measurements specific to speciation
         self.num_new_species = 0 # these are set by calling get_initial_pop (only used if strat speciation)
@@ -130,8 +130,8 @@ class GeneticAlgorithm:
                     gen_info["best genome"] = copy(self.best_genome)
                     gen_info["population"] = [copy(g) for g in self.population]
 
-            gen_info["num total innovations"] = self.new_innovcount
-            gen_info["num new innovations"] = self.new_innovcount - self.old_innovcount
+            gen_info["num total innovations"] = self.new_innovnum
+            gen_info["num new innovations"] = self.new_innovnum - self.old_innovnum
             gen_info["best genome fitness"] = self.population[0].fitness
             gen_info["avg pop fitness"] = self.total_pop_fitness / params.popsize
             gen_info["total pop fitness"] = self.total_pop_fitness
@@ -191,6 +191,7 @@ class GeneticAlgorithm:
             "best_genome": self.best_genome,
             "max_fitness": self.best_genome.fitness
         }
+        print(80*"X", "\n", innovs.curr_arc_id, "\n", 80*"x")
         return results
 
 # ------------------------------------------------------------------------------
@@ -199,7 +200,7 @@ class GeneticAlgorithm:
 
     def pop_update(self) -> None:
         if self.is_timed: self.timer.start("pop_update", self.curr_gen)
-        self.old_innovcount = len(innovs.arcs)
+        self.old_innovnum = innovs.curr_arc_id
 
         if params.selection_strategy == "speciation":
             self.speciation_pop_update()
@@ -208,7 +209,10 @@ class GeneticAlgorithm:
         elif params.selection_strategy == "truncation": # https://www.researchgate.net/publication/259461147_Selection_Methods_for_Genetic_Algorithms
             self.truncation_pop_update()
 
-        self.new_innovcount = len(innovs.arcs)
+        self.new_innovnum = innovs.curr_arc_id
+
+        print(80*"X", "\n", innovs.curr_arc_id, "\n", 80*"x")
+
         if self.is_timed: self.timer.stop("pop_update", self.curr_gen)
 
 # SPECIATION -------------------------------------------------------------------
