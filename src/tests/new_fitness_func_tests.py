@@ -75,7 +75,7 @@ splice_d = {
     750: (0, 1, 2, 3, 4, 5)
 }
 
-gen = 10
+gen = 250
 s_l = list(filter(lambda g: g <= gen, splice_d.keys()))[-1]
 
 spliced_log = copy(log)
