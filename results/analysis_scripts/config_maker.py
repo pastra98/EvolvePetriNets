@@ -72,7 +72,7 @@ class Config():
             },
             "stop_cond": {
                 "var": "gen",
-                "val": 1000
+                "val": 2000
             },
             "send_gen_info_to_console": False,
             "is_profiled": False,
@@ -115,10 +115,12 @@ class Config():
         for base_param_name in self.base_params:
             print(f"\n{base_param_name}\nchanging values:")
             for change_val in self.base_params[base_param_name]:
-                tot_num += 1
                 if change_val != "base":
                     print(f"{change_val} - new values:")
                     print(self.base_params[base_param_name][change_val]["values"])
+                    tot_num += len(self.base_params[base_param_name][change_val]["values"])
+                else:
+                    tot_num += 1
         print(f"you will create {tot_num} params")
     
     def new_param_list(self, base_params_name: str, param_to_change: str, new_values: list) -> list:
@@ -174,30 +176,24 @@ class Config():
 # -------------------- END CONFIG CLASS
 
 # setup config for 2x, 3x, 4x
-conf = Config("speciation_harder")
+conf = Config("speciation_round2")
 
 bp_paths = [
-    "configs/speciation_base_params/01_prob_tp.json",
-    "configs/speciation_base_params/03_prob_tp.json",
-    "configs/speciation_base_params/06_prob_tp.json",
-    "configs/speciation_base_params/harder.json"
+    "configs/speciation_base_params/speciation_round2.json"
 ]
 conf.set_base_params(bp_paths)
 
-conf.param_list_for_all_bases("prob_t_t_conn", [
-    [0.1, 0],
-    [0.3, 0],
-    [0.6, 0]
+# %%
+conf.param_list_for_all_bases("prob_split_arc", [
+    [0.2, 0],
+    [0.4, 0]
 ])
-
-
-conf.param_list_for_all_bases("average_trace_fitness_weight", [2, 4])
-conf.param_list_for_all_bases("soundness_weight", [2,4])
-conf.param_list_for_all_bases("simplicity_weight", [2,4])
-conf.param_list_for_all_bases("precision_weight", [2,4])
-conf.param_list_for_all_bases("t_exec_scoring_weight", [
-    [0, 0],
+conf.param_list_for_all_bases("generalization_weight", [2, 4])
+conf.param_list_for_all_bases("prob_remove_arc", [
+    [0.4, 0]
 ])
+conf.param_list_for_all_bases("soundness_weight", [4])
+conf.param_list_for_all_bases("simplicity_weight", [4])
 
 # %%
 # fitness func on 5 variations
