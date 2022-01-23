@@ -191,7 +191,6 @@ class GeneticAlgorithm:
             "best_genome": self.best_genome,
             "max_fitness": self.best_genome.fitness
         }
-        print(80*"X", "\n", innovs.curr_arc_id, "\n", 80*"x")
         return results
 
 # ------------------------------------------------------------------------------
@@ -210,8 +209,6 @@ class GeneticAlgorithm:
             self.truncation_pop_update()
 
         self.new_innovnum = innovs.curr_arc_id
-
-        print(80*"X", "\n", innovs.curr_arc_id, "\n", 80*"x")
 
         if self.is_timed: self.timer.stop("pop_update", self.curr_gen)
 
