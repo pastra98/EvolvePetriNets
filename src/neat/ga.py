@@ -18,6 +18,7 @@ class GeneticAlgorithm:
             is_timed=True)-> None:
 
         self.history = {}
+        self.improvements = {} # store every best genome that improved upon the previous one
         self.params_name = params_name
         self.log = log
         self.curr_gen = 1
@@ -96,6 +97,10 @@ class GeneticAlgorithm:
             g.evaluate_fitness(log)
             self.total_pop_fitness += g.fitness
         self.population.sort(key=lambda g: g.fitness, reverse=True)
+        # check if fitness improvement happened
+        if self.curr_gen > 1 and self.population[0].fitness > self.best_genome.fitness:
+            self.improvements[self.curr_gen] = self.population[0]
+        # update best genome
         self.best_genome = self.population[0]
         return
 
@@ -189,6 +194,7 @@ class GeneticAlgorithm:
             "history": self.history,
             "param_values": params.get_curr_curr_dict(),
             "best_genome": self.best_genome,
+            "improvements": self.improvements,
             "max_fitness": self.best_genome.fitness
         }
         return results
