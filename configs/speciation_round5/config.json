@@ -60,8 +60,8 @@
             "save_reports": true,
             "save_params": true,
             "dump_pickle": false,
-            "setupname": "speciation_round5--log_splices--{'1':_[1_AND_2_AND_3_AND_5]_AND_'9999999999':_[0_AND_1_AND_2_AND_3_AND_4_AND_5]}",
-            "parampath": "./configs/speciation_round5/params/speciation_round5--log_splices--{'1':_[1_AND_2_AND_3_AND_5]_AND_'9999999999':_[0_AND_1_AND_2_AND_3_AND_4_AND_5]}.json",
+            "setupname": "speciation_round5--log_splices",
+            "parampath": "./configs/speciation_round5/params/speciation_round5--log_splices.json",
             "n_runs": 2
         },
         {
@@ -123,8 +123,8 @@
             "save_reports": true,
             "save_params": true,
             "dump_pickle": false,
-            "setupname": "speciation_round5_few_arc--log_splices--{'1':_[1_AND_2_AND_3_AND_5]_AND_'9999999999':_[0_AND_1_AND_2_AND_3_AND_4_AND_5]}",
-            "parampath": "./configs/speciation_round5/params/speciation_round5_few_arc--log_splices--{'1':_[1_AND_2_AND_3_AND_5]_AND_'9999999999':_[0_AND_1_AND_2_AND_3_AND_4_AND_5]}.json",
+            "setupname": "speciation_round5_few_arc--log_splices",
+            "parampath": "./configs/speciation_round5/params/speciation_round5_few_arc--log_splices.json",
             "n_runs": 2
         },
         {
@@ -186,8 +186,8 @@
             "save_reports": true,
             "save_params": true,
             "dump_pickle": false,
-            "setupname": "speciation_round5_many_arc--log_splices--{'1':_[1_AND_2_AND_3_AND_5]_AND_'9999999999':_[0_AND_1_AND_2_AND_3_AND_4_AND_5]}",
-            "parampath": "./configs/speciation_round5/params/speciation_round5_many_arc--log_splices--{'1':_[1_AND_2_AND_3_AND_5]_AND_'9999999999':_[0_AND_1_AND_2_AND_3_AND_4_AND_5]}.json",
+            "setupname": "speciation_round5_many_arc--log_splices",
+            "parampath": "./configs/speciation_round5/params/speciation_round5_many_arc--log_splices.json",
             "n_runs": 2
         }
     ]
