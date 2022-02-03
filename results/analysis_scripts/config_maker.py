@@ -72,11 +72,11 @@ class Config():
             },
             "stop_cond": {
                 "var": "gen",
-                "val": 2000
+                "val": 3000
             },
             "send_gen_info_to_console": False,
             "is_profiled": False,
-            "save_reduced_history_df": True,
+            "save_reduced_history_df": False,
             "save_reports": True,
             "save_params": True,
             "dump_pickle": False
@@ -157,7 +157,7 @@ class Config():
                         val = str(cp_dict["values"][i])
                         for prob, fix in [(".","pt"), (",","_AND"), (" ","_")]:
                             val = val.replace(prob, fix)
-                        saves[f"{bp_name}->{p}->{val}"] = cp
+                        saves[f"{bp_name}--{p}--{val}"] = cp
         final_cfg = {}
         final_cfg["name"] = self.name
         final_cfg["setups"] = []
@@ -176,24 +176,18 @@ class Config():
 # -------------------- END CONFIG CLASS
 
 # setup config for 2x, 3x, 4x
-conf = Config("speciation_round2")
+conf = Config("final_round_spec_vs_roulette_simpler_vs_full")
 
 bp_paths = [
-    "configs/speciation_base_params/speciation_round2.json"
+    "configs/final_bp/speciation_simpler_model.json",
+    "configs/final_bp/speciation_full_model.json"
 ]
+
 conf.set_base_params(bp_paths)
 
 # %%
-conf.param_list_for_all_bases("prob_split_arc", [
-    [0.2, 0],
-    [0.4, 0]
-])
-conf.param_list_for_all_bases("generalization_weight", [2, 4])
-conf.param_list_for_all_bases("prob_remove_arc", [
-    [0.4, 0]
-])
-conf.param_list_for_all_bases("soundness_weight", [4])
-conf.param_list_for_all_bases("simplicity_weight", [4])
+conf.param_list_for_all_bases("selection_strategy", ["roulette"])
+conf.get_overview()
 
 # %%
 # fitness func on 5 variations
