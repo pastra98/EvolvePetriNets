@@ -135,3 +135,18 @@ def generate_n_random_genomes(n_genomes, log):
 # log = pm4py.read_xes(logpath)
 # # parameters
 # params.load("../neat/param_files/test_params.json")
+
+def test_startconf():
+    trans_d = {}
+    innovs.set_tasks(["A", "B", "C", "D"])
+    for t in innovs.tasks:
+        trans_d[t] = netobj.GTrans(t, True)
+    gen_net = genome.GeneticNet(trans_d, dict(), dict())
+
+    start_arc = netobj.GArc(0, "start", "A")
+    gen_net.arcs[0] = start_arc
+
+    end_arc = netobj.GArc(1, "D", "end")
+    gen_net.arcs[1] = end_arc
+
+    return gen_net

@@ -1,4 +1,21 @@
 # %%
+import sys # syspath fuckery to run from same location as main
+import os # set cwd to same as project cwd from vscode
+from pathlib import Path
+
+cwd = Path.cwd()
+
+# RUN ONLY ONCE
+if not os.getcwd().endswith("EvolvePetriNets"): # rename dir on laptop to repo name as well
+    sys.path.append(str(cwd.parent.parent / "src")) # src from where all the relative imports work
+    os.chdir(cwd.parent.parent) # workspace level from where I execute scripts
+
+# notebook specific - autoreload modules
+from IPython import get_ipython
+ipython = get_ipython()
+ipython.magic("load_ext autoreload")
+ipython.magic("autoreload 2")
+
 import pprint
 from typing import final
 import pm4py
@@ -32,11 +49,10 @@ heuristics_miner = pm4py.algo.discovery.heuristics.algorithm
 # logpath = "../pm_data/BPI_Challenge_2012.xes"
 # logpath = "../pm_data/bpi2021/train/pdc2021_1100000.xes"
 # logpath = "../pm_data/pdc_2016_6.xes"
-logpath = "../pm_data/running_example.xes"
+logpath = "pm_data/running_example.xes"
 # logpath = "../pm_data/simulated_running_example.xes"
 # logpath = "../pm_data/simulated_running_example.xes"
 log = pm4py.read_xes(logpath)
-# %% load a log, mine it and show conformance
 
 # name, miner =  "alpha", alpha_miner
 # name, miner =  "heuristics", heuristics_miner
@@ -49,6 +65,13 @@ net, initial_marking, final_marking = miner.apply(log)
 # pm4py.view_bpmn(process_model)
 
 pm4py.view_petri_net(net, initial_marking, final_marking)
+
+net_gviz = visualizer.apply(net, initial_marking, final_marking)
+savepath = f"vis/"
+visualizer.save(net_gviz, savepath + "running_example" + ".png")
+net_gviz.format = "pdf"
+visualizer.save(net_gviz, savepath + "running_example" + ".pdf")
+print(f"saved under {savepath}")
 
 print(f"{name}, using alignments: {use_alignments}")
 print("starting to measure")
