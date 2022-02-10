@@ -6,6 +6,7 @@ from neatutils import timer
 from . import params, innovs, startconfigs
 from .genome import GeneticNet
 from .species import Species
+from copy import copy
 
 class GeneticAlgorithm:
     def __init__(
@@ -17,6 +18,7 @@ class GeneticAlgorithm:
             is_timed=True)-> None:
 
         self.history = {}
+        self.improvements = {} # store every best genome that improved upon the previous one
         self.params_name = params_name
         self.log = log
         self.curr_gen = 1
@@ -33,8 +35,8 @@ class GeneticAlgorithm:
         self.best_genome = None
         self.total_pop_fitness = None
         self.avg_pop_fitness = None
-        self.old_innovcount = 0
-        self.new_innovcount = 0
+        self.old_innovnum = 0
+        self.new_innovnum = 0
         
         # measurements specific to speciation
         self.num_new_species = 0 # these are set by calling get_initial_pop (only used if strat speciation)
@@ -82,12 +84,23 @@ class GeneticAlgorithm:
 
 
     def evaluate_curr_genomes(self) -> None:
-        # this is where multithreading magic will happen - i.e. this will need a rewrite
+        # if log is spliced according to params, pass spliced log for curr gen here
+        if params.log_splices:
+            s_gen = list(filter(lambda g: int(g) <= self.curr_gen, params.log_splices.keys()))[-1]
+            log = copy(self.log)
+            log._list = [log._list[int(i)] for i in params.log_splices[s_gen]]
+        else:
+            log = self.log
+        # calc fitness for every genome
         self.total_pop_fitness = 0
         for g in self.population:
-            g.evaluate_fitness(self.log)
+            g.evaluate_fitness(log)
             self.total_pop_fitness += g.fitness
         self.population.sort(key=lambda g: g.fitness, reverse=True)
+        # check if fitness improvement happened
+        if self.curr_gen > 1 and self.population[0].fitness > self.best_genome.fitness:
+            self.improvements[self.curr_gen] = self.population[0]
+        # update best genome
         self.best_genome = self.population[0]
         return
 
@@ -122,8 +135,8 @@ class GeneticAlgorithm:
                     gen_info["best genome"] = copy(self.best_genome)
                     gen_info["population"] = [copy(g) for g in self.population]
 
-            gen_info["num total innovations"] = self.new_innovcount
-            gen_info["num new innovations"] = self.new_innovcount - self.old_innovcount
+            gen_info["num total innovations"] = self.new_innovnum
+            gen_info["num new innovations"] = self.new_innovnum - self.old_innovnum
             gen_info["best genome fitness"] = self.population[0].fitness
             gen_info["avg pop fitness"] = self.total_pop_fitness / params.popsize
             gen_info["total pop fitness"] = self.total_pop_fitness
@@ -181,6 +194,7 @@ class GeneticAlgorithm:
             "history": self.history,
             "param_values": params.get_curr_curr_dict(),
             "best_genome": self.best_genome,
+            "improvements": self.improvements,
             "max_fitness": self.best_genome.fitness
         }
         return results
@@ -191,7 +205,7 @@ class GeneticAlgorithm:
 
     def pop_update(self) -> None:
         if self.is_timed: self.timer.start("pop_update", self.curr_gen)
-        self.old_innovcount = len(innovs.arcs)
+        self.old_innovnum = innovs.curr_arc_id
 
         if params.selection_strategy == "speciation":
             self.speciation_pop_update()
@@ -200,7 +214,8 @@ class GeneticAlgorithm:
         elif params.selection_strategy == "truncation": # https://www.researchgate.net/publication/259461147_Selection_Methods_for_Genetic_Algorithms
             self.truncation_pop_update()
 
-        self.new_innovcount = len(innovs.arcs)
+        self.new_innovnum = innovs.curr_arc_id
+
         if self.is_timed: self.timer.stop("pop_update", self.curr_gen)
 
 # SPECIATION -------------------------------------------------------------------
@@ -335,13 +350,20 @@ class GeneticAlgorithm:
         fit_sum = sum(fitnesses)
         probabilities = [fit / fit_sum for fit in fitnesses]
 
+        n_elites = 100
         new_genomes = []
-        for _ in range(params.popsize - 1): # elitism: keep a slot for best g
+        for _ in range(params.popsize - n_elites): # elitism: keep a slot for best g
             new_g = roulette_select(self.population, probabilities)
             new_g.mutate(1)
             new_genomes.append(new_g)
 
-        new_genomes.append(self.best_genome.clone()) # append unmutated best g
+        for i, g in enumerate(self.population):
+            new_elite = g.clone() # append unmutated top g
+            if i > 0: # mutate all other tops
+                new_elite.mutate(1)
+            new_genomes.append(new_elite)
+            if i == n_elites - 1:
+                break
         self.population = new_genomes
 
 # TRUNCATION -------------------------------------------------------------------

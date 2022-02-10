@@ -30,6 +30,8 @@ from pm4py.objects.petri_net.obj import PetriNet, Marking
 from collections import Counter
 from math import sqrt
 
+from . import params
+
 class Parameters(Enum):
     ACTIVITY_KEY = constants.PARAMETER_CONSTANT_ACTIVITY_KEY
     ATTRIBUTE_KEY = constants.PARAMETER_CONSTANT_ATTRIBUTE_KEY
@@ -85,6 +87,8 @@ def get_aligned_traces(log, petri_net, initial_marking, final_marking):
     parameters_tr = {token_replay.Parameters.ACTIVITY_KEY: DEFAULT_NAME_KEY,
                      token_replay.Parameters.CONSIDER_REMAINING_IN_FITNESS: True,
                      token_replay.Parameters.CLEANING_TOKEN_FLOOD: False,
+                     token_replay.Parameters.TRY_TO_REACH_FINAL_MARKING_THROUGH_HIDDEN: True,
+                     token_replay.Parameters.WALK_THROUGH_HIDDEN_TRANS: True,
                      token_replay.Parameters.SHOW_PROGRESS_BAR: False}
 
     aligned_traces = executor.apply(
@@ -187,3 +191,16 @@ def get_precision(log: EventLog, net: PetriNet, marking: Marking, final_marking:
         precision = 1 - float(sum_ee) / float(sum_at)
 
     return precision
+
+
+def transition_execution_quality(replay):
+    total_quality = 0
+    for trace in replay:
+        bad = set([t.label for t in trace["transitions_with_problems"]])
+        ok = set([t.label for t in trace["activated_transitions"]])
+        score = (
+            len(bad) * params.t_exec_scoring_weight[0] +
+            len(ok.difference(bad)) * params.t_exec_scoring_weight[1]
+        )
+        total_quality += score
+    return total_quality

@@ -1,3 +1,5 @@
+from pm4py.visualization.petri_net import visualizer
+
 import matplotlib.pyplot as plt
 import pandas as pd
 from statistics import fmean
@@ -7,6 +9,8 @@ import traceback
 import gc
 import importlib
 import matplotlib
+import pickle
+import os
 
 
 def save_report(
@@ -38,7 +42,9 @@ def save_report(
     if use_species:
         species_plot(full_history, savedir=savedir)
     history_plots(plotting_history_df, use_species, savedir=savedir)
-    best_genome_gviz(best_genome, savedir=savedir)
+    save_genome_gviz(best_genome, "pdf", savedir=savedir, name_prefix="best_genome")
+    save_improvements(ga_info["improvements"], savedir=savedir)
+    pickle_best_genome(best_genome, savedir=savedir)
     plot_detailed_fitness(full_history, savedir=savedir)
 
     run_report(full_history, savedir=savedir)
@@ -75,7 +81,7 @@ def history_plots(plotting_history_df, use_species: bool, savedir: str) -> None:
         plot = plotting_history_df[vars].plot(title=name)
         fig = plot.get_figure()
         try:
-            fig.savefig(f"{savedir}/{name}.png", dpi=300)
+            fig.savefig(f"{savedir}/{name}.pdf", dpi=300)
         except:
             print(f"could not save in the given path\n{savedir}")
         fig.clf()
@@ -123,7 +129,7 @@ def species_plot(full_history, savedir: str):
     plt.rcParams["figure.figsize"] = (15,5)
     try:
         fig.savefig(
-            f"{savedir}/species_plot.png",
+            f"{savedir}/species_plot.pdf",
             bbox_extra_artists=(legend,),
             bbox_inches='tight',
             dpi=300)
@@ -135,15 +141,27 @@ def species_plot(full_history, savedir: str):
     gc.collect()
 
 
-def best_genome_gviz(best_genome, savedir: str) -> None:
-    gviz = best_genome.get_graphviz()
+def save_genome_gviz(genome, ftype: str, savedir: str, use_custom_gviz=False, name_prefix="") -> None:
+    # get gviz based on custom or default gviz from pm4py
+    if use_custom_gviz:
+        gviz = genome.get_graphviz()
+    else:
+        net, im, fm = genome.build_petri()
+        gviz = visualizer.apply(net, im, fm)
+    # try saving in desired format
     try:
-        gviz.format = "png"
-        with open(f"{savedir}/best_genome.png", "wb") as img:
-            img.write(gviz.pipe())
+        gviz.format = ftype
+        with open(f"{savedir}/{name_prefix}_id-{genome.id}.{ftype}", "wb") as f:
+            f.write(gviz.pipe(format=ftype))
     except:
         print(f"couldn't save gviz in\n{savedir}")
 
+def pickle_best_genome(best_genome, savedir: str) -> None:
+    try:
+        with open(f"{savedir}/best_genome.pkl", "wb") as f:
+            pickle.dump(best_genome, f)
+    except:
+        print(f"couldn't save best_genome in\n{savedir}")
 
 def plot_detailed_fitness(full_history, savedir: str) -> None:
     plotvars = {
@@ -156,7 +174,8 @@ def plot_detailed_fitness(full_history, savedir: str) -> None:
         "simplicity": {"best": [], "pop_avg": []},
         "is_sound": {"best": [], "pop_avg": []},
         "fraction_used_trans": {"best": [], "pop_avg": []},
-        "fraction_tasks": {"best": [], "pop_avg": []}
+        "fraction_tasks": {"best": [], "pop_avg": []},
+        "execution_score": {"best": [], "pop_avg": []}
     }
     # read data into plotvars
     for info_d in full_history.values():
@@ -176,7 +195,7 @@ def plot_detailed_fitness(full_history, savedir: str) -> None:
         ax.legend(d.keys())
         plt.title(vname)
         try:
-            fig.savefig(f"{savedir}/{vname}.png", dpi=300)
+            fig.savefig(f"{savedir}/{vname}.pdf", dpi=300)
         except:
             print(f"could not save in the given path\n{savedir}")
         fig.clf()
@@ -220,3 +239,9 @@ def get_population_df(full_history):
         for g in info_d["population"]:
             l.append(g | {"gen": gen})
     return pd.DataFrame(l)
+
+
+def save_improvements(improvements: str, savedir: str):
+    os.makedirs(f"{savedir}/improvements")
+    for gen, genome in improvements.items():
+        save_genome_gviz(genome, "pdf", f"{savedir}/improvements", name_prefix=f"improvement_gen-{gen}")

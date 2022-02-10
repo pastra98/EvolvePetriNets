@@ -1,0 +1,11 @@
+        perc_fit_traces: 1.0
+        average_trace_fitness: 1.0
+        is_sound: True
+        precision: 0.7530864197530864
+        generalization: 0.5465854051849908
+        simplicity: 0.7599999999999999
+        fraction_used_trans: 1.0
+        fraction_tasks: 0.8
+        execution_score: 39.0
+
+total 53.0923580862221

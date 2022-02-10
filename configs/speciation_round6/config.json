@@ -1,0 +1,89 @@
+{
+    "name": "speciation_round6",
+    "setups": [
+        {
+            "logpath": "pm_data/running_example.xes",
+            "ga_kwargs": {
+                "is_pop_serialized": true,
+                "is_minimal_serialization": true,
+                "is_timed": true
+            },
+            "stop_cond": {
+                "var": "gen",
+                "val": 4000
+            },
+            "send_gen_info_to_console": false,
+            "is_profiled": false,
+            "save_reduced_history_df": false,
+            "save_reports": true,
+            "save_params": true,
+            "dump_pickle": false,
+            "setupname": "speciation_round6--normal--spawn_cutoff--07",
+            "parampath": "configs/speciation_round6/params/speciation_round6--spawn_cutoff--0pt7.json",
+            "n_runs": 2
+        },
+        {
+            "logpath": "pm_data/running_example.xes",
+            "ga_kwargs": {
+                "is_pop_serialized": true,
+                "is_minimal_serialization": true,
+                "is_timed": true
+            },
+            "stop_cond": {
+                "var": "gen",
+                "val": 4000
+            },
+            "send_gen_info_to_console": false,
+            "is_profiled": false,
+            "save_reduced_history_df": false,
+            "save_reports": true,
+            "save_params": true,
+            "dump_pickle": false,
+            "setupname": "speciation_round6--spawn_cutoff--0pt2",
+            "parampath": "./configs/speciation_round6/params/speciation_round6--spawn_cutoff--0pt2.json",
+            "n_runs": 2
+        },
+        {
+            "logpath": "pm_data/running_example.xes",
+            "ga_kwargs": {
+                "is_pop_serialized": true,
+                "is_minimal_serialization": true,
+                "is_timed": true
+            },
+            "stop_cond": {
+                "var": "gen",
+                "val": 4000
+            },
+            "send_gen_info_to_console": false,
+            "is_profiled": false,
+            "save_reduced_history_df": false,
+            "save_reports": true,
+            "save_params": true,
+            "dump_pickle": false,
+            "setupname": "speciation_round6--spawn_cutoff--0pt4",
+            "parampath": "./configs/speciation_round6/params/speciation_round6--spawn_cutoff--0pt4.json",
+            "n_runs": 2
+        },
+        {
+            "logpath": "pm_data/running_example.xes",
+            "ga_kwargs": {
+                "is_pop_serialized": true,
+                "is_minimal_serialization": true,
+                "is_timed": true
+            },
+            "stop_cond": {
+                "var": "gen",
+                "val": 4000
+            },
+            "send_gen_info_to_console": false,
+            "is_profiled": false,
+            "save_reduced_history_df": false,
+            "save_reports": true,
+            "save_params": true,
+            "dump_pickle": false,
+            "setupname": "speciation_round6--spawn_cutoff--1pt0",
+            "parampath": "./configs/speciation_round6/params/speciation_round6--spawn_cutoff--1pt0.json",
+            "n_runs": 2
+        }
+    ]
+}

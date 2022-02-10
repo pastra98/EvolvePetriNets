@@ -1,0 +1,110 @@
+{
+    "name": "profiled_reward_sound_squared_precision_avg_fit_few_mutations_fixed_start_end",
+    "setups": [
+        {
+            "logpath": "pm_data/running_example.xes",
+            "ga_kwargs": {
+                "is_pop_serialized": true,
+                "is_minimal_serialization": true,
+                "is_timed": true
+            },
+            "stop_cond": {
+                "var": "gen",
+                "val": 1000
+            },
+            "send_gen_info_to_console": false,
+            "is_profiled": true,
+            "save_reduced_history_df": true,
+            "save_reports": true,
+            "save_params": true,
+            "dump_pickle": false,
+            "setupname": "ss11",
+            "parampath": "configs/precision_squared_and_avg_trace_fit/params/supersimple_11.json",
+            "n_runs": 2
+        },
+        {
+            "logpath": "pm_data/running_example.xes",
+            "ga_kwargs": {
+                "is_pop_serialized": true,
+                "is_minimal_serialization": true,
+                "is_timed": true
+            },
+            "stop_cond": {
+                "var": "gen",
+                "val": 1000
+            },
+            "send_gen_info_to_console": false,
+            "is_profiled": true,
+            "save_reduced_history_df": true,
+            "save_reports": true,
+            "save_params": true,
+            "dump_pickle": false,
+            "setupname": "ss12",
+            "parampath": "configs/precision_squared_and_avg_trace_fit/params/supersimple_12.json",
+            "n_runs": 2
+        },
+        {
+            "logpath": "pm_data/running_example.xes",
+            "ga_kwargs": {
+                "is_pop_serialized": true,
+                "is_minimal_serialization": true,
+                "is_timed": true
+            },
+            "stop_cond": {
+                "var": "gen",
+                "val": 1000
+            },
+            "send_gen_info_to_console": false,
+            "is_profiled": true,
+            "save_reduced_history_df": true,
+            "save_reports": true,
+            "save_params": true,
+            "dump_pickle": false,
+            "setupname": "supss13",
+            "parampath": "configs/precision_squared_and_avg_trace_fit/params/supersimple_13.json",
+            "n_runs": 2
+        },
+        {
+            "logpath": "pm_data/running_example.xes",
+            "ga_kwargs": {
+                "is_pop_serialized": true,
+                "is_minimal_serialization": true,
+                "is_timed": true
+            },
+            "stop_cond": {
+                "var": "gen",
+                "val": 1000
+            },
+            "send_gen_info_to_console": false,
+            "is_profiled": true,
+            "save_reduced_history_df": true,
+            "save_reports": true,
+            "save_params": true,
+            "dump_pickle": false,
+            "setupname": "ss1_10",
+            "parampath": "configs/precision_squared_and_avg_trace_fit/params/supersimple_1_10.json",
+            "n_runs": 2
+        },
+        {
+            "logpath": "pm_data/running_example.xes",
+            "ga_kwargs": {
+                "is_pop_serialized": true,
+                "is_minimal_serialization": true,
+                "is_timed": true
+            },
+            "stop_cond": {
+                "var": "gen",
+                "val": 1000
+            },
+            "send_gen_info_to_console": false,
+            "is_profiled": true,
+            "save_reduced_history_df": true,
+            "save_reports": true,
+            "save_params": true,
+            "dump_pickle": false,
+            "setupname": "ss_1_100",
+            "parampath": "configs/precision_squared_and_avg_trace_fit/params/supersimple_1_100.json",
+            "n_runs": 2
+        }
+    ]
+}

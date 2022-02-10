@@ -2,6 +2,11 @@
     "start_config": "random",
     "popsize": 500,
     "selection_strategy": "roulette",
+    "log_splices": {
+        "1": [1, 3],
+        "500": [1, 2, 3, 5],
+        "2000": [0, 1, 2, 3, 4, 5]
+    },
     "initial_tp_gauss_dist": [
         2.0,
         0.5
@@ -42,15 +47,16 @@
     "old_penalty": 0.8,
     "youth_bonus": 1.4,
     "random_mating": true,
-    "perc_fit_traces_weight": 4.0,
-    "average_trace_fitness_weight": 0.0,
-    "log_fitness_weight": 1.0,
-    "soundness_weight": 2.0,
-    "precision_weight": 0.4,
-    "generalization_weight": 0.4,
-    "simplicity_weight": 0.3,
-    "fraction_used_trans_weight": 3.0,
-    "fraction_tasks_weight": 0,
+    "perc_fit_traces_weight": 0.0,
+    "average_trace_fitness_weight": 2.0,
+    "log_fitness_weight": 0.0,
+    "soundness_weight": 0.5,
+    "precision_weight": 0.2,
+    "generalization_weight": 0.2,
+    "simplicity_weight": 0.0,
+    "fraction_used_trans_weight": 2.0,
+    "fraction_tasks_weight": 0.5,
+    "t_exec_scoring_weight": [0, 0],
     "prob_t_p_arc": [
         0.1,
         0.3

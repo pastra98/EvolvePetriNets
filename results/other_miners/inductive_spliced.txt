@@ -1,0 +1,11 @@
+perc_fit_traces: 1.0
+average_trace_fitness: 1.0
+is_sound: True
+precision: 0.8823529411764706
+generalization: 0.3816532678934015
+simplicity: 0.7777777777777779
+fraction_used_trans: 1.0
+fraction_tasks: 1.0
+execution_score: 20.0
+
+total 34.61352398078172

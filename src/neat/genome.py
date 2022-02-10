@@ -35,6 +35,7 @@ class GeneticNet:
         self.simplicity: float = None
         self.fraction_used_trans: float = None
         self.fraction_tasks: float = None
+        self.execution_score: float = None
         # make Transition genes for every task saved in innovs and add to genome
         task_trans = {t: GTrans(t, True) for t in innovs.tasks}
         self.transitions = transitions | task_trans
@@ -50,6 +51,9 @@ class GeneticNet:
 
     def mutate(self, mutation_rate):
         try:
+            # remove arcs, this calculates probabilities for arcs one at a time
+            self.remove_arcs(mutation_rate)
+            # perform single mutations
             if rd.random() < params.prob_t_p_arc[mutation_rate]:
                 self.trans_place_arc()
             if rd.random() < params.prob_p_t_arc[mutation_rate]:
@@ -64,8 +68,6 @@ class GeneticNet:
                 self.split_arc()
             if rd.random() < params.prob_prune_extensions[mutation_rate]:
                 self.prune_extensions()
-            # remove arcs, this calculates probabilities for arcs one at a time
-            self.remove_arcs(mutation_rate)
             # remove nodes that are no longer connected
             self.remove_unused_nodes()
         except:
@@ -137,6 +139,8 @@ class GeneticNet:
 
 
     def extend_new_trans(self, place_id=None) -> str:
+        if len(self.places) <= 2:
+            return
         if not place_id:
             for _try in range(params.num_trys_make_conn):
                 place_id = rd.choice([p for p in self.places if p not in ["start", "end"]])
@@ -163,26 +167,26 @@ class GeneticNet:
             for _try in range(params.num_trys_make_conn):
                 source_id = self.pick_trans_with_preference()
                 target_id = self.pick_trans_with_preference()
-                place_id = innovs.check_trans_to_trans(source_id, target_id)
-                if place_id not in self.places and source_id != target_id: # check if valid
+                a1_id, p_id, a2_id = innovs.check_trans_to_trans(source_id, target_id)
+                if p_id not in self.places and source_id != target_id: # check if valid
                     break
                 else:
-                    place_id = None
+                    p_id = None
         else:
-            place_id = innovs.check_trans_to_trans(source_id, target_id)
-            if place_id in self.places:
+            a1_id, p_id, a2_id = innovs.check_trans_to_trans(source_id, target_id)
+            if p_id in self.places:
                 print("trans-trans-conn already made")
                 return
-        if place_id:
-            self.places[place_id] = GPlace(place_id)
-            arc1_id = innovs.check_arc(source_id, place_id)
-            self.arcs[arc1_id] = GArc(arc1_id, source_id, place_id)
-            arc2_id = innovs.check_arc(place_id, target_id)
-            self.arcs[arc2_id] = GArc(arc2_id, place_id, target_id)
-            return
+        if p_id:
+            self.arcs[a1_id] = GArc(a1_id, source_id, p_id)
+            self.places[p_id] = GPlace(p_id)
+            self.arcs[a2_id] = GArc(a2_id, p_id, target_id)
+            return 
 
 
     def split_arc(self):
+        if not self.arcs:
+            return
         for _try in range(params.num_trys_split_arc):
             arc_to_split = rd.choice(list(self.arcs.values()))
             all_nodes = self.places | self.transitions
@@ -409,18 +413,22 @@ class GeneticNet:
         self.generalization = fitnesscalc.get_generalization(net, aligned_traces)
         # simplicity
         self.simplicity = simplicity_evaluator.apply(net)
-        # some preliminary fitness measure
+        # execution score
+        self.execution_score = fitnesscalc.transition_execution_quality(aligned_traces)
+
         self.fitness = (
             + params.perc_fit_traces_weight * (self.perc_fit_traces / 100)
-            + params.average_trace_fitness_weight * self.average_trace_fitness
+            + params.average_trace_fitness_weight * (self.average_trace_fitness**2)
             + params.log_fitness_weight * self.log_fitness
             + params.soundness_weight * int(self.is_sound)
-            + params.precision_weight * self.precision
-            + params.generalization_weight * self.generalization
-            + params.simplicity_weight * self.simplicity
+            + params.precision_weight * (self.precision**2)
+            + params.generalization_weight * (self.generalization**2)
+            + params.simplicity_weight * (self.simplicity**2)
             + params.fraction_used_trans_weight * self.fraction_used_trans
             + params.fraction_tasks_weight * self.fraction_tasks
+            + self.execution_score
         )
+        
         if self.fitness < 0:
             raise Exception("Fitness below 0 should not be possible!!!")
         return

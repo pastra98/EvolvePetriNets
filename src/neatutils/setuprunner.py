@@ -53,6 +53,7 @@ def run_setup(run_nr, main_logger, setup, results_path) -> dict:
             f"{run_dir}/reports",
             setup["save_reduced_history_df"]
         )
+        main_logger.info(f"reports saved at:\n{run_dir}/reports")
 
     try:
         if setup["save_params"]:

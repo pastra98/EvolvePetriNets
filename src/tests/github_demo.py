@@ -16,7 +16,10 @@ from pm4py.algo.conformance.tokenreplay import algorithm as token_replay
 from pm4py.objects.petri_net.obj import PetriNet, Marking
 from pm4py.objects.petri_net.utils.petri_utils import add_arc_from_to
 from pm4py.objects.log.importer.xes import importer as xes_importer
+<<<<<<< HEAD
 from pm4py.visualization.petri_net import visualizer
+=======
+>>>>>>> 8db9ff5e6b65b9676940c0fbe42fa5c5eaaf36c1
 from pm4py import view_petri_net
 
 # load running example log
@@ -48,6 +51,7 @@ replayed_tr = token_replay.apply(
 )
 
 print(replayed_tr)
+view_petri_net(net, im, fm)
 
 net_gviz = visualizer.apply(net, im, fm)
 savepath = f"vis/test_petrinet.svg"
