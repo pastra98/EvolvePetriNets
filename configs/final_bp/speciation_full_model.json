@@ -78,15 +78,15 @@
         0
     ],
     "prob_new_p": [
-        0,
+        0.05,
         0
     ],
     "prob_new_empty_t": [
-        0,
+        0.05,
         0
     ],
     "prob_split_arc": [
-        0,
+        0.05,
         0
     ],
     "prob_increase_arcs": [
@@ -98,7 +98,7 @@
         0
     ],
     "prob_prune_extensions": [
-        0.0,
+        0.1,
         0.0
     ],
     "is_no_preference_for_tasks": false,
