@@ -1,4 +1,5 @@
 # %%
+from pty import slave_open
 import sys, os, pprint
 from pathlib import Path
 from pm4py import view_petri_net
@@ -17,6 +18,7 @@ ipython = get_ipython()
 ipython.magic("load_ext autoreload")
 ipython.magic("autoreload 2")
 
+from src.tests import visualize_genome as vg
 from src.neat.genome import GeneticNet
 
 # %%
@@ -24,86 +26,55 @@ from neat import startconfigs, innovs, params
 from pm4py.objects.log.importer.xes import importer as xes_importer
 from IPython.core.display import display, HTML, Image
 
-def show_graphviz(g):
-    gviz = g.get_graphviz()
-    display(Image(data=gviz.pipe(format="png"), unconfined=True, retina=True))
+from pm4py import view_petri_net
+from pm4py.visualization.petri_net import visualizer
+from IPython.core.display import display, HTML, Image
 
-lp = "pm_data/running_example.xes" # "pm_data/m1_log.xes"
-log = xes_importer.apply(lp)
-innovs.reset()
+def vis_genome(g, view=True, save=False, sname=""):
+    net, im, fm = g.build_petri()
+    if save:
+        net_gviz = visualizer.apply(net, im, fm)
+        savepath = f"vis/show_mutations/"
+        visualizer.save(net_gviz, savepath + sname + ".png")
+        net_gviz.format = "svg"
+        visualizer.save(net_gviz, savepath + sname + ".svg")
+        print(f"saved under {savepath}")
+    if view:
+        print(g.id)
+        view_petri_net(net, im, fm)
+
 params.load("params/testing/default_speciation_params.json")
-
-test_genomes = startconfigs.traces_with_concurrency(log)
 
 # %%
 # check cloning
-target_g = test_genomes[1]
-g2 = target_g.clone()
-for _ in range(3):
-    print()
+innovs.reset()
+test_genome = startconfigs.test_startconf()
+target_g = test_genome.clone()
 
-    # pp.pprint(g.transitions)
-    show_graphviz(target_g)
+target_g.trans_trans_conn("A", "B")
+target_g.trans_trans_conn("B", "D")
+target_g.trans_place_arc("D", "end")
+vis_genome(target_g, save=True, sname="1_base")
 
-    print("clone:")
-    # pp.pprint(g2.transitions)
-    show_graphviz(g2)
-    g2.trans_place_arc()
+target_g.extend_new_trans("p1")
+vis_genome(target_g, save=True, sname="2_extend_trans")
 
-# %%
-# visualize all test genomes
-from pm4py import view_petri_net
+target_g.split_arc(4)
+target_g.split_arc(5)
+vis_genome(target_g, save=True, sname="3_split_arc")
 
-for g in test_genomes:
-    print(g.id)
-    show_graphviz(g)
-    # net, im, fm = g.build_petri()
-    # view_petri_net(net, im, fm)
+target_g.extend_new_place("t5")
+vis_genome(target_g, save=True, sname="4_extend_place")
 
-# %%
-# perform mutations on target g
-target_g: GeneticNet = test_genomes[1]
+target_g.trans_place_arc("t3", "p6")
+target_g.trans_place_arc("t3", "p2")
+vis_genome(target_g, save=True, sname="5_trans_place")
 
-target_g.evaluate_fitness(log)
-print(f"BEFORE mutation fitness:\n{target_g.fitness}")
+del target_g.arcs[16]
+vis_genome(target_g, save=True, sname="6_remove_arc")
 
-target_g.show_nb_graphviz()
+target_g.place_trans_arc("p8", "C")
+vis_genome(target_g, save=True, sname="7_place_trans")
 
-# target_g.split_arc()
-# target_g.trans_trans_conn()
-
-# target_g.place_trans_arc()
-# target_g.trans_place_arc()
-
-# target_g.extend_new_place()
-# target_g.extend_new_trans()
-
-# target_g.show_nb_graphviz()
-
-# target_g.prune_extensions()
-
-# target_g.show_nb_graphviz()
-
-# target_g.evaluate_fitness(log)
-
-print(f"AFTER mutation fitness:\n{target_g.fitness}")
-
-# %%
-target_g: GeneticNet = test_genomes[1]
-target_g.show_nb_graphviz()
-
-for _ in range(100):
-    target_g.mutate(0)
-    target_g.show_nb_graphviz()
-
-# %%
-target_g = test_genomes[4]
-target_g.evaluate_fitness(log)
-
-print(f"log_fitness: {target_g.log_fitness}")
-print(f"is_sound: {target_g.is_sound}")
-print(f"precision: {target_g.precision}")
-print(f"generalization: {target_g.generalization}")
-print(f"simplicity: {target_g.simplicity}")
-print(f"fraction_used_trans: {target_g.fraction_used_trans}")
-print(f"fraction_tasks: {target_g.fraction_tasks}")
+target_g.trans_trans_conn("C", "t7")
+vis_genome(target_g, save=True, sname="8_trans_trans")
