@@ -16,7 +16,8 @@ GA speciation_round6--spawn_cutoff--0pt4 GEN: 1
  'num new species': 1,
  'num total innovations': 0,
  'num total species': 1,
- 'times': {'evaluate_curr_generation': 10.272140658926219},
+ 'times': {'evaluate_curr_generation': 10.272140658926219,
+           'pop_update': 0.42882820195518434},
  'total pop fitness': 42932.313914651146}
 --------
 

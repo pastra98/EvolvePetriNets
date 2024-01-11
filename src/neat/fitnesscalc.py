@@ -194,6 +194,8 @@ def get_precision(log: EventLog, net: PetriNet, marking: Marking, final_marking:
 
 
 def transition_execution_quality(replay):
+    import pprint as pp
+    pp.pprint(replay)
     total_quality = 0
     for trace in replay:
         bad = set([t.label for t in trace["transitions_with_problems"]])
