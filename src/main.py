@@ -1,5 +1,3 @@
-#!/usr/bin/python3.9
-
 import sys, os, json, datetime
 from multiprocessing import Pool
 
