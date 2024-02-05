@@ -50,6 +50,4 @@ if __name__ == "__main__":
     except:
         raise Exception("passed invalid config filepath!")
     main(config)
-else:
-    raise Exception("this file should not be imported!")
     
