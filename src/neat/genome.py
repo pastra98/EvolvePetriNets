@@ -89,7 +89,6 @@ class GeneticNet:
         else: # if place/trans specified in arguments, just get that innov number
             arc_id = innovs.check_arc(place_id, trans_id)
             if arc_id in self.arcs:
-                print("arc already exists")
                 return # no connection is made
         new_arc = GArc(arc_id, place_id, trans_id)
         self.arcs[arc_id] = new_arc
@@ -110,7 +109,6 @@ class GeneticNet:
         else: # if place/trans specified in arguments, just get that innov number
             arc_id = innovs.check_arc(trans_id, place_id)
             if arc_id in self.arcs:
-                print("arc already exists")
                 return # no connection is made
         new_arc = GArc(arc_id, trans_id, place_id)
         self.arcs[arc_id] = new_arc
