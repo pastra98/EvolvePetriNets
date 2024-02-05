@@ -56,7 +56,7 @@ def run_setup(run_nr, main_logger, setup, results_path) -> dict:
         main_logger.info(f"reports saved at:\n{run_dir}/reports")
 
     try:
-        if setup["save_params"]:
+        if setup["save_params"] and not "EXCEPTION" in run_result:
             params_name = f"{run_dir}/{run_name}_params.json"
             with open(params_name, "w") as f:
                 json.dump(run_result["param_values"], f, indent=4)
@@ -74,7 +74,7 @@ def run_setup(run_nr, main_logger, setup, results_path) -> dict:
     return {
         "setupname": setup['setupname'],
         "run_nr": run_nr,
-        "max_fitness": run_result['max_fitness'],
+        "max_fitness": run_result['max_fitness'] if not "EXCEPTION" in run_result else None,
         "Exceptions": "EXCEPTION" in run_result
     }
 
