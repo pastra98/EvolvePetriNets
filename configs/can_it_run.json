@@ -15,7 +15,7 @@
                 "val": 10
             },
             "n_runs": 4,
-            "send_gen_info_to_console": true,
+            "send_gen_info_to_console": false,
             "is_profiled": false,
             "save_reduced_history_df": true,
             "save_reports": true,
