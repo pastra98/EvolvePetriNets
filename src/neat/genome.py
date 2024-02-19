@@ -1,18 +1,24 @@
 import random as rd
+import traceback
 import itertools
 
 from graphviz import Digraph
 
-from pm4py import fitness_alignments
 from pm4py.objects.petri_net.obj import PetriNet, Marking
 from pm4py.objects.petri_net.utils.petri_utils import add_arc_from_to
 
-from pm4py.algo.analysis.woflan import algorithm as woflan
-from pm4py.algo.evaluation.simplicity import algorithm as simplicity_evaluator
+from neat import params, innovs
+from neat.netobj import GArc, GPlace, GTrans
 
-from . import params, innovs, fitnesscalc
-from .netobj import GArc, GPlace, GTrans
-import traceback
+from pm4py.algo.conformance.tokenreplay.variants.token_replay import apply as get_replayed_traces
+from pm4py.algo.evaluation.replay_fitness.variants.token_replay import evaluate as get_fitness_dict
+from pm4py.algo.evaluation.precision.variants.etconformance_token import apply as get_precision
+from pm4py.algo.evaluation.generalization.variants.token_based import get_generalization
+from pm4py.algo.evaluation.simplicity.variants.arc_degree import apply as get_simplicity
+from pm4py.algo.analysis.woflan import algorithm as woflan
+
+from neat.fitnesscalc import transition_execution_quality
+
 
 class GeneticNet:
     def __init__(self, transitions: dict, places: dict, arcs: dict) -> None:
@@ -386,8 +392,9 @@ class GeneticNet:
         self.remove_unused_nodes()
         net, im, fm = self.build_petri()
         # fitness eval
-        aligned_traces = fitnesscalc.get_aligned_traces(log, net, im, fm)
-        trace_fitness = fitnesscalc.get_replay_fitness(aligned_traces)
+        default_params = {"show_progress_bar": False}
+        aligned_traces = get_replayed_traces(log, net, im, fm, default_params)
+        trace_fitness = get_fitness_dict(aligned_traces)
         self.perc_fit_traces = trace_fitness["perc_fit_traces"] / 100
         self.average_trace_fitness = trace_fitness["average_trace_fitness"]
         self.log_fitness = trace_fitness["log_fitness"]
@@ -405,14 +412,11 @@ class GeneticNet:
             woflan.Parameters.PRINT_DIAGNOSTICS: False,
             woflan.Parameters.RETURN_DIAGNOSTICS: False
         })
-        # precision
-        self.precision = fitnesscalc.get_precision(log, net, im, fm)
-        # generealization
-        self.generalization = fitnesscalc.get_generalization(net, aligned_traces)
-        # simplicity
-        self.simplicity = simplicity_evaluator.apply(net)
-        # execution score
-        self.execution_score = fitnesscalc.transition_execution_quality(aligned_traces)
+        # precision, generalization, simplicity, execution score
+        self.precision = get_precision(log, net, im, fm, default_params)
+        self.generalization = get_generalization(net, aligned_traces)
+        self.simplicity = get_simplicity(net)
+        self.execution_score = transition_execution_quality(aligned_traces)
 
         self.fitness = (
             + params.perc_fit_traces_weight * (self.perc_fit_traces / 100)
