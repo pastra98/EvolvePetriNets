@@ -1,23 +1,23 @@
-import random as rd
-import traceback
-import itertools
-
-from graphviz import Digraph
-
 from pm4py.objects.petri_net.obj import PetriNet, Marking
 from pm4py.objects.petri_net.utils.petri_utils import add_arc_from_to
-
-from neat import params, innovs
-from neat.netobj import GArc, GPlace, GTrans
 
 from pm4py.algo.conformance.tokenreplay.variants.token_replay import apply as get_replayed_traces
 from pm4py.algo.evaluation.replay_fitness.variants.token_replay import evaluate as get_fitness_dict
 from pm4py.algo.evaluation.precision.variants.etconformance_token import apply as get_precision
 from pm4py.algo.evaluation.generalization.variants.token_based import get_generalization
 from pm4py.algo.evaluation.simplicity.variants.arc_degree import apply as get_simplicity
-from pm4py.algo.analysis.woflan import algorithm as woflan
+from pm4py.algo.analysis.woflan.algorithm import apply as get_soundness
 
 from neat.fitnesscalc import transition_execution_quality
+from neat.netobj import GArc, GPlace, GTrans
+from neat import params, innovs
+
+import random as rd
+import traceback
+import itertools
+
+from graphviz import Digraph
+
 
 
 class GeneticNet:
@@ -407,11 +407,8 @@ class GeneticNet:
             self.fraction_used_trans = 0
             self.fraction_tasks = 0
         # soundness check
-        self.is_sound = woflan.apply(net, im, fm, parameters={
-            woflan.Parameters.RETURN_ASAP_WHEN_NOT_SOUND: True,
-            woflan.Parameters.PRINT_DIAGNOSTICS: False,
-            woflan.Parameters.RETURN_DIAGNOSTICS: False
-        })
+        soundness_params = {"return_asap_when_not_sound": True, "print_diagnostics": False}
+        self.is_sound = get_soundness(net, im, fm, soundness_params)
         # precision, generalization, simplicity, execution score
         self.precision = get_precision(log, net, im, fm, default_params)
         self.generalization = get_generalization(net, aligned_traces)
