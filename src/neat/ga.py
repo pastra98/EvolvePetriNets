@@ -3,7 +3,7 @@ import random as rd
 from copy import copy
 
 from neatutils import timer
-from neatutils.bootstrapping import get_spliced_log_on_gen
+from neatutils.splicing import get_spliced_log_on_gen
 
 from neat import params, innovs, startconfigs
 from neat.genome import GeneticNet
