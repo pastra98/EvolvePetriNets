@@ -1,12 +1,13 @@
 import numpy as np
 import random as rd
 from copy import copy
+
 from neatutils import timer
+from neatutils.bootstrapping import get_spliced_log_on_gen
 
 from neat import params, innovs, startconfigs
 from neat.genome import GeneticNet
 from neat.species import Species
-from copy import copy
 
 class GeneticAlgorithm:
     def __init__(
@@ -86,11 +87,7 @@ class GeneticAlgorithm:
     def evaluate_curr_genomes(self) -> None:
         # if log is spliced according to params, pass spliced log for curr gen here
         if params.log_splices:
-            s_gen = list(filter(lambda g: int(g) <= self.curr_gen, params.log_splices.keys()))[-1]
-            log = copy(self.log)
-            log._list = [log._list[int(i)] for i in params.log_splices[s_gen]]
-        else:
-            log = self.log
+            log = get_spliced_log_on_gen(self.curr_gen, self.log)
         # calc fitness for every genome
         self.total_pop_fitness = 0
         for g in self.population:
