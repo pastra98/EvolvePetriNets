@@ -3,6 +3,8 @@ import sys # syspath fuckery to run from same location as main
 import os # set cwd to same as project cwd from vscode
 from pathlib import Path
 
+from neatutils import fitnesscalc
+
 cwd = Path.cwd()
 
 # RUN ONLY ONCE
@@ -27,7 +29,7 @@ from pm4py.algo.discovery.footprints import algorithm as footprints_discovery
 from pm4py.visualization.footprints import visualizer as fp_visualizer
 from pm4py import view_petri_net
 
-from src.neat import fitnesscalc, innovs, netobj, genome, params
+from src.neat import innovs, netobj, genome, params
 
 from copy import copy
 import pprint as pp

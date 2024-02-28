@@ -8,7 +8,7 @@ from pm4py.algo.evaluation.generalization.variants.token_based import get_genera
 from pm4py.algo.evaluation.simplicity.variants.arc_degree import apply as get_simplicity
 from pm4py.algo.analysis.woflan.algorithm import apply as get_soundness
 
-from neat.fitnesscalc import transition_execution_quality
+from neatutils.fitnesscalc import transition_execution_quality
 from neat.netobj import GArc, GPlace, GTrans
 from neat import params, innovs
 

@@ -26,7 +26,8 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 from statistics import fmean, stdev
 
-from src.neat import fitnesscalc, innovs, netobj, genome, params
+from src.neat import innovs, netobj, genome, params
+from neatutils import fitnesscalc
 from pm4py.algo.analysis.woflan import algorithm as woflan
 from pm4py.algo.evaluation.simplicity import algorithm as simplicity_evaluator
 from pm4py.algo.discovery.footprints import algorithm as footprints_discovery
