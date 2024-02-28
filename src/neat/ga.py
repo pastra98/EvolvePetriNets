@@ -3,9 +3,9 @@ import random as rd
 from copy import copy
 from neatutils import timer
 
-from . import params, innovs, startconfigs
-from .genome import GeneticNet
-from .species import Species
+from neat import params, innovs, startconfigs
+from neat.genome import GeneticNet
+from neat.species import Species
 from copy import copy
 
 class GeneticAlgorithm:

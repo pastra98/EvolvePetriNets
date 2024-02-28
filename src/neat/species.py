@@ -1,6 +1,6 @@
 import random as rd
-from . import params
-from .genome import GeneticNet
+from neat import params
+from neat.genome import GeneticNet
 
 class Species:
     def __init__(self, name) -> None:

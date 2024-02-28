@@ -2,7 +2,7 @@ from random import gauss
 from pm4py.algo.discovery.footprints import algorithm as footprints_discovery
 from pm4py.visualization.footprints import visualizer as fp_visualizer
 
-from . import netobj, innovs, genome, params
+from neat import netobj, innovs, genome, params
 
 def get_trace_str(trace):
     tr_events = []

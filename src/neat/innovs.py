@@ -1,6 +1,6 @@
 import sys, importlib # used for reset
 from typing import List
-from .netobj import GArc, GTrans, GPlace
+from neat.netobj import GArc, GTrans, GPlace
 
 tasks = []
 nodes = {"start":GPlace, "end":GPlace}

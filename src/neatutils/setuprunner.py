@@ -1,8 +1,8 @@
 import cProfile, os, json, traceback, datetime, pickle, pprint, gc, logging
 from pm4py.objects.log.importer.xes import importer as xes_importer
 
-from . import endreports as er
-from . import neatlogger as nl
+from neatutils import endreports as er
+from neatutils import neatlogger as nl
 from neat import ga
 
 def run_setup(run_nr, main_logger, setup, results_path) -> dict:
