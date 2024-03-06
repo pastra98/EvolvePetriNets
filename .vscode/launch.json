@@ -5,6 +5,15 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "debug file",
+            "type": "python",
+            "program": "${file}",
+            "request": "launch",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+
+        },
+        {
             "name": "debug main",
             "type": "python",
             "request": "launch",
@@ -13,6 +22,6 @@
             "justMyCode": false,
             "args": ["configs/can_it_run.json"]
 
-}
+        }
     ]
 }
