@@ -102,7 +102,7 @@ display(Image(data=gv2.pipe(format="png"), unconfined=True, retina=True))
 # %% ---------------------------------------------------------------------------
 # ---------- TEST STARTCONFIGS 2 ----------
 # ------------------------------------------------------------------------------
-from src.neat import startconfigs as sc
+from src.neatutils import startconfigs as sc
 
 ng = sc.generate_n_random_genomes(50, log)
 for g in ng:

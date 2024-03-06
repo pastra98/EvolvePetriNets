@@ -1,8 +1,9 @@
-from src.neat import startconfigs, innovs
+from src.neat import innovs
 from pm4py import view_petri_net
 
 from src.neat import genome
 from src.neat import params
+from src.neatutils import startconfigs
 
 params.load("test")
 

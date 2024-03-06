@@ -3,6 +3,7 @@ from pty import slave_open
 import sys, os, pprint
 from pathlib import Path
 from pm4py import view_petri_net
+from src.neatutils import startconfigs
 
 
 
@@ -22,7 +23,7 @@ from src.tests import visualize_genome as vg
 from src.neat.genome import GeneticNet
 
 # %%
-from neat import startconfigs, innovs, params
+from neat import innovs, params
 from pm4py.objects.log.importer.xes import importer as xes_importer
 from IPython.core.display import display, HTML, Image
 

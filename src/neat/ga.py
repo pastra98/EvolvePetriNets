@@ -5,9 +5,10 @@ from copy import copy
 from neatutils import timer
 from neatutils.splicing import get_spliced_log_on_gen
 
-from neat import params, innovs, startconfigs
+from neat import params, innovs
 from neat.genome import GeneticNet
 from neat.species import Species
+from src.neatutils import startconfigs
 
 class GeneticAlgorithm:
     def __init__(
