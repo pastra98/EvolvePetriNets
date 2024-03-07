@@ -12,7 +12,7 @@ extensions_inverted = {}
 
 splits = {}
 
-trans = {}
+trans_to_trans = {}
 
 curr_genome_id = 0
 
@@ -31,20 +31,26 @@ def get_new_genome_id():
     return curr_genome_id
 
 
-def check_trans_to_trans(source_id, target_id):
-    global trans
-    if (source_id, target_id) in trans:
-        return trans[(source_id, target_id)]
+def get_trans_to_trans(source_id, target_id):
+    """connects a transition to another transition via a place
+    """
+    global trans_to_trans
+    # check if connection already exists
+    if (source_id, target_id) in trans_to_trans:
+        return trans_to_trans[(source_id, target_id)]
+    # if not, create new place and arcs
     else:
         new_place_id = store_new_node(GPlace)
         # should do check arc instead of directly adding
-        arc1_id = check_arc(source_id, new_place_id)
-        arc2_id = check_arc(new_place_id, target_id)
-        trans[(source_id, target_id)] = (arc1_id, new_place_id, arc2_id)
-        return trans[(source_id, target_id)]
+        arc1_id = get_arc(source_id, new_place_id)
+        arc2_id = get_arc(new_place_id, target_id)
+        trans_to_trans[(source_id, target_id)] = (arc1_id, new_place_id, arc2_id)
+        return trans_to_trans[(source_id, target_id)]
 
 
-def check_extension(extend_from_id: str) -> dict:
+def get_extension(extend_from_id: str) -> dict:
+    """returns the extension info for a node, if it exists.
+    If not, creates a new node"""
     global extensions, extensions_inverted, nodes
     if extend_from_id in extensions:
         return extensions[extend_from_id]
@@ -54,7 +60,7 @@ def check_extension(extend_from_id: str) -> dict:
         new_node_id = store_new_node(ntype)
         # in case of extending extension (e.g. in startconfigs), check arc makes sure
         # to delete from_id from extensions. the returned innov id will still be new
-        check_arc(extend_from_id, new_node_id)
+        get_arc(extend_from_id, new_node_id)
         new_arc_id = store_new_arc(extend_from_id, new_node_id)
         ext_info = {"arc": new_arc_id, "node": new_node_id, "ntype": ntype}
         # save extension info
@@ -63,7 +69,7 @@ def check_extension(extend_from_id: str) -> dict:
         return ext_info
 
 
-def check_split(source, target):
+def get_split(source, target):
     global splits
     check_tasks_set()
     split_name = f"{source.id}-x->{target.id}"
@@ -88,7 +94,7 @@ def check_split(source, target):
         return split_d
 
 
-def check_arc(source_id: int, target_id: int) -> int:
+def get_arc(source_id: int, target_id: int) -> int:
     global arcs, extensions
     check_tasks_set()
     # in case the source is a (so far) unconnected extension, remove it from extensions

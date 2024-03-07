@@ -89,11 +89,11 @@ class GeneticNet:
                 place_id = rd.choice([p for p in self.places if p != "end"])
                 trans_id = self.pick_trans_with_preference()
                 # check in innovs
-                arc_id = innovs.check_arc(place_id, trans_id)
+                arc_id = innovs.get_arc(place_id, trans_id)
                 if arc_id not in self.arcs:
                     break
         else: # if place/trans specified in arguments, just get that innov number
-            arc_id = innovs.check_arc(place_id, trans_id)
+            arc_id = innovs.get_arc(place_id, trans_id)
             if arc_id in self.arcs:
                 return # no connection is made
         new_arc = GArc(arc_id, place_id, trans_id)
@@ -109,11 +109,11 @@ class GeneticNet:
                 trans_id = self.pick_trans_with_preference()
                 place_id = rd.choice([p for p in self.places if p != "start"])
                 # check in innovs
-                arc_id = innovs.check_arc(trans_id, place_id)
+                arc_id = innovs.get_arc(trans_id, place_id)
                 if arc_id not in self.arcs:
                     break
         else: # if place/trans specified in arguments, just get that innov number
-            arc_id = innovs.check_arc(trans_id, place_id)
+            arc_id = innovs.get_arc(trans_id, place_id)
             if arc_id in self.arcs:
                 return # no connection is made
         new_arc = GArc(arc_id, trans_id, place_id)
@@ -125,13 +125,13 @@ class GeneticNet:
         if not trans_id:
             for _try in range(params.num_trys_make_conn):
                 trans_id = self.pick_trans_with_preference()
-                ext_info = innovs.check_extension(trans_id)
+                ext_info = innovs.get_extension(trans_id)
                 if ext_info["node"] not in self.places: # check if place not already exist
                     break
                 else: # place already exists, reset ext_info
                     ext_info = None
         else:
-            ext_info = innovs.check_extension(trans_id)
+            ext_info = innovs.get_extension(trans_id)
             if ext_info["node"] in self.places:
                 print(f"trans {trans_id} has already been ext to {ext_info['node']}!")
                 return
@@ -148,13 +148,13 @@ class GeneticNet:
         if not place_id:
             for _try in range(params.num_trys_make_conn):
                 place_id = rd.choice([p for p in self.places if p not in ["start", "end"]])
-                ext_info = innovs.check_extension(place_id)
+                ext_info = innovs.get_extension(place_id)
                 if ext_info["node"] not in self.transitions: # check if transition not already exist
                     break
                 else: # place already exists, reset ext_info
                     ext_info = None
         else:
-            ext_info = innovs.check_extension(place_id)
+            ext_info = innovs.get_extension(place_id)
             if ext_info["node"] in self.transitions:
                 print(f"place {place_id} has already been ext to {ext_info['node']}!")
                 return
@@ -171,13 +171,13 @@ class GeneticNet:
             for _try in range(params.num_trys_make_conn):
                 source_id = self.pick_trans_with_preference()
                 target_id = self.pick_trans_with_preference()
-                a1_id, p_id, a2_id = innovs.check_trans_to_trans(source_id, target_id)
+                a1_id, p_id, a2_id = innovs.get_trans_to_trans(source_id, target_id)
                 if p_id not in self.places and source_id != target_id: # check if valid
                     break
                 else:
                     p_id = None
         else:
-            a1_id, p_id, a2_id = innovs.check_trans_to_trans(source_id, target_id)
+            a1_id, p_id, a2_id = innovs.get_trans_to_trans(source_id, target_id)
             if p_id in self.places:
                 print("trans-trans-conn already made")
                 return
@@ -199,7 +199,7 @@ class GeneticNet:
             # check if arc is trans -> place, and if this mutation should occur
             is_t_p = isinstance(source, GTrans)
             if (is_t_p and not target.is_start) or (not is_t_p and not source.is_end):
-                sp_d = innovs.check_split(source, target)
+                sp_d = innovs.get_split(source, target)
                 # check if mutation has already occured via place (could also be t or a)
                 if sp_d["p"] not in self.places:
                     break
