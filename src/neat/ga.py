@@ -5,10 +5,9 @@ from copy import copy
 from neatutils import timer
 from neatutils.splicing import get_spliced_log_on_gen
 
-from neat import params, innovs
+from neat import params, innovs, initial_population
 from neat.genome import GeneticNet
 from neat.species import Species
-from src.neatutils import startconfigs
 
 class GeneticAlgorithm:
     def __init__(
@@ -170,9 +169,9 @@ class GeneticAlgorithm:
         """
         """ 
         if params.start_config == "concurrent_traces":
-            initial_pop = startconfigs.generate_n_traces_with_concurrency(params.popsize, self.log)
+            initial_pop = initial_population.generate_n_traces_with_concurrency(params.popsize, self.log)
         elif params.start_config == "random":
-            initial_pop = startconfigs.generate_n_random_genomes(params.popsize, self.log)
+            initial_pop = initial_population.generate_n_random_genomes(params.popsize, self.log)
         else:
             raise NotImplementedError()
         # if using speciation, generate initial set of spec, place genomes there

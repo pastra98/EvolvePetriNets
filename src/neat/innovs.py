@@ -132,6 +132,7 @@ def store_new_node(node_type: type)-> str:
 
 
 def set_tasks(task_list: list):
+    # TODO: add checks if task_list has been set already
     global tasks
     for name in task_list:
         tasks.append(name)
