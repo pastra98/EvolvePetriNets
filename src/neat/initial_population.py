@@ -7,85 +7,18 @@ log = pm4py.read_xes("../pm_data/running_example.xes")
 log
 
 # %%
+################################################################################
+#################### SPLICING THE LOG AND MINING ON IT #########################
+################################################################################
+
 from neatutils.splicing import balanced_splice
 from pm4py.stats import get_variants
-
-
-def print_variants(log):
-    for variant in get_variants(log):
-        print(' -> '.join(variant))
-
-bs = balanced_splice(log, 4)
-for i, l in enumerate(bs):
-    print('Log Splice ', i)
-    print_variants(l)
-    print()
-
-
-
-# %%
-# %%
-# from pm4py.filtering import filter_variants
-
-log = pm4py.read_xes("../pm_data/running_example.xes")
-get_variants(log)
-
-
-# %%
-from pm4py.algo.discovery.footprints import algorithm as footprints_discovery
-
-fp_log = footprints_discovery.apply(log)
-fp_log['end_activities']
-
-# %%
-from random import gauss
-
-from neat import netobj, innovs, genome, params
-
-
-# todo - this can be improved
-def generate_n_random_genomes(n_genomes, log):
-    # get footprints needed to get the task list
-    fp_log = footprints(log, visualize=False, printit=False)
-    task_list = list(fp_log["activities"])
-    innovs.set_tasks(task_list)
-    # generate n random genomes
-    new_genomes = []
-    for _ in range(n_genomes):
-        gen_net = genome.GeneticNet(dict(), dict(), dict())
-        for _ in range(int(abs(gauss(*params.initial_tp_gauss_dist)))):
-            gen_net.trans_place_arc()
-        for _ in range(int(abs(gauss(*params.initial_pt_gauss_dist)))):
-            gen_net.place_trans_arc()
-        for _ in range(int(abs(gauss(*params.initial_tt_gauss_dist)))):
-            gen_net.trans_trans_conn()
-        for _ in range(int(abs(gauss(*params.initial_pe_gauss_dist)))):
-            gen_net.extend_new_place()
-        for _ in range(int(abs(gauss(*params.initial_te_gauss_dist)))):
-            gen_net.extend_new_trans()
-        for _ in range(int(abs(gauss(*params.initial_as_gauss_dist)))):
-            gen_net.split_arc()
-        new_genomes.append(gen_net)
-        # connect all start and end activities to start and end - debatable
-        for sa in list(fp_log["start_activities"]):
-            gen_net.place_trans_arc("start", sa)
-        for ea in list(fp_log["end_activities"]):
-            gen_net.trans_place_arc(ea, "end")
-
-    return new_genomes
-
-
-# %%
-def generate_n_random_genomes(n_genomes, log):
-    pass
-
 from pm4py.discovery import (
     discover_petri_net_alpha as alpha,
     discover_petri_net_inductive as inductive,
     discover_petri_net_heuristics as heuristics,
     discover_petri_net_ilp as ilp
 )
-# -------------------- applying mining algos
 
 # this is just for testing the layout of the new params layout for bootstrap
 configdesign = {
@@ -97,7 +30,13 @@ configdesign = {
     }
 }
 
+default_params = {"show_progress_bar": False}
 
+def print_variants(log):
+    for variant in get_variants(log):
+        print(' -> '.join(variant))
+
+# -------------------- applies the 4 mining algos on a given log
 def mine_bootstrapped_nets(log, debug=False):
     mined_nets = []
     for miner in [alpha, inductive, heuristics, ilp]:
@@ -108,80 +47,108 @@ def mine_bootstrapped_nets(log, debug=False):
             pm4py.view_petri_net(net, debug=True)
     return mined_nets
 
-mined_nets = mine_bootstrapped_nets(log)
+# -------------------- splices the log, and applies the mining algos on each splice
+def get_all_nets(log):
+    allnets = []
+    for splice in balanced_splice(log, 4):
+        mined_nets = mine_bootstrapped_nets(splice)
+        allnets.extend(mined_nets)
+    return allnets
 
-# %%
-
-def build_mined_nets(net_list):
-    # There will be a higher level function that will call this function
-    # It shall be responsible for creating the task list and setting it in innovs
-    fp_log = footprints(log, visualize=False, printit=False)
-    task_list = list(fp_log["activities"])
-    innovs.set_tasks(task_list)
-    # generate genomes
-    new_genomes = []
-    #
-    g = construct_genome_from_mined_net(mined_nets[0])
-    new_genomes.append(g)
-    return new_genomes
-
-mined_nets = mine_bootstrapped_nets(log)
+allnets = get_all_nets(log)
 
 # %%
 ################################################################################
 #################### NEW COMPATIBILITY FUNCTION ################################
 ################################################################################
-mn = mined_nets[1] # inductive
 
-net, im, fm = mn["net"], mn["im"], mn["fm"]
 
-default_params = {"show_progress_bar": False}
-
-from pm4py.algo.simulation.montecarlo.utils.replay import get_map_from_log_and_net as get_smap
-smap = get_smap(log, net, im, fm, parameters=default_params)
-
+# ---------- GET THE LONGEST VARIANT
 def find_longest_variant(log):
     return max([len(t) for t in pm4py.stats.get_variants(log).keys()])
 
 lv = find_longest_variant(log)
 
-res = pm4py.sim.play_out(net, im, fm, parameters={
-    "smap": smap,
-    "maxTraceLength": lv,
-    "add_only_if_fm_is_reached": True,
-    "no_traces": 1000})
 
-var = list(pm4py.stats.get_variants(res).keys())
-len(var)
-# %%
 # ---------- DO AN EXTENSIVE PLAYOUT TEST
-
-def get_extensive_variants(log, net, im, fm, *maxlen):
+def get_extensive_variants(pn, maxlen=None, debug=False):
     from pm4py.algo.simulation.playout.petri_net.variants.extensive import apply as extensive_playout
+
+    net, im, fm = pn["net"], pn["im"], pn["fm"]
     if maxlen:
         res = extensive_playout(net, im, fm, parameters={"maxTraceLength": maxlen})
-    res = extensive_playout(net, im, fm)
-    return list(pm4py.stats.get_variants(res).keys())
+    else:
+        res = extensive_playout(net, im, fm)
+    variants = list(pm4py.stats.get_variants(res).keys()) # return only the variants
 
-n1 = 
-variants = get_extensive_variants(log, net, im, fm)
-variants
+    # can delete the following block later
+    if debug:
+        pm4py.view_petri_net(net, debug=True)
+        print("variants in net:", len(variants))
+
+    return variants
+
+def number_overlapping_variants(variants0, variants1):
+    v1, v2 = set(variants0), set(variants1)
+    overlap = len(v1.intersection(v2))
+    fraction = overlap / len(v1.union(v2))
+    return fraction
+
+import pandas as pd
+
+def compare_all_nets(netlist):
+    netdict = dict()
+    for i, net in enumerate(netlist):
+        netdict[i] = get_extensive_variants(net)
+
+    # Prepare a DataFrame to store overlap scores
+    overlap_scores = pd.DataFrame(index=range(len(netlist)), columns=range(len(netlist)))
+    
+    # Calculate overlap scores for each combination of networks
+    for i in range(len(netlist)):
+        for j in range(i + 1, len(netlist)):  # Start from i+1 to avoid redundant and self comparisons
+            score = number_overlapping_variants(netdict[i], netdict[j])
+            overlap_scores.at[i, j] = score
+            overlap_scores.at[j, i] = score  # Mirror the score to avoid redundant function calls
+
+    # Fill NaN walues with 1 for the same net
+    overlap_scores = overlap_scores.fillna(1)
+    return overlap_scores
+
+# %%
+################################################################################
+#################### PLOT OVERLAP AS HEATMAP ###################################
+################################################################################
+
+import seaborn as sns
+import matplotlib.pyplot as plt
+import numpy as np
+
+def visualize_heatmap(df):
+    """
+    Visualizes the given DataFrame as a heatmap without annotations.
+    Assumes DataFrame values are already log-transformed.
+    """
+    plt.figure(figsize=(10, 8))
+    sns.heatmap(df, cmap="viridis", cbar=True, annot=False)
+    plt.title('Log-Transformed Overlap Scores Heatmap')
+    plt.xlabel('Network Index')
+    plt.ylabel('Network Index')
+    plt.show()
+
+overlap_df = compare_all_nets(allnets)
+# Log-transform the DataFrame
+log_transformed_df = np.log(overlap_df + 0.001) # Add a small value to avoid log(0)
+
+print("normal heatmap")
+visualize_heatmap(overlap_df)
+print("log-transformed heatmap")
+visualize_heatmap(log_transformed_df)
 
 
 # %%
-# testing if there is a way to do non-random playthrough
-from pm4py.algo.conformance.tokenreplay.variants.token_replay import apply as get_replayed_traces
-
-
-aligned_traces = get_replayed_traces(log, net, im, fm, default_params)
-print(len(aligned_traces))
-
-from pm4py.algo.evaluation.precision.variants.etconformance_token import apply as get_precision
-
-precision = get_precision(log, net, im, fm, default_params)
-print(precision)
-
-# %%
+################################################################################
+#################### OLD STUFF BEGINS HERE #####################################
 ################################################################################
 
 from pm4py.objects.petri_net.obj import PetriNet as pn
@@ -210,7 +177,6 @@ def construct_genome_from_mined_net(mined_net):
 
 construct_genome_from_mined_net(mn)
 
-################################################################################
 # %%
 for net in mined_nets:
     print(net.arcs)
@@ -219,6 +185,10 @@ for net in mined_nets:
     pm4py.view_petri_net(net, debug=True)
 
 # %%
+###############################################################
+###### OLD BROKEN FUNCTION; ONLY LEFT HERE FOR REFERENCE ######
+###############################################################
+
 def traces_with_concurrency(log):
     # start traces loop --------------------------------------------------------
     for trace in log:
@@ -283,4 +253,70 @@ def traces_with_concurrency(log):
         # end task loop --------------------------------------------------------
         new_genomes.append(gen_net)
     # end traces loop ----------------------------------------------------------
+    return new_genomes
+
+# %%
+###############################################################
+###### FOR BUILDING THE MINED NETS LATER ######################
+###############################################################
+
+def build_mined_nets(net_list):
+    # There will be a higher level function that will call this function
+    # It shall be responsible for creating the task list and setting it in innovs
+    fp_log = footprints(log, visualize=False, printit=False)
+    task_list = list(fp_log["activities"])
+    innovs.set_tasks(task_list)
+    # generate genomes
+    new_genomes = []
+    #
+    g = construct_genome_from_mined_net(mined_nets[0])
+    new_genomes.append(g)
+    return new_genomes
+
+mined_nets = mine_bootstrapped_nets(log)
+
+# %%
+###############################################################
+###### OLD BROKEN FUNCTION; ONLY LEFT HERE FOR REFERENCE ######
+###############################################################
+
+from pm4py.algo.discovery.footprints import algorithm as footprints_discovery
+
+fp_log = footprints_discovery.apply(log)
+fp_log['end_activities']
+
+from random import gauss
+
+from neat import netobj, innovs, genome, params
+
+
+# todo - this can be improved
+def generate_n_random_genomes(n_genomes, log):
+    # get footprints needed to get the task list
+    fp_log = footprints(log, visualize=False, printit=False)
+    task_list = list(fp_log["activities"])
+    innovs.set_tasks(task_list)
+    # generate n random genomes
+    new_genomes = []
+    for _ in range(n_genomes):
+        gen_net = genome.GeneticNet(dict(), dict(), dict())
+        for _ in range(int(abs(gauss(*params.initial_tp_gauss_dist)))):
+            gen_net.trans_place_arc()
+        for _ in range(int(abs(gauss(*params.initial_pt_gauss_dist)))):
+            gen_net.place_trans_arc()
+        for _ in range(int(abs(gauss(*params.initial_tt_gauss_dist)))):
+            gen_net.trans_trans_conn()
+        for _ in range(int(abs(gauss(*params.initial_pe_gauss_dist)))):
+            gen_net.extend_new_place()
+        for _ in range(int(abs(gauss(*params.initial_te_gauss_dist)))):
+            gen_net.extend_new_trans()
+        for _ in range(int(abs(gauss(*params.initial_as_gauss_dist)))):
+            gen_net.split_arc()
+        new_genomes.append(gen_net)
+        # connect all start and end activities to start and end - debatable
+        for sa in list(fp_log["start_activities"]):
+            gen_net.place_trans_arc("start", sa)
+        for ea in list(fp_log["end_activities"]):
+            gen_net.trans_place_arc(ea, "end")
+
     return new_genomes
