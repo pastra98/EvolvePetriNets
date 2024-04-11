@@ -96,6 +96,7 @@ def number_overlapping_variants(variants0, variants1):
 
 import pandas as pd
 
+
 def compare_all_nets(netlist):
     netdict = dict()
     for i, net in enumerate(netlist):
@@ -120,6 +121,7 @@ def compare_all_nets(netlist):
 #################### PLOT OVERLAP AS HEATMAP ###################################
 ################################################################################
 
+
 import seaborn as sns
 import matplotlib.pyplot as plt
 import numpy as np
@@ -131,13 +133,12 @@ def visualize_heatmap(df):
     """
     plt.figure(figsize=(10, 8))
     sns.heatmap(df, cmap="viridis", cbar=True, annot=False)
-    plt.title('Log-Transformed Overlap Scores Heatmap')
+    plt.title('Overlap Scores Heatmap')
     plt.xlabel('Network Index')
     plt.ylabel('Network Index')
     plt.show()
 
 overlap_df = compare_all_nets(allnets)
-# Log-transform the DataFrame
 log_transformed_df = np.log(overlap_df + 0.001) # Add a small value to avoid log(0)
 
 print("normal heatmap")
@@ -148,139 +149,68 @@ visualize_heatmap(log_transformed_df)
 
 # %%
 ################################################################################
-#################### OLD STUFF BEGINS HERE #####################################
+######################### FOR BUILDING THE MINED NETS ##########################
 ################################################################################
-
 from pm4py.objects.petri_net.obj import PetriNet as pn
+from pm4py.algo.discovery.footprints.algorithm import apply as footprints
+from neat import params, innovs, genome, netobj
 
-params.load('../params/testing/default_speciation_params.json')
+params.load('../params/testing/speciation_test.json')
 innovs.reset()
-
-# TODO: build a petri net genome
-
-def construct_genome_from_mined_net(mined_net):
-    gen_net = genome.GeneticNet(dict(), dict(), dict())
-    # 
-    for arc in mn.arcs:
-        s = arc.source.label if arc.source.label else arc.source.name
-        o = arc.target.label if arc.target.label else arc.target.name
-        # print(s)
-        # print(o)
-
-        # if type(arc.source) == pn.Transition:
-        #     if (l := arc.source.label):
-        #         print(l)
-        #     else:
-        #         print(arc.source.name)
-
-    return gen_net
-
-construct_genome_from_mined_net(mn)
-
-# %%
-for net in mined_nets:
-    print(net.arcs)
-    print(net.places)
-    print(net.transitions)
-    pm4py.view_petri_net(net, debug=True)
-
-# %%
-###############################################################
-###### OLD BROKEN FUNCTION; ONLY LEFT HERE FOR REFERENCE ######
-###############################################################
-
-def traces_with_concurrency(log):
-    # start traces loop --------------------------------------------------------
-    for trace in log:
-        # task dict with fresh genes for each genome
-        gen_net = genome.GeneticNet(dict(), dict(), dict())
-        # start task loop ------------------------------------------------------
-        parallels = []
-        for i, task in enumerate(trace):
-            curr_task_id = task["concept:name"]
-            # first task
-            if i == 0:
-                start_arc_id = innovs.get_arc("start", curr_task_id)
-                start_arc = netobj.GArc(start_arc_id, "start", curr_task_id)
-                gen_net.arcs[start_arc_id] = start_arc
-            # last task
-            elif i == len(trace)-1:
-                if parallels:
-                    gen_net.trans_trans_conn(end_trans_id, curr_task_id)
-                else:
-                    gen_net.trans_trans_conn(prev_task_id, curr_task_id)
-                end_arc_id = innovs.get_arc(curr_task_id, "end")
-                end_arc = netobj.GArc(end_arc_id, curr_task_id, "end")
-                gen_net.arcs[end_arc_id] = end_arc
-            # middle task
-            else:
-                next_task_id = trace[i+1]["concept:name"]
-                is_prev_pair_para = (prev_task_id, curr_task_id) in fp_log["parallel"]
-                is_next_pair_para = (curr_task_id, next_task_id) in fp_log["parallel"]
-                # get task before parallel
-                if not is_prev_pair_para and is_next_pair_para:
-                    task_before_para = prev_task_id
-                # next task is parallel
-                if is_next_pair_para:
-                    parallels.append(curr_task_id)
-                # end of parallel construct, build it
-                elif is_prev_pair_para and not is_next_pair_para:
-                    parallels.append(curr_task_id)
-                    # take first parallel task, build parallel structure
-                    first_para_task_id = parallels.pop(0)
-                    #  use it to create start trans, connect to it
-                    start_place_id = gen_net.extend_new_place(task_before_para)
-                    start_trans_id = gen_net.extend_new_trans(start_place_id)
-                    gen_net.trans_trans_conn(start_trans_id, first_para_task_id)
-                    # create end trans (it is already conn to first_para_task!)
-                    end_place_id = gen_net.extend_new_place(first_para_task_id)
-                    end_trans_id = gen_net.extend_new_trans(end_place_id)
-                    # build remaining parallels
-                    for task_id in parallels:
-                        # print(f"{task_before_para} -> {task_id}")
-                        # print(f"{task_id} -> {next_task}")
-                        gen_net.trans_trans_conn(start_trans_id, task_id)
-                        gen_net.trans_trans_conn(task_id, end_trans_id)
-                    # parallel structure over now
-                # connect to empty trans at end of parallel construct
-                elif parallels and not is_prev_pair_para and not is_next_pair_para:
-                    gen_net.trans_trans_conn(end_trans_id, curr_task_id)
-                    parallels.clear()
-                # just normal connect to prev_task
-                else:
-                    gen_net.trans_trans_conn(prev_task_id, curr_task_id)
-            prev_task_id = curr_task_id
-        # end task loop --------------------------------------------------------
-        new_genomes.append(gen_net)
-    # end traces loop ----------------------------------------------------------
-    return new_genomes
-
-# %%
-###############################################################
-###### FOR BUILDING THE MINED NETS LATER ######################
-###############################################################
 
 def build_mined_nets(net_list):
     # There will be a higher level function that will call this function
     # It shall be responsible for creating the task list and setting it in innovs
-    fp_log = footprints(log, visualize=False, printit=False)
+    fp_log = footprints(log)
     task_list = list(fp_log["activities"])
     innovs.set_tasks(task_list)
     # generate genomes
     new_genomes = []
     #
-    g = construct_genome_from_mined_net(mined_nets[0])
-    new_genomes.append(g)
+    for i, net in enumerate(net_list):
+        g = construct_genome_from_mined_net(net["net"], i+1)
+        new_genomes.append(g)
     return new_genomes
 
-mined_nets = mine_bootstrapped_nets(log)
+def construct_genome_from_mined_net(net, node_prefix: int):
+    # update the labels of the net for consistent naming for all mining algos
+    pi, ti = 0, 0
+    gplaces, gtransitions, garcs = dict(), dict(), dict()
+
+    for p in net.places:
+        if p.name not in ["start", "end"]:
+            p.label = f"p{node_prefix}0{pi}" # new property added
+            pi += 1
+            gplaces[p.label] = netobj.GPlace(p.label)
+        else: # add label property also for start and end places
+            p.label = p.name
+
+    for t in net.transitions:
+        if t.label not in innovs.tasks:
+            t.label = f"t{node_prefix}0{ti}" # insert 0 to avoid collision when ti>9
+            ti += 1
+            gtransitions[t.label] = netobj.GTrans(t.label, is_task=False)
+
+    for i, a in enumerate(net.arcs):
+        arc_id = 100*node_prefix + i
+        garcs[arc_id] = netobj.GArc(arc_id, a.source.label, a.target.label)
+    
+    return genome.GeneticNet(gtransitions, gplaces, garcs)
+
+genetic_nets = build_mined_nets(allnets)
+
+#%%
+from IPython.display import display
+
+for g in genetic_nets:
+    display(g.get_graphviz())
+    # print(type(g.get_graphviz()))
+    # break
 
 # %%
 ###############################################################
 ###### OLD BROKEN FUNCTION; ONLY LEFT HERE FOR REFERENCE ######
 ###############################################################
-
-from pm4py.algo.discovery.footprints import algorithm as footprints_discovery
 
 fp_log = footprints_discovery.apply(log)
 fp_log['end_activities']
