@@ -2,7 +2,12 @@ import sys, importlib # used for reset
 from typing import List
 from neat.netobj import GArc, GTrans, GPlace
 
-tasks = []
+from pm4py.algo.discovery.footprints.algorithm import apply as footprints
+from pm4py.objects.conversion.log import converter as log_converter
+
+is_tasks_set = False
+fp_log = None
+
 nodes = {"start":GPlace, "end":GPlace}
 arcs = {}
 
@@ -122,7 +127,7 @@ def store_new_arc(source_id: int, target_id: int)-> int:
 
 def store_new_node(node_type: type)-> str:
     global curr_node_id, nodes
-    # can only store empty transitions and places. set_tasks() stores tasks
+    # can only store empty transitions and places
     check_tasks_set()
     curr_node_id += 1
     prefix = "t" if node_type == GTrans else "p"
@@ -131,14 +136,23 @@ def store_new_node(node_type: type)-> str:
     return node_name
 
 
-def set_tasks(task_list: list):
-    # TODO: add checks if task_list has been set already
-    global tasks
-    for name in task_list:
-        tasks.append(name)
+def set_tasks(log):
+    global fp_log, nodes, is_tasks_set
+    is_tasks_set = True
+    # need to convert to df for this to get the normal fp log
+    log = log_converter.apply(log, variant=log_converter.Variants.TO_DATA_FRAME)
+    fp_log = footprints(log)
+    
+    for name in get_task_list():
         nodes[name] = (GTrans, True)
 
 
 def check_tasks_set():
-    if not tasks:
+    global is_tasks_set
+    if not is_tasks_set:
         raise Exception("Initial task list must be set!!")
+
+
+def get_task_list() -> List[str]:
+    global fp_log
+    return list(fp_log["activities"])

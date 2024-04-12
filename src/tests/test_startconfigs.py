@@ -158,9 +158,7 @@ innovs.reset()
 def build_mined_nets(net_list):
     # There will be a higher level function that will call this function
     # It shall be responsible for creating the task list and setting it in innovs
-    fp_log = footprints(log)
-    task_list = list(fp_log["activities"])
-    innovs.set_tasks(task_list)
+    innovs.set_tasks(log)
     # generate genomes
     new_genomes = []
     #
@@ -183,7 +181,7 @@ def construct_genome_from_mined_net(net, node_prefix: int):
             p.label = p.name
 
     for t in net.transitions:
-        if t.label not in innovs.tasks:
+        if t.label not in innovs.fp_log['activities']:
             t.label = f"t{node_prefix}0{ti}" # insert 0 to avoid collision when ti>9
             ti += 1
             gtransitions[t.label] = netobj.GTrans(t.label, is_task=False)
@@ -201,3 +199,18 @@ from IPython.display import display
 
 for g in genetic_nets:
     display(g.get_graphviz())
+
+#%%
+from pm4py.algo.discovery.footprints.algorithm import apply as footprints
+
+fp_log = footprints(log)
+
+#%%
+list(fp_log['activities'])
+
+#%%
+
+innovs.reset()
+innovs.set_tasks(log)
+#%%
+innovs.get_task_list()

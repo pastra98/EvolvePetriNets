@@ -47,6 +47,8 @@ class GeneticAlgorithm:
 
         params.load(params_name)
         innovs.reset()
+        innovs.set_tasks(log)
+
         self.set_initial_pop()
 
     
@@ -241,7 +243,7 @@ class GeneticAlgorithm:
                 else:
                     baby = s.asex_spawn()
                 # check if baby should speciate away from it's current species
-                if baby.innov_compatibility(s.representative) > params.species_boundary:
+                if baby.get_compatibility_score(s.representative) > params.species_boundary:
                     # if the baby is too different, find an existing species to change
                     # into. If no compatible species is found, a new one is made and returned
                     found_species = self.find_and_add_to_species(baby)

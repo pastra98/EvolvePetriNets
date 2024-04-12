@@ -43,7 +43,7 @@ class GeneticNet:
         self.fraction_tasks: float = None
         self.execution_score: float = None
         # make Transition genes for every task saved in innovs and add to genome
-        task_trans = {t: GTrans(t, True) for t in innovs.tasks}
+        task_trans = {t: GTrans(t, True) for t in innovs.get_task_list()}
         self.transitions = transitions | task_trans
         # make place genes for start and end places
         se_places = {"start":GPlace("start", is_start=True), "end":GPlace("end", is_end=True)}
@@ -230,7 +230,7 @@ class GeneticNet:
         """Returns transition id according to preferences set in params
         """
         # set of task trans and empty trans
-        task_trans = set(innovs.tasks)
+        task_trans = set(innovs.get_task_list())
         empty_trans = set(self.transitions.keys()).difference(task_trans)
         # pick a trans
         if params.is_no_preference_for_tasks: # choose from all trans
@@ -402,7 +402,7 @@ class GeneticNet:
         # get fraction of task trans represented in genome
         my_task_trans = [t for t in self.transitions.values() if t.is_task]
         if my_task_trans:
-            self.fraction_used_trans = len(my_task_trans) / len(innovs.tasks)
+            self.fraction_used_trans = len(my_task_trans) / len(innovs.get_task_list())
             self.fraction_tasks = len(my_task_trans) / len(self.transitions)
         else:
             self.fraction_used_trans = 0
