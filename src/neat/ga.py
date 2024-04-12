@@ -168,7 +168,7 @@ class GeneticAlgorithm:
     def set_initial_pop(self) -> None:
         """
         """ 
-        if params.start_config == "concurrent_traces":
+        if params.start_config == "concurrent_traces": # DEPRECATED
             initial_pop = initial_population.generate_n_traces_with_concurrency(params.popsize, self.log)
         elif params.start_config == "random":
             initial_pop = initial_population.generate_n_random_genomes(params.popsize, self.log)
