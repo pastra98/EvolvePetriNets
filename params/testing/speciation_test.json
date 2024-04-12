@@ -3,8 +3,19 @@
     "popsize": 10,
     "selection_strategy": "speciation",
     "log_splices": {
-        "1": [ 0, 1, 2],
-        "2": [ 0, 1, 2, 3, 4, 5]
+        "1": [
+            0,
+            1,
+            2
+        ],
+        "2": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5
+        ]
     },
     "initial_tp_gauss_dist": [
         0.0,
@@ -99,5 +110,6 @@
     "prob_pick_empty_trans": 0.3,
     "num_trys_make_conn": 20,
     "prevent_chaining": true,
-    "num_trys_split_arc": 10
+    "num_trys_split_arc": 10,
+    "distance_metric": "innovs"
 }

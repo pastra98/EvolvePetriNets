@@ -295,15 +295,16 @@ class GeneticNet:
 # REPRODUCTION RELATED STUFF ---------------------------------------------------
 # ------------------------------------------------------------------------------
 
-    def get_compatibility_score(self, other_genome, printstuff=False) -> float:
+    def get_compatibility_score(self, other_genome, debug=False) -> float:
+        if params.distance_metric == "innovs":
+            return self.innov_compatibility(other_genome, debug)
+
+    def innov_compatibility(self, other_genome, debug) -> float:
         """Calculates how similar this genome is to another genome according to the
         formula proposed in the original NEAT Paper. See distance variable to see
         how the formula works. It's parameters can be adjusted.
         """
-        # numbers needed for compatibility score formula
-        num_matched = 0
-        num_disjoint = 0
-        num_excess = 0
+        num_matched, num_disjoint, num_excess = 0, 0, 0
         # get sorted arrays of both genomes innovation historys 
         my_innovs = sorted(list(self.arcs.keys()))
         other_innovs = sorted(list(other_genome.arcs.keys()))
@@ -342,7 +343,7 @@ class GeneticNet:
                     (params.coeff_excess * num_excess) / longest) # excess increase dist
         if distance < 0:
             raise Exception("Distance should not be < 0")
-        if printstuff:
+        if debug:
             print(f"""num_matched: {num_matched}\nnum_disjoint: {num_disjoint}
                 num_excess: {num_excess}\ncomputed distance: {distance}""")
         return distance

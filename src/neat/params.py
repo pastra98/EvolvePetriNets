@@ -53,6 +53,7 @@ initial_te_gauss_dist: list[float, float]
 initial_as_gauss_dist: list[float, float]
 
 # -------------------- selection strategy: SPECIATION
+distance_metric: str # "innovs" / "behavior"
 species_boundary: float
 coeff_disjoint: float
 coeff_excess: float
