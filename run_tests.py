@@ -68,18 +68,6 @@ mom, dad = tg[0], tg[1] # try wiht more similar ones
 t = mom.get_compatibility_score(dad)
 
 # %% ---------------------------------------------------------------------------
-# ---------- RELOAD AND SAVE PARAMS ----------
-# ------------------------------------------------------------------------------
-from src.tests import read_and_save_new_params as rsp
-from src.neat import params
-
-# overwrite the existing test params
-rsp.save_new_params(
-    old_name="params/testing/default_speciation_params.json",
-    new_name="params/testing/default_speciation_params.json",
-)
-
-# %% ---------------------------------------------------------------------------
 # ---------- PRINTING VERBOSE FITNESS ----------
 # ------------------------------------------------------------------------------
 from src.tests import print_verbose_fitness as pf
