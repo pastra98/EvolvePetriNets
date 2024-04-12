@@ -19,7 +19,7 @@ ipython = get_ipython()
 ipython.magic("load_ext autoreload")
 ipython.magic("autoreload 2")
 
-from src.tests import visualize_genome as vg
+from tests.need_to_sort import visualize_genome as vg
 from src.neat.genome import GeneticNet
 
 # %%

@@ -19,7 +19,7 @@ ipython.magic("autoreload 2")
 # import various other shit
 import pickle as pkl
 import pandas as pd
-from src.tests import visualize_genome as vg
+from tests.need_to_sort import visualize_genome as vg
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 from statistics import fmean

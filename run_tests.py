@@ -39,7 +39,7 @@ else:
 # ---------- TEST STARTCONFIGS ----------
 # ------------------------------------------------------------------------------
 from src.tests import initial_pop_speciation, test_startconfigs as ts
-from src.tests import visualize_genome as vg
+from tests.need_to_sort import visualize_genome as vg
 
 tg = ts.get_genomes(log)
 
