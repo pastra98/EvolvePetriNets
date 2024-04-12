@@ -204,21 +204,9 @@ from IPython.display import display
 
 for g in genetic_nets:
     display(g.get_graphviz())
-    # print(type(g.get_graphviz()))
-    # break
 
 # %%
-###############################################################
-###### OLD BROKEN FUNCTION; ONLY LEFT HERE FOR REFERENCE ######
-###############################################################
-
-fp_log = footprints_discovery.apply(log)
-fp_log['end_activities']
-
 from random import gauss
-
-from neat import netobj, innovs, genome, params
-
 
 # todo - this can be improved
 def generate_n_random_genomes(n_genomes, log):
