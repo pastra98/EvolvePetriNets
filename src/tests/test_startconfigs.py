@@ -55,6 +55,8 @@ def get_all_nets(log):
 allnets = get_all_nets(log)
 
 # %%
+
+# %%
 ################################################################################
 #################### NEW COMPATIBILITY FUNCTION ################################
 ################################################################################
@@ -148,7 +150,6 @@ visualize_heatmap(log_transformed_df)
 ################################################################################
 ######################### FOR BUILDING THE MINED NETS ##########################
 ################################################################################
-from pm4py.objects.petri_net.obj import PetriNet as pn
 from pm4py.algo.discovery.footprints.algorithm import apply as footprints
 from neat import params, innovs, genome, netobj
 
@@ -195,10 +196,168 @@ def construct_genome_from_mined_net(net, node_prefix: int):
 genetic_nets = build_mined_nets(allnets)
 
 #%%
+################################################################################
+#################### TESTING REACHABILITY GRAPH ################################
+################################################################################
+
+from pm4py.objects.petri_net.utils.reachability_graph import construct_reachability_graph
+
+# n = allnets[0]
+for n in allnets[:2] + [allnets[3]]:
+    ts = construct_reachability_graph(n["net"], n["im"], n["fm"], parameters={"max_elab_time": 1.0})
+    pm4py.vis.view_transition_system(ts)
+
+#%%
+################################################################################
+#################### TESTING MAXIMAL DECOMPOSITION #############################
+################################################################################
+from pm4py.analysis import maximal_decomposition
+
+pn_list = maximal_decomposition(allnets[0]["net"], allnets[0]["im"], allnets[0]["fm"])
+#%%
+for net in allnets[:3]:
+    print("initial net")
+    pm4py.view_petri_net(net["net"])
+    print("decomposed nets")
+    for c in maximal_decomposition(net["net"], net["im"], net["fm"]):
+        pm4py.view_petri_net(c[0])
+
+#%%
+################################################################################
+#################### COMPONENT OVERLAP SCORE ###################################
+################################################################################
+from pm4py.objects.petri_net.obj import PetriNet as pn
+
+net = allnets[0]
+md = maximal_decomposition(net["net"], net["im"], net["fm"])
+
+# for c in md:
+#     pm4py.view_petri_net(c[0])
+
+def format_tname(t):
+    # all hidden transitions are named "t"
+    return t.label if t.label in innovs.get_task_list() else "t"
+
+def add_md_to_net(net): # of course this is total bullshit because we should not do this to petri net objects
+    net["md"] = set()
+
+    for md in maximal_decomposition(net["net"], net["im"], net["fm"]):
+        aset = set()
+
+        for a in md[0].arcs:
+            if type(a.source) == pn.Transition: # target must be a place
+                aset.add((format_tname(a.source), "p")) # there is only one place per component
+
+            else: # source must be a place, target must be a transition
+                aset.add(("p", format_tname(a.target)))
+
+        # could remove pure (t,p) and (p,t) pairs here
+        net["md"].add(frozenset(aset))
+
+for net in allnets:
+    add_md_to_net(net)
+
+def md_similarity(net1, net2):
+    return len(net1["md"].intersection(net2["md"]))/len(net1["md"].union(net2["md"]))
+
+# compute the similarity between the first 3 nets
+for i in range(3):
+    for j in range(i+1, 3):
+        print(md_similarity(allnets[i], allnets[j]))
+
+n1, n2, n3 = allnets[:3]
+
+#%%
+allnets[2]['md']
+
+#%%
+from collections import Counter
+
+# Create multisets
+multiset1 = Counter()
+multiset2 = Counter()
+
+# Add a tuple
+multiset1.update([("t", "p")])
+# Add the same tuple again
+multiset1.update([("t", "p")])
+
+# update the second multiset
+multiset2.update({("t", "p"): 1, ("p", "t"): 1})
+
+# Display the multisets
+print(multiset1)
+print(multiset2)
+
+# Perform set operations
+intersection = multiset1 & multiset2
+union = multiset1 | multiset2
+
+# Display the results
+print("Intersection:", intersection)
+print("Union:", union)
+
+print(multiset1 == multiset2)
+
+multiset1.update([("p", "t")])
+multiset2.update([("t", "p")])
+
+print(multiset1 == multiset2)
+
+# Display the results
+print("Intersection:", multiset1 & multiset2)
+print("Union:", multiset1 | multiset2)
+
+#%%
+
+t1 = (("p", "t"), ("t", "p"))
+t2 = (("t", "p"), ("p", "t"))
+t1 == t2
+
+#%%
 from IPython.display import display
+################################################################################
+#################### TESTING MUTATIONS #########################################
+################################################################################
+def turn_genome_into_stupid_dict(g):
+    net, im, fm = g.build_petri()
+    print(add_md_to_net({"net": net, "im": im, "fm": fm}))
+
+tg = genetic_nets[0].clone()
+
+unchanged = turn_genome_into_stupid_dict(tg.clone())
+
+
+for _ in range(10):
+    tg.mutate(0) # mutation rate 0 is normal mutation rate
+
+    # display(tg.get_graphviz())
+    tg_dict = turn_genome_into_stupid_dict(tg)
+    print(tg_dict)
+    # print(md_similarity(unchanged, tg_dict))
+    print(80*"-")
+
+# display(unchanged.get_graphviz())
+# pm4py.view_petri_net(unet)
+
+#%%
+sd = turn_genome_into_stupid_dict(genetic_nets[0])
+print(sd)
+
+#%%
 
 for g in genetic_nets:
     display(g.get_graphviz())
+
+# %%
+from pm4py.convert import convert_to_reachability_graph
+rgs = []
+
+for n in allnets[:4]:
+    pm4py.view_petri_net(n["net"], debug=True)
+    # rg = convert_to_reachability_graph(n["net"], n["im"], n["fm"])
+    # rgs.append(rg)
+
 
 #%%
 from pm4py.algo.discovery.footprints.algorithm import apply as footprints
