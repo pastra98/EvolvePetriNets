@@ -7,6 +7,10 @@ from pm4py.algo.evaluation.precision.variants.etconformance_token import apply a
 from pm4py.algo.evaluation.generalization.variants.token_based import get_generalization
 from pm4py.algo.evaluation.simplicity.variants.arc_degree import apply as get_simplicity
 from pm4py.algo.analysis.woflan.algorithm import apply as get_soundness
+from pm4py.algo.simulation.playout.petri_net.variants.extensive import apply as extensive_playout
+from pm4py.stats import get_variants
+from pm4py.analysis import maximal_decomposition
+
 
 from neatutils.fitnesscalc import transition_execution_quality
 from neat.netobj import GArc, GPlace, GTrans
@@ -15,6 +19,8 @@ from neat import params, innovs
 import random as rd
 import traceback
 import itertools
+from functools import cache
+from collections import Counter
 
 from graphviz import Digraph
 
@@ -48,7 +54,6 @@ class GeneticNet:
         # make place genes for start and end places
         se_places = {"start":GPlace("start", is_start=True), "end":GPlace("end", is_end=True)}
         self.places = places | se_places
-        # make arcs
         self.arcs = arcs
 
 # ------------------------------------------------------------------------------
@@ -78,6 +83,9 @@ class GeneticNet:
             self.remove_unused_nodes()
         except:
             print(traceback.format_exc()) # TODO: meh, aint got not time to do logging here
+        # clear the cache of methods that use it
+        self.get_extensive_variants.cache_clear()
+        self.get_component_set.cache_clear()
 
 
 
@@ -295,9 +303,23 @@ class GeneticNet:
 # REPRODUCTION RELATED STUFF ---------------------------------------------------
 # ------------------------------------------------------------------------------
 
+    def clone(self):
+        """returns a deepcopy
+        """
+        new_transitions = {k: v.get_copy() for k, v in self.transitions.items()}
+        new_places = {k: v.get_copy() for k, v in self.places.items()}
+        new_arcs = {k: v.get_copy() for k, v in self.arcs.items()}
+        return GeneticNet(new_transitions, new_places, new_arcs)
+
     def get_compatibility_score(self, other_genome, debug=False) -> float:
         if params.distance_metric == "innovs":
-            return self.innov_compatibility(other_genome, debug)
+            return self.innov_compatibility(other_genome)
+        elif params.distance_metric == "behavior":
+            return self.behavior_compatibility(other_genome)
+        elif params.distance_metric == "components":
+            return self.component_compatibility(other_genome)
+
+# ----- innovs compatibility
 
     def innov_compatibility(self, other_genome, debug) -> float:
         """Calculates how similar this genome is to another genome according to the
@@ -348,20 +370,63 @@ class GeneticNet:
                 num_excess: {num_excess}\ncomputed distance: {distance}""")
         return distance
 
+# ----- behavior compatibility - TODO: this is not working yet
+    @cache
+    def get_extensive_variants(self, maxlen=None):
+        net, im, fm = self.build_petri()
+        if maxlen:
+            res = extensive_playout(net, im, fm, parameters={"maxTraceLength": maxlen})
+        else:
+            res = extensive_playout(net, im, fm)
+        return set(get_variants(res).keys()) # return only the variants
 
-    def clone(self):
-        """returns a deepcopy
+
+    def behavior_compatibility(self, other) -> float:
+        # this needs to be fetched fresh, bc. the genome might have changed
+        my_variants = self.get_extensive_variants()
+        other_variants = other.get_extensive_variants()
+        # calculate the fraction of overlapping traces
+        overlap = len(my_variants.intersection(other_variants))
+        union = len(my_variants.union(other_variants))
+        fraction = overlap / union if union else 0
+        return 1 - fraction # 0 means identical, 1 means completely different
+
+# ----- component compatibility
+    @cache
+    def get_component_set(self) -> set:
+        c_set = set()
+        net, im, fm = self.build_petri()
+
+        def format_tname(t): # all hidden transitions are named "t"
+            return t.label if t.label in innovs.get_task_list() else "t"
+
+        for md in maximal_decomposition(net, im, fm): # loop the components
+            a_multi_set = Counter() # multiset of arcs in the component
+            for a in md[0].arcs:
+                if type(a.source) == PetriNet.Transition: # target must be a place
+                    # pack into iterable (list) to avoid unpacking
+                    a_multi_set.update([(format_tname(a.source), "p")]) # only one place per component
+                else: # source must be a place, target must be a transition
+                    a_multi_set.update([("p", format_tname(a.target))])
+
+            # convert multiset to tuple to make it hashable, order of tuples must be the same
+            if res := tuple(sorted(a_multi_set.items())): # only add non-empty components
+                c_set.add(res)
+
+        return c_set
+
+    def component_compatibility(self, other_genome) -> float:
+        """Distance metric based on percentage of components that are not shared
         """
-        new_transitions = {k: v.get_copy() for k, v in self.transitions.items()}
-        new_places = {k: v.get_copy() for k, v in self.places.items()}
-        new_arcs = {k: v.get_copy() for k, v in self.arcs.items()}
-        return GeneticNet(new_transitions, new_places, new_arcs)
+        my_c = self.get_component_set()
+        other_c = other_genome.get_component_set()
+        return 1 - (len(my_c & other_c) / len(my_c | other_c))
 
 # ------------------------------------------------------------------------------
 # FITNESS RELATED STUFF --------------------------------------------------------
 # ------------------------------------------------------------------------------
 
-    def build_petri(self) -> None:
+    def build_petri(self):
         net = PetriNet(f"{self.id}-Net")
         temp_obj_d = {} # stores both trans and place pm4py objs in the scope of this method
         # genome contains all tasks, but not all are connected necessarily
@@ -498,8 +563,7 @@ class GeneticNet:
         connected = self.get_connected()
         t_to_del = []
         for t in self.transitions:
-            # if t not in connected and t not in innovs.tasks:
-            if t not in connected:
+            if t not in connected and t not in innovs.get_task_list():
                 t_to_del.append(t)
         for t in t_to_del:
             del self.transitions[t]
