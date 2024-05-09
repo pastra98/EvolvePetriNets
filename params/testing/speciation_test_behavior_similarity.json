@@ -41,7 +41,7 @@
         0.0,
         0.0
     ],
-    "species_boundary": 1.8,
+    "species_boundary": 0.8,
     "coeff_disjoint": 1.2,
     "coeff_excess": 1.4,
     "coeff_matched": 0.5,
@@ -111,5 +111,5 @@
     "num_trys_make_conn": 20,
     "prevent_chaining": true,
     "num_trys_split_arc": 10,
-    "distance_metric": "innovs"
+    "distance_metric": "behavior"
 }

@@ -2,8 +2,8 @@
     "name": "can_it_run",
     "setups": [
         {
-            "setupname": "speciation",
-            "parampath": "params/testing/speciation_test.json",
+            "setupname": "component_test_mult5",
+            "parampath": "params/testing/speciation_test_component_similarity.json",
             "logpath": "pm_data/running_example.xes",
             "ga_kwargs": {
                 "is_pop_serialized": true,
@@ -12,10 +12,10 @@
             },
             "stop_cond": {
                 "var": "gen",
-                "val": 10
+                "val": 30
             },
             "n_runs": 4,
-            "send_gen_info_to_console": false,
+            "send_gen_info_to_console": true,
             "is_profiled": false,
             "save_reduced_history_df": true,
             "save_reports": true,
