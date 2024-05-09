@@ -52,8 +52,7 @@ class GeneticNet:
         task_trans = {t: GTrans(t, True) for t in innovs.get_task_list()}
         self.transitions = transitions | task_trans
         # make place genes for start and end places
-        se_places = {"start":GPlace("start", is_start=True), "end":GPlace("end", is_end=True)}
-        self.places = places | se_places
+        self.places = places | {"start":GPlace("start", is_start=True), "end":GPlace("end", is_end=True)}
         self.arcs = arcs
 
 # ------------------------------------------------------------------------------
