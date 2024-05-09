@@ -220,7 +220,7 @@ class GeneticAlgorithm:
 # SPECIATION -------------------------------------------------------------------
 
     def speciation_pop_update(self) -> None:
-        """
+        """Get spawns from species, and add them to the population.
         """ 
         self.num_new_species = 0
         new_genomes = []
@@ -260,7 +260,7 @@ class GeneticAlgorithm:
 
 
     def evaluate_curr_species(self) -> None:
-        """
+        """update species, kill off stale ones, and update spawn amounts
         """
         updated_species = []
         total_adjusted_species_avg_fitness = 0
