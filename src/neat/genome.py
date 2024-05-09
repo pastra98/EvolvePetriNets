@@ -61,6 +61,20 @@ class GeneticNet:
 # ------------------------------------------------------------------------------
 
     def mutate(self, mutation_rate):
+        if params.mutation_type == "multi":
+            self.multi_mutation(mutation_rate)
+        elif params.mutation_type == "atomic":
+            self.atomic_mutation(mutation_rate)
+        # remove nodes that are no longer connected
+        self.remove_unused_nodes()
+        # clear the cache of methods depend on the genome structure
+        self.get_extensive_variants.cache_clear()
+        self.get_component_set.cache_clear()
+
+
+    def multi_mutation(self, mutation_rate):
+        """multiple mutations can occur
+        """
         try:
             # remove arcs, this calculates probabilities for arcs one at a time
             self.remove_arcs(mutation_rate)
@@ -79,15 +93,33 @@ class GeneticNet:
                 self.split_arc()
             if rd.random() < params.prob_prune_extensions[mutation_rate]:
                 self.prune_extensions()
-            # remove nodes that are no longer connected
-            self.remove_unused_nodes()
         except:
             print(traceback.format_exc()) # TODO: meh, aint got not time to do logging here
-        # clear the cache of methods that use it
-        self.get_extensive_variants.cache_clear()
-        self.get_component_set.cache_clear()
 
 
+    def atomic_mutation(self, mutation_rate):
+        """only one mutation can occur
+        """
+        mutations = [
+            self.trans_place_arc,
+            self.place_trans_arc,
+            self.trans_trans_conn,
+            self.extend_new_place,
+            self.extend_new_trans,
+            self.split_arc,
+            self.prune_extensions
+        ]
+        probabilities = [
+            params.prob_t_p_arc[mutation_rate],
+            params.prob_p_t_arc[mutation_rate],
+            params.prob_t_t_conn[mutation_rate],
+            params.prob_new_p[mutation_rate],
+            params.prob_new_empty_t[mutation_rate],
+            params.prob_split_arc[mutation_rate],
+            params.prob_prune_extensions[mutation_rate]
+        ]
+        mutation = rd.choices(mutations, weights=probabilities, k=1)[0]
+        mutation()
 
     def place_trans_arc(self, place_id=None, trans_id=None) -> None:
         if not place_id and not trans_id: # no trans/place specified in arguments
