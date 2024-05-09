@@ -54,6 +54,8 @@ class GeneticNet:
         # make place genes for start and end places
         self.places = places | {"start":GPlace("start", is_start=True), "end":GPlace("end", is_end=True)}
         self.arcs = arcs
+        # track mutations of that genome
+        self.my_mutations = []
 
 # ------------------------------------------------------------------------------
 # MUTATIONS --------------------------------------------------------------------
@@ -100,6 +102,7 @@ class GeneticNet:
         """only one mutation can occur
         """
         mutations = [
+            self.remove_arcs,
             self.trans_place_arc,
             self.place_trans_arc,
             self.trans_trans_conn,
@@ -109,6 +112,7 @@ class GeneticNet:
             self.prune_extensions
         ]
         probabilities = [
+            params.prob_remove_arc[mutation_rate],
             params.prob_t_p_arc[mutation_rate],
             params.prob_p_t_arc[mutation_rate],
             params.prob_t_t_conn[mutation_rate],
@@ -138,6 +142,7 @@ class GeneticNet:
                 return # no connection is made
         new_arc = GArc(arc_id, place_id, trans_id)
         self.arcs[arc_id] = new_arc
+        self.my_mutations.append('place_trans_arc')
         return
 
 
@@ -158,6 +163,7 @@ class GeneticNet:
                 return # no connection is made
         new_arc = GArc(arc_id, trans_id, place_id)
         self.arcs[arc_id] = new_arc
+        self.my_mutations.append('trans_place_arc')
         return
 
 
@@ -178,6 +184,7 @@ class GeneticNet:
         if ext_info:
             self.places[ext_info["node"]] = GPlace(ext_info["node"])
             self.arcs[ext_info["arc"]] = GArc(ext_info["arc"], trans_id, ext_info["node"])
+            self.my_mutations.append('extend_new_place')
             return ext_info["node"] # return id of new place
         return # nothing found
 
@@ -201,6 +208,7 @@ class GeneticNet:
         if ext_info:
             self.transitions[ext_info["node"]] = GTrans(ext_info["node"], is_task=False)
             self.arcs[ext_info["arc"]] = GArc(ext_info["arc"], place_id, ext_info["node"])
+            self.my_mutations.append('extend_new_trans')
             return ext_info["node"] # return id of new trans
         return # nothing found
 
@@ -225,6 +233,7 @@ class GeneticNet:
             self.arcs[a1_id] = GArc(a1_id, source_id, p_id)
             self.places[p_id] = GPlace(p_id)
             self.arcs[a2_id] = GArc(a2_id, p_id, target_id)
+            self.my_mutations.append('trans_trans_conn')
             return 
 
 
@@ -262,6 +271,7 @@ class GeneticNet:
             self.arcs.update({sp_d["a1"]:a1, sp_d["a2"]:a2, sp_d["a3"]:a3})
             # remove old arc
             del self.arcs[arc_to_split.id]
+            self.my_mutations.append('split_arc')
             return # mutation success
         return # nothing found
 
@@ -298,6 +308,7 @@ class GeneticNet:
                         arcs_to_ext = [a.id for a in self.arcs.values() if a.target_id == node_id]
                         for arc_id in arcs_to_ext:
                             del self.arcs[arc_id]
+                        self.my_mutations.append('pruned_an_extension')
         else:
             # wow this is a shit
             arcs_pointing_to_target = {}
@@ -311,6 +322,7 @@ class GeneticNet:
                 else:
                     arcs_pointing_to_target[arc.target_id] = [arc.id]
             for node_id in set(target_nodes).difference(set(source_nodes+["end"])): # make sure end node is not removed
+                self.my_mutations.append('pruned_an_extension')
                 for arc_id in arcs_pointing_to_target[node_id]:
                     del self.arcs[arc_id]
                 if node_id in self.transitions:
@@ -320,15 +332,20 @@ class GeneticNet:
 
 
     def remove_arcs(self, mutation_rate: int, arcs_to_remove=None) -> None:
+        arcs_removed = 0
         if not arcs_to_remove: # if nothing in arguments, generate list
             arcs_to_remove = []
-            for a_id, arc in self.arcs.items():
+            for a_id, arc in rd.shuffle(list(self.arcs.items())):
                 if rd.random() < params.prob_remove_arc[mutation_rate]:
                     if arc.source_id != "start" and arc.target_id != "end":
                         arcs_to_remove.append(a_id)
+                        arcs_removed += 1
+                        if arcs_removed >= params.max_arcs_removed:
+                            break
         # delete arcs in arcs to remove
         for a_id in arcs_to_remove:
             del self.arcs[a_id]
+            self.my_mutations.append('removed_an_arc')
 
 
 # ------------------------------------------------------------------------------
