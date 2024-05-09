@@ -46,6 +46,9 @@ class GeneticAlgorithm:
         self.best_species = None
 
         params.load(params_name)
+        if params.mutation_type == "atomic":
+            params.max_arcs_removed = 1 # bad practice, but I want to ensure this
+
         innovs.reset()
         innovs.set_tasks(log)
 
@@ -142,7 +145,7 @@ class GeneticAlgorithm:
             if self.is_timed:
                 gen_info["times"] = self.timer.get_gen_times(self.curr_gen)
                 if self.curr_gen == 0:
-                    gen_info["times"]["pop_update"] = 0 # TODO total hack lol
+                    gen_info["times"]["pop_update"] = 0
         else:
             raise Exception("Tried to log gen before evaluating")
         return

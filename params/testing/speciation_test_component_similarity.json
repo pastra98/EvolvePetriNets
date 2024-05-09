@@ -94,9 +94,9 @@
         0,
         0
     ],
-    "prob_increase_arcs": [
-        0.0,
-        0.0
+    "max_arcs_removed": [
+        1,
+        1
     ],
     "prob_remove_arc": [
         0.2,

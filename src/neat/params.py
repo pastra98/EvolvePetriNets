@@ -100,7 +100,13 @@ mutation_type: str # "multi" / "atomic"
 
 """
 Parameters in list depend on the Mutation Rate, which is either 0 (normal) or 1 (high)
+When using atomic mutations, the same probabilities are used, however they are now
+weights in a singular random choice. This changes their influence and should be considered
+when atomic mutations are used.
 """
+# arc mutations
+prob_remove_arc: list[float, float]
+max_arcs_removed: list[float, float] # in case of atomic mutation, this is set automatically to 1
 # Make a new arc
 prob_t_p_arc: list[float, float]
 prob_p_t_arc: list[float, float]
@@ -111,9 +117,6 @@ prob_new_p: list[float, float]
 prob_new_empty_t: list[float, float]
 # split an arc
 prob_split_arc: list[float, float]
-# arc mutations
-prob_increase_arcs: list[float, float]
-prob_remove_arc: list[float, float]
 # prune extensions
 prob_prune_extensions: list[float, float]
 
