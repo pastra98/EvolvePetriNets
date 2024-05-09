@@ -363,7 +363,7 @@ class GeneticNet:
         new_transitions = {k: v.get_copy() for k, v in self.transitions.items()}
         new_places = {k: v.get_copy() for k, v in self.places.items()}
         new_arcs = {k: v.get_copy() for k, v in self.arcs.items()}
-        return GeneticNet(new_transitions, new_places, new_arcs, self.id)
+        return GeneticNet(new_transitions, new_places, new_arcs, int(self.id))
 
     def get_compatibility_score(self, other_genome, debug=False) -> float:
         if params.distance_metric == "innovs":
