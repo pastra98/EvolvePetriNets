@@ -153,13 +153,13 @@ visualize_heatmap(log_transformed_df)
 from pm4py.algo.discovery.footprints.algorithm import apply as footprints
 from neat import params, innovs, genome, netobj
 
-params.load('../params/testing/speciation_test.json')
-innovs.reset()
 
 def build_mined_nets(net_list):
+    params.load('../params/testing/speciation_test_component_similarity.json')
+    innovs.reset()
+    innovs.set_tasks(log)
     # There will be a higher level function that will call this function
     # It shall be responsible for creating the task list and setting it in innovs
-    innovs.set_tasks(log)
     # generate genomes
     new_genomes = []
     #
@@ -288,31 +288,33 @@ for _ in range(10):
 # display(unchanged.get_graphviz())
 # pm4py.view_petri_net(unet)
 
-#%%
-sd = turn_genome_into_stupid_dict(genetic_nets[0])
-print(sd)
+# %%
+################################################################################
+#################### TESTING ATOMIC MUTATIONS ##################################
+################################################################################
+from importlib import reload
+
+def reload_module_and_get_fresh_genome():
+    reload(genome)
+    return build_mined_nets(allnets[:4])
+
+
+fresh_genomes = reload_module_and_get_fresh_genome()
+tg = fresh_genomes[0].clone()
+
+# net, im, fm = tg.build_petri()
+# pm4py.view_petri_net(net)
+tg.mutate(0)
 
 # %%
+################################################################################
+#################### REACHABILITY GRAPH SUCKS ##################################
+################################################################################
 from pm4py.convert import convert_to_reachability_graph
 rgs = []
 
 for n in allnets[:4]:
     pm4py.view_petri_net(n["net"], debug=True)
-    # rg = convert_to_reachability_graph(n["net"], n["im"], n["fm"])
-    # rgs.append(rg)
+    rg = convert_to_reachability_graph(n["net"], n["im"], n["fm"])
+    rgs.append(rg)
 
-
-#%%
-from pm4py.algo.discovery.footprints.algorithm import apply as footprints
-
-fp_log = footprints(log)
-
-#%%
-list(fp_log['activities'])
-
-#%%
-
-innovs.reset()
-innovs.set_tasks(log)
-#%%
-innovs.get_task_list()
