@@ -122,7 +122,10 @@ class GeneticNet:
             params.prob_prune_extensions[mutation_rate]
         ]
         mutation = rd.choices(mutations, weights=probabilities, k=1)[0]
-        mutation()
+        if mutation == self.remove_arcs:
+            mutation(mutation_rate)
+        else:
+            mutation()
 
 
     def place_trans_arc(self, place_id=None, trans_id=None) -> None:
@@ -333,9 +336,11 @@ class GeneticNet:
 
     def remove_arcs(self, mutation_rate: int, arcs_to_remove=None) -> None:
         arcs_removed = 0
-        if not arcs_to_remove: # if nothing in arguments, generate list
+        if not arcs_to_remove: # no arcs to remove specified
             arcs_to_remove = []
-            for a_id, arc in rd.shuffle(list(self.arcs.items())):
+            arclist = list(self.arcs.items())
+            rd.shuffle(arclist)
+            for a_id, arc in arclist:
                 if rd.random() < params.prob_remove_arc[mutation_rate]:
                     if arc.source_id != "start" and arc.target_id != "end":
                         arcs_to_remove.append(a_id)
