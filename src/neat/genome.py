@@ -420,7 +420,7 @@ class GeneticNet:
         """
         my_c = self.get_component_set()
         other_c = other_genome.get_component_set()
-        return 1 - (len(my_c & other_c) / len(my_c | other_c))
+        return 1 - (len(my_c & other_c) / len(my_c | other_c)) * params.component_mult
 
 # ------------------------------------------------------------------------------
 # FITNESS RELATED STUFF --------------------------------------------------------
