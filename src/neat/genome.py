@@ -25,9 +25,8 @@ from collections import Counter
 from graphviz import Digraph
 
 
-
 class GeneticNet:
-    def __init__(self, transitions: dict, places: dict, arcs: dict) -> None:
+    def __init__(self, transitions: dict, places: dict, arcs: dict, parent_id=None) -> None:
         """transitions, places and arcs must either be dicts containing valid id: netobj
         key-value pairings, or an empty dict.
         - Adds task transitions and start/end place automatically
@@ -35,6 +34,7 @@ class GeneticNet:
         Reasoning: Cannot use mutable default args, and didn't want to use *args or **kwargs
         """
         self.id = innovs.get_new_genome_id()
+        self.parent_id: int = parent_id
         self.species_id: str = None # gets assigned by species.add_member()
         self.fitness: float = None
         # fitness measures
@@ -120,6 +120,7 @@ class GeneticNet:
         ]
         mutation = rd.choices(mutations, weights=probabilities, k=1)[0]
         mutation()
+
 
     def place_trans_arc(self, place_id=None, trans_id=None) -> None:
         if not place_id and not trans_id: # no trans/place specified in arguments
@@ -341,7 +342,7 @@ class GeneticNet:
         new_transitions = {k: v.get_copy() for k, v in self.transitions.items()}
         new_places = {k: v.get_copy() for k, v in self.places.items()}
         new_arcs = {k: v.get_copy() for k, v in self.arcs.items()}
-        return GeneticNet(new_transitions, new_places, new_arcs)
+        return GeneticNet(new_transitions, new_places, new_arcs, self.id)
 
     def get_compatibility_score(self, other_genome, debug=False) -> float:
         if params.distance_metric == "innovs":
