@@ -106,7 +106,7 @@ when atomic mutations are used.
 """
 # arc mutations
 prob_remove_arc: list[float, float]
-max_arcs_removed: list[float, float] # in case of atomic mutation, this is set automatically to 1
+max_arcs_removed: float # in case of atomic mutation, this is set automatically to 1
 # Make a new arc
 prob_t_p_arc: list[float, float]
 prob_p_t_arc: list[float, float]
