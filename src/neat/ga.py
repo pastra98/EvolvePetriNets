@@ -148,12 +148,6 @@ class GeneticAlgorithm:
                 gen_info["times"] = self.timer.get_gen_times(self.curr_gen)
                 if self.curr_gen == 0:
                     gen_info["times"]["pop_update"] = 0
-            # --- COMPONENT ANALYSIS: REMOVE ME LATER ---
-            component_dict = {}
-            for g in self.population:
-                component_dict[g.id] = g.get_component_set()
-            gen_info["component_set"] = component_dict
-            # --- COMPONENT ANALYSIS: REMOVE ME LATER ---
         else:
             raise Exception("Tried to log gen before evaluating")
         return
