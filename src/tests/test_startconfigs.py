@@ -151,11 +151,13 @@ visualize_heatmap(log_transformed_df)
 ######################### FOR BUILDING THE MINED NETS ##########################
 ################################################################################
 from pm4py.algo.discovery.footprints.algorithm import apply as footprints
-from neat import params, innovs, genome, netobj
+from neat import params, innovs, genome, netobj, initial_population
 from importlib import reload
 
 def reset_ga():
-    reload(genome)
+    neat_modules = [params, innovs, genome, netobj, initial_population]
+    for module in neat_modules:
+        reload(module)
     params.load('../params/testing/speciation_test_component_similarity.json')
     innovs.reset()
     innovs.set_tasks(log)
@@ -303,7 +305,6 @@ for n in allnets[:4]:
 # %%
 from pm4py.convert import convert_petri_net_to_networkx
 import networkx as nx
-from neat import initial_population
 import pandas as pd
 from statistics import mean
 import matplotlib.pyplot as plt
