@@ -152,12 +152,16 @@ visualize_heatmap(log_transformed_df)
 ################################################################################
 from pm4py.algo.discovery.footprints.algorithm import apply as footprints
 from neat import params, innovs, genome, netobj
+from importlib import reload
 
-
-def build_mined_nets(net_list):
+def reset_ga():
+    reload(genome)
     params.load('../params/testing/speciation_test_component_similarity.json')
     innovs.reset()
     innovs.set_tasks(log)
+
+def build_mined_nets(net_list):
+    reset_ga()
     # There will be a higher level function that will call this function
     # It shall be responsible for creating the task list and setting it in innovs
     # generate genomes
@@ -269,30 +273,8 @@ n1, n2, n3 = allnets[:3]
 
 # %%
 ################################################################################
-#################### TESTING MUTATIONS #########################################
-################################################################################
-
-tg = genetic_nets[0].clone()
-
-unchanged = tg.clone()
-
-
-for _ in range(10):
-    tg.mutate(0) # mutation rate 0 is normal mutation rate
-
-    # display(tg.get_graphviz())
-    print(unchanged.component_compatibility(tg))
-    print(unchanged.innov_compatibility(tg, debug=False))
-    print()
-
-# display(unchanged.get_graphviz())
-# pm4py.view_petri_net(unet)
-
-# %%
-################################################################################
 #################### TESTING ATOMIC MUTATIONS ##################################
 ################################################################################
-from importlib import reload
 
 def reload_module_and_get_fresh_genome():
     reload(genome)
@@ -318,3 +300,99 @@ for n in allnets[:4]:
     rg = convert_to_reachability_graph(n["net"], n["im"], n["fm"])
     rgs.append(rg)
 
+# %%
+from pm4py.convert import convert_petri_net_to_networkx
+import networkx as nx
+from neat import initial_population
+import pandas as pd
+from statistics import mean
+import matplotlib.pyplot as plt
+from tqdm import tqdm
+
+reset_ga()
+
+n_genomes = 10
+n_generations = 30
+
+genomes = initial_population.generate_n_random_genomes(n_genomes, log)
+unchanged = [g.clone() for g in genomes]
+
+distance_dict = {}
+
+for i in tqdm(range(n_generations)):
+    distance_dict[i] = {
+        'innovation_distance': [],
+        'component_distance': [],
+        'graph_edit_distance': [],
+        'simrank_similarity': []
+    }
+    for ig, g in zip(unchanged, genomes):
+        g.mutate(0)
+        distance_dict[i]['innovation_distance'].append(ig.innov_compatibility(g))
+        distance_dict[i]['component_distance'].append(ig.component_compatibility(g))
+        
+        # Convert Petri nets to NetworkX graphs
+        initial_nx = convert_petri_net_to_networkx(*ig.build_petri())
+        mutated_nx = convert_petri_net_to_networkx(*g.build_petri())
+
+        # Calculate Graph Edit Distance
+        for ep in nx.optimize_edit_paths(initial_nx, mutated_nx, timeout=5):
+            min_distance = ep[2]
+        distance_dict[i]['graph_edit_distance'].append(min_distance)
+
+        # Calculate SimRank Similarity
+        simrank_scores = nx.simrank_similarity(initial_nx)
+        simrank_avg = mean([simrank_scores[u][v] for u in initial_nx for v in mutated_nx if u in simrank_scores and v in simrank_scores[u]])
+        distance_dict[i]['simrank_similarity'].append(simrank_avg)
+
+def calculate_averages(distance_dict):
+    averages = {
+        'generation': [],
+        'avg_innovation_distance': [],
+        'avg_component_distance': [],
+        'avg_graph_edit_distance': [],
+        'avg_simrank_similarity': []
+    }
+    for gen, metrics in distance_dict.items():
+        averages['generation'].append(gen)
+        averages['avg_innovation_distance'].append(mean(metrics['innovation_distance']))
+        averages['avg_component_distance'].append(mean(metrics['component_distance']))
+        averages['avg_graph_edit_distance'].append(mean(metrics['graph_edit_distance']))
+        averages['avg_simrank_similarity'].append(mean(metrics['simrank_similarity']))
+    df = pd.DataFrame(averages)
+    return df
+
+df = calculate_averages(distance_dict)
+
+# %%
+def plot_averages(df):
+    plt.figure(figsize=(12, 8))
+
+    plt.subplot(2, 2, 1)
+    plt.plot(df['generation'], df['avg_innovation_distance'], marker='o')
+    plt.title('Average Innovation Distance per Generation')
+    plt.xlabel('Generation')
+    plt.ylabel('Average Innovation Distance')
+
+    plt.subplot(2, 2, 2)
+    plt.plot(df['generation'], df['avg_component_distance'], marker='o')
+    plt.title('Average Component Distance per Generation')
+    plt.xlabel('Generation')
+    plt.ylabel('Average Component Distance')
+
+    plt.subplot(2, 2, 3)
+    plt.plot(df['generation'], df['avg_graph_edit_distance'], marker='o')
+    plt.title('Average Graph Edit Distance per Generation')
+    plt.xlabel('Generation')
+    plt.ylabel('Average Graph Edit Distance')
+
+    plt.subplot(2, 2, 4)
+    plt.plot(df['generation'], df['avg_simrank_similarity'], marker='o')
+    plt.title('Average SimRank Similarity per Generation')
+    plt.xlabel('Generation')
+    plt.ylabel('Average SimRank Similarity')
+
+    plt.tight_layout()
+    plt.show()
+
+plot_averages(df)
