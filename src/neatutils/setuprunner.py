@@ -51,7 +51,8 @@ def run_setup(run_nr, main_logger, setup, results_path) -> dict:
         er.save_report(
             run_result,
             f"{run_dir}/reports",
-            setup["save_reduced_history_df"]
+            setup["save_reduced_history_df"],
+            setup["ga_kwargs"]["is_minimal_serialization"]
         )
         main_logger.info(f"reports saved at:\n{run_dir}/reports")
 

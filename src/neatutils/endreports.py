@@ -16,7 +16,8 @@ import os
 def save_report(
         ga_info: dict,
         savedir: str,
-        save_df: bool
+        save_df: bool,
+        is_min_serialize: bool
     ) -> None:
     """saves some plots in the specified dir
     """
@@ -33,11 +34,12 @@ def save_report(
         if use_species:
             # extract species names if using speciation
             fixup_history_df(plotting_history_df).to_feather(f"{savedir}/history.feather")
-            get_species_df(full_history).to_feather(f"{savedir}/species.feather")
+            get_species_df(full_history, is_min_serialize).to_pickle(f"{savedir}/species.feather")
         else:
             plotting_history_df.to_feather(f"{savedir}/history.feather")
         # save population df
-        get_population_df(full_history).to_feather(f"{savedir}/population.feather")
+        # ---- TESTING THE COMPONENTS ---
+        get_population_df(full_history, is_min_serialize).to_pickle(f"{savedir}/population.pkl")
 
     if use_species:
         species_plot(full_history, savedir=savedir)
@@ -222,22 +224,28 @@ def fixup_history_df(df):
     return df
 
 
-def get_species_df(full_history):
+def get_species_df(full_history, is_min_serialize: bool):
     # only works with minimal serialization right now
     l = []
     for gen, info_d in full_history.items():
         for s in info_d["species"]:
-            del s["alive_member_ids"]
-            l.append(s | {"gen": gen})
+            if is_min_serialize:
+                del s["alive_member_ids"]
+                l.append(s | {"gen": gen})
+            else:
+                l.append({"gen": gen, "species_pickle": s})
     return pd.DataFrame(l)
 
 
-def get_population_df(full_history):
+def get_population_df(full_history, is_min_serialize: bool):
     # only works with minimal serialization right now
     l = []
     for gen, info_d in full_history.items():
         for g in info_d["population"]:
-            l.append(g | {"gen": gen})
+            if is_min_serialize:
+                l.append(g | {"gen": gen})
+            else:
+                l.append({"gen": gen, "genome_pickle": g})
     return pd.DataFrame(l)
 
 
