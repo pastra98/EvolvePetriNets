@@ -56,6 +56,8 @@ class GeneticNet:
         self.arcs = arcs
         # track mutations of that genome
         self.my_mutations = []
+        # ---- TESTING THE COMPONENTS ---
+        self.my_components: set = None
 
 # ------------------------------------------------------------------------------
 # MUTATIONS --------------------------------------------------------------------
@@ -526,6 +528,9 @@ class GeneticNet:
             + self.execution_score
         )
         
+        # ---- TESTING THE COMPONENTS ---
+        self.my_components = self.get_component_set()
+
         if self.fitness < 0:
             raise Exception("Fitness below 0 should not be possible!!!")
         return
