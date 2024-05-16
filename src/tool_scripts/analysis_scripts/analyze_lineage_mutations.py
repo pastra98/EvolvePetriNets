@@ -1,10 +1,14 @@
+"""
+This analysis file plots the relative frequency of mutations along with their
+fitness impact.
+"""
 # %%
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 
-history_path = "../results/data/test_mutation_lineage_stats_05-09-2024_16-49-25/equal_probabilities/1_05-09-2024_16-49-34/reports/population.feather"
-df = pd.read_feather(history_path)
+population_path = "../results/data/component_fitness_analysis_200gen_05-14-2024_13-03-59/no_log_splices/1_05-14-2024_13-04-08/reports/population.pkl"
+df = pd.read_pickle(population_path)
 # %%
 df
 list_of_mutations = [
