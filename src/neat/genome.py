@@ -71,6 +71,7 @@ class GeneticNet:
         # remove nodes that are no longer connected
         self.remove_unused_nodes()
         # clear the cache of methods depend on the genome structure
+        self.build_petri.cache_clear()
         self.get_extensive_variants.cache_clear()
         self.get_component_set.cache_clear()
 
@@ -449,6 +450,7 @@ class GeneticNet:
 
         return c_set
 
+
     def component_compatibility(self, other_genome) -> float:
         """Distance metric based on percentage of components that are not shared
         """
@@ -460,6 +462,7 @@ class GeneticNet:
 # FITNESS RELATED STUFF --------------------------------------------------------
 # ------------------------------------------------------------------------------
 
+    @cache
     def build_petri(self):
         net = PetriNet(f"{self.id}-Net")
         temp_obj_d = {} # stores both trans and place pm4py objs in the scope of this method
