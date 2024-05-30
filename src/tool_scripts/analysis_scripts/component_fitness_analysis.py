@@ -5,18 +5,22 @@ This analyzes which metric is suitable for identifying good components.
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
+from scipy.stats import ttest_ind
+import pickle
+from tqdm import tqdm
+from numba import njit
 
 population = "../results/data/component_fitness_analysis_200gen_05-14-2024_13-03-59/no_log_splices/1_05-14-2024_13-04-08/reports/population.pkl"
-df = pd.read_pickle(population)
+df_expanded = pd.read_pickle(population)
 # %%
 from sklearn.preprocessing import MultiLabelBinarizer
 
 mlb = MultiLabelBinarizer()
-components_expanded = mlb.fit_transform(df['my_components'])
+components_expanded = mlb.fit_transform(df_expanded['my_components'])
 components_df = pd.DataFrame(components_expanded, columns=mlb.classes_)
 
 # Concatenate this with the 'fitness' column
-df_expanded = pd.concat([df['fitness'], components_df], axis=1)
+df_expanded = pd.concat([df_expanded['fitness'], components_df], axis=1)
 
 # %%
 ################################################################################
@@ -58,70 +62,88 @@ pprint(list(sorted_component_fitness.items())[:10])
 
 # %%
 ################################################################################
+#################### OPTIMIZED T TEST COMPARISON ###############################
+################################################################################
+
+def optimized_t(expanded_df: pd.DataFrame):
+    comp_dict = {}
+
+    pop = expanded_df['fitness'].to_numpy()
+    pop_sum, pop_len = pop.sum(), len(pop)
+    pop_df = pop_len - 2
+
+    for component in tqdm(df_expanded.columns[1:]):
+        inc = df_expanded[df_expanded[component] == 1]['fitness'].to_numpy()
+        comp_dict[component] = compute_t(inc, pop, pop_len, pop_sum, pop_df)
+    return comp_dict
+
+@njit(parallel=True)
+def compute_t(inc, pop, pop_len, pop_sum, pop_df):
+    inc_sum, inc_len = inc.sum(), len(inc)
+    inc_avg_fit = inc_sum / inc_len
+    exc_len = pop_len - inc_len
+    exc_avg_fit = (pop_sum - inc_sum) / exc_len
+    mean_diff = inc_avg_fit - exc_avg_fit
+
+    inc_df, exc_df = inc_len-1, exc_len-1
+
+    inc_ss = ((inc - inc_avg_fit)**2).sum()
+    inc_var = inc_ss / inc_len
+    
+    exc_ss = ((pop - exc_avg_fit)**2).sum() - inc_ss - inc_len*mean_diff**2
+    exc_var = exc_ss / exc_len
+
+    pool_var = (inc_var*inc_df + exc_var*exc_df) / pop_df
+    se = (pool_var/inc_len + pool_var/exc_len)**0.5
+    return mean_diff/se
+
+
+opt_comp_dict = optimized_t(df_expanded)
+
+with open('opt_comp_dict.pkl', 'wb') as f:
+    pickle.dump(opt_comp_dict, f)
+
+
+# %%
+################################################################################
+#################### T TEST COMPARISON #########################################
+################################################################################
+
+def slow_t(expanded_df: pd.DataFrame):
+    unop_comp_dict = {}
+    for component in tqdm(expanded_df.columns[1:]):
+        # Split data into two groups based on the presence of the gene
+        present = expanded_df[expanded_df[component] == 1]['fitness']
+        absent = expanded_df[expanded_df[component] == 0]['fitness']
+        
+        # Perform independent two-sample t-test (one-sided)
+        t_stat, p_val = ttest_ind(present, absent, alternative='greater', equal_var=True)
+        
+        # Append the result
+        unop_comp_dict[component] = t_stat
+
+    return unop_comp_dict
+
+unop_comp_dict = slow_t(df_expanded)
+
+with open('unop_comp_dict.pkl', 'wb') as f:
+    pickle.dump(unop_comp_dict, f)
+# %%
+results_df['P-Value'].value_counts()
+# plot the p-values
+# plt.hist(results_df['P-Value'], bins=50)
+# plt.hist(results_df['T-Statistic'], bins=50)
+# results_df.sort_values(by='T-Statistic', ascending=False)
+
+for g in results_df.sort_values(by='T-Statistic', ascending=True)['Gene'][:10]:
+    print(g)
+    print()
+
+# %%
+################################################################################
 #################### UPDATE CORRELATIONS FOR EVERY GEN #########################
 ################################################################################
-import time
-
-def update_and_calculate_correlations(df_expanded, all_possible_components, previous_scores, generation):
-    # Initialize sums if first generation
-    if generation == 0:
-        num_components = len(all_possible_components)
-        previous_scores['sum_xy'] = np.zeros(num_components)
-        previous_scores['sum_x'] = np.zeros(num_components)
-        previous_scores['sum_y'] = 0
-        previous_scores['sum_x2'] = np.zeros(num_components)
-        previous_scores['sum_y2'] = 0
-        previous_scores['n'] = 0
-    
-    # Filter data for the current generation
-    current_gen_data = df_expanded[df_expanded['gen'] == generation]
-    
-    # Update sums
-    start_time = time.time()
-    for index, row in current_gen_data.iterrows():
-        fitness = row['fitness']
-        for i, component in enumerate(all_possible_components):
-            x = row[component]
-            y = fitness
-            previous_scores['sum_xy'][i] += x * y
-            previous_scores['sum_x'][i] += x
-            previous_scores['sum_y'] += y
-            previous_scores['sum_x2'][i] += x * x
-            previous_scores['sum_y2'] += y * y
-        previous_scores['n'] += 1
-    
-    # Calculate correlations
-    mean_x = previous_scores['sum_x'] / previous_scores['n']
-    mean_y = previous_scores['sum_y'] / previous_scores['n']
-    numerator = previous_scores['sum_xy'] - previous_scores['n'] * mean_x * mean_y
-    denominator = np.sqrt((previous_scores['sum_x2'] - previous_scores['n'] * mean_x**2) * (previous_scores['sum_y2'] - previous_scores['n'] * mean_y**2))
-    correlations = numerator / denominator
-
-    # Find the 5 best components
-    best_indices = np.argsort(correlations)[-5:]
-    best_components = [all_possible_components[i] for i in best_indices]
-
-    # Print the 5 best components and the time taken
-    print(f"Generation {generation}: 5 Best Components - {best_components}")
-    print(f"Time taken: {time.time() - start_time:.2f} seconds")
-
-    return correlations
-
-# Example usage
-df_expanded = pd.DataFrame({
-    'fitness': np.random.rand(100000),
-    'gen': np.repeat(np.arange(200), 500),
-    # Dummy data for components, replace with actual component names
-    **{f'component_{i}': np.random.randint(0, 2, 100000) for i in range(10)}
-})
-
-all_possible_components = [f'component_{i}' for i in range(10)]
-previous_scores = {}
-
-for generation in range(200):
-    correlations = update_and_calculate_correlations(df_expanded, all_possible_components, previous_scores, generation)
-
-
+# think about this later
 # %%
 ################################################################################
 #################### LINEAR REGRESSION #########################################
@@ -129,7 +151,7 @@ for generation in range(200):
 import statsmodels.api as sm
 
 X = sm.add_constant(components_df)
-y = df['fitness']
+y = df_expanded['fitness']
 
 # Fit the regression model
 model = sm.OLS(y, X).fit()
@@ -228,3 +250,21 @@ high_fitness_rules = rules[rules['consequents'] == {True}]
 print(high_fitness_rules)
 
 # %%
+################################################################################
+#################### EXPERIMENTING WITH T-VAL RESULTS ##########################
+################################################################################
+
+# plot the t-values
+ts = unop_comp_dict.values()
+# ts = opt_comp_dict.values()
+
+plt.hist(ts, bins=50)
+# scale histogram y-axis to log scale
+plt.yscale('log')
+
+# %%
+# print top 10 highest t-values and their corresponding components
+from pprint import pprint
+
+sorted_unop_comp_dict = {k: v for k, v in sorted(unop_comp_dict.items(), key=lambda item: item[1], reverse=True)}
+pprint(list(sorted_unop_comp_dict.items())[:10])
