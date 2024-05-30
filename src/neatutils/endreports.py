@@ -34,13 +34,12 @@ def save_report(
         if use_species:
             # extract species names if using speciation
             fixup_history_df(plotting_history_df).to_feather(f"{savedir}/history.feather")
-            get_species_df(full_history, is_min_serialize).to_pickle(f"{savedir}/species.feather")
+            get_species_df(full_history, is_min_serialize).to_feather(f"{savedir}/species.feather")
         else:
             plotting_history_df.to_feather(f"{savedir}/history.feather")
         # save population df
-        # ---- TESTING THE COMPONENTS ---
-        get_population_df(full_history, is_min_serialize).to_pickle(f"{savedir}/population.pkl")
-
+        pop_df = get_population_df(full_history, is_min_serialize)
+        pop_df.to_feather(f"{savedir}/population.feather")
     if use_species:
         species_plot(full_history, savedir=savedir)
     history_plots(plotting_history_df, use_species, savedir=savedir)
@@ -48,7 +47,10 @@ def save_report(
     save_improvements(ga_info["improvements"], savedir=savedir)
     pickle_best_genome(best_genome, savedir=savedir)
     plot_detailed_fitness(full_history, savedir=savedir)
-
+    try:
+        plot_mutation_effects(pop_df, savedir=savedir)
+    except:
+        pass # means that multi-mutation was used, making mut effects impossible
     run_report(full_history, savedir=savedir)
     gc.collect()
 
@@ -248,6 +250,67 @@ def get_population_df(full_history, is_min_serialize: bool):
                 l.append({"gen": gen, "genome_pickle": g})
     return pd.DataFrame(l)
 
+
+def plot_mutation_effects(pop_df, savedir: str):
+    # TODO: save a txt file with the mutation effects as numbers
+    
+    df_with_parents = pop_df.dropna(subset=['parent_id']).copy()
+    df_with_parents['parent_id'] = df_with_parents['parent_id'].astype(int)
+    fitness_dict = pop_df.set_index('id')['fitness'].to_dict()
+
+    df_with_parents.loc[:, 'fitness_difference'] = df_with_parents.apply(lambda row: row['fitness'] - fitness_dict[row['parent_id']], axis=1)
+    mutation_effects = {}
+    mutation_frequency = {}
+
+    for _, row in df_with_parents.iterrows():
+        mutations = row['my_mutations']
+        fitness_diff = row['fitness_difference']
+        for mutation in mutations:
+            if mutation not in mutation_effects:
+                mutation_effects[mutation] = []
+            mutation_effects[mutation].append(fitness_diff)
+            mutation_frequency[mutation] = mutation_frequency.get(mutation, 0) + 1
+
+    average_impacts = {mutation: sum(effects) / len(effects) for mutation, effects in mutation_effects.items()}
+    average_impacts = {k: average_impacts[k] for k in sorted(average_impacts)}
+    overall_average_impact = sum(df_with_parents['fitness_difference']) / len(df_with_parents)
+
+    total_mutations = sum(mutation_frequency.values())
+    relative_frequencies = {mutation: count / total_mutations for mutation, count in mutation_frequency.items()}
+
+    mutations = list(average_impacts.keys())
+    average_fitness_impacts = list(average_impacts.values())
+    frequencies = [relative_frequencies[mutation] for mutation in mutations]
+
+    fig, ax1 = plt.subplots(figsize=(12, 6))
+
+    # Bar plot for average fitness impact
+    color = 'tab:blue'
+    ax1.set_xlabel('Mutation')
+    ax1.set_ylabel('Average Fitness Impact', color=color)
+    ax1.bar(mutations, average_fitness_impacts, color=color)
+    ax1.tick_params(axis='y', labelcolor=color)
+    ax1.set_xticks(range(len(mutations)))
+    ax1.set_xticklabels(mutations, rotation=45, ha='right')
+
+    # Create a second y-axis to show relative frequency
+    ax2 = ax1.twinx()
+    color = 'tab:red'
+    ax2.set_ylabel('Relative Frequency', color=color)
+    ax2.plot(mutations, frequencies, color=color, marker='o', linestyle='-')
+    ax2.tick_params(axis='y', labelcolor=color)
+
+    plt.title('Average Fitness Impact and Relative Frequency of Each Mutation')
+    fig.tight_layout()
+
+    try:
+        fig.savefig(f"{savedir}/mutation_analysis.pdf", dpi=300)
+    except:
+        print(f"could not save in the given path\n{savedir}")
+    fig.clf()
+    del fig
+    plt.close("all")
+    gc.collect()
 
 def save_improvements(improvements: str, savedir: str):
     os.makedirs(f"{savedir}/improvements")
