@@ -7,7 +7,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 
-population_path = "../results/data/component_fitness_analysis_200gen_05-14-2024_13-03-59/no_log_splices/1_05-14-2024_13-04-08/reports/population.pkl"
+population_path = "../results/data/compare_using_t_100_gen_05-30-2024_16-46-19/with_use_t_delete_good_arcs/1_05-30-2024_17-16-07/reports/population.pkl"
 df = pd.read_pickle(population_path)
 # %%
 df
@@ -46,6 +46,7 @@ for _, row in df_with_parents.iterrows():
 # Step 4: Aggregate and analyze the data
 # Calculate average fitness impact per mutation
 average_impacts = {mutation: sum(effects) / len(effects) for mutation, effects in mutation_effects.items()}
+average_impacts = {k: average_impacts[k] for k in sorted(average_impacts)}
 overall_average_impact = sum(df_with_parents['fitness_difference']) / len(df_with_parents)
 
 # Calculate relative frequency
