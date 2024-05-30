@@ -199,6 +199,10 @@ def calculate_t_vals(fitness_components: list) -> dict:
     for component in comp_dict:
         included = np.array(comp_dict[component]["all_fitnesses"])
         comp_dict[component]["t_val"] = compute_t(included, pop_fit, pop_len, pop_sum, pop_df)
+        # this should only happen in the first gen, when the start and end connections
+        # yield components, shared by everyone, making t value comparison impossible
+        if len(included) == params.popsize:
+            comp_dict[component]["t_val"] = 1 # TODO: revisit this number maybe later
     return comp_dict
 
 # @njit(parallel=True)
@@ -219,4 +223,4 @@ def compute_t(inc, pop, pop_len, pop_sum, pop_df):
 
     pool_var = (inc_var*inc_df + exc_var*exc_df) / pop_df
     se = (pool_var/inc_len + pool_var/exc_len)**0.5
-    return mean_diff/se
+    return float(mean_diff/se)

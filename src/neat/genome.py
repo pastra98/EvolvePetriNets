@@ -17,6 +17,7 @@ from neat.netobj import GArc, GPlace, GTrans
 from neat import params, innovs
 
 import random as rd
+import numpy as np
 import traceback
 import itertools
 from functools import cache
@@ -81,9 +82,8 @@ class GeneticNet:
         """multiple mutations can occur
         """
         try:
-            # remove arcs, this calculates probabilities for arcs one at a time
-            self.remove_arcs(mutation_rate)
-            # perform single mutations
+            if rd.random() < params.prob_remove_arc[mutation_rate]:
+                self.remove_arcs(mutation_rate)
             if rd.random() < params.prob_t_p_arc[mutation_rate]:
                 self.trans_place_arc()
             if rd.random() < params.prob_p_t_arc[mutation_rate]:
@@ -126,10 +126,7 @@ class GeneticNet:
             params.prob_prune_extensions[mutation_rate]
         ]
         mutation = rd.choices(mutations, weights=probabilities, k=1)[0]
-        if mutation == self.remove_arcs:
-            mutation(mutation_rate)
-        else:
-            mutation()
+        mutation()
 
 
     def place_trans_arc(self, place_id=None, trans_id=None) -> None:
@@ -316,19 +313,20 @@ class GeneticNet:
                     self.my_mutations.append('pruned_an_extension')
 
 
-    def remove_arcs(self, mutation_rate: int, arcs_to_remove=None) -> None:
-        arcs_removed = 0
+    def remove_arcs(self, arcs_to_remove=None) -> None:
         if not arcs_to_remove: # no arcs to remove specified
-            arcs_to_remove = []
-            arclist = list(self.arcs.items())
-            rd.shuffle(arclist)
-            for a_id, arc in arclist:
-                if rd.random() < params.prob_remove_arc[mutation_rate]:
-                    if arc.source_id != "start" and arc.target_id != "end":
-                        arcs_to_remove.append(a_id)
-                        arcs_removed += 1
-                        if arcs_removed >= params.max_arcs_removed:
-                            break
+            arcs_to_remove = set()
+            for _ in range(params.max_arcs_removed):
+                if params.use_t_vals:
+                    arcdict = self.get_arc_t_values()
+                    # since higher t is better, multiply ts with -1 for removal
+                    arc_weights = np.array(list(arcdict.values()))
+                    arc_weights = arc_weights * -1 + abs(arc_weights.sum())
+                    arc = rd.choices(list(arcdict.keys()), weights=arc_weights, k=1)[0]
+                else:
+                    arc = rd.choices(list(self.arcs.keys()), k=1)[0]
+                arcs_to_remove.add(arc) # use a set to prevent duplicates
+            arcs_to_remove = list(arcs_to_remove)
         # delete arcs in arcs to remove
         for a_id in arcs_to_remove:
             del self.arcs[a_id]
@@ -469,7 +467,11 @@ class GeneticNet:
         """
         my_c = set(self.get_component_set().keys())
         other_c = set(other_genome.get_component_set().keys())
-        return 1 - (len(my_c & other_c) / len(my_c | other_c)) * params.component_mult
+        union = len(my_c | other_c)
+        intersect = len(my_c & other_c)
+        if union == 0:
+            return 0 # they are assumed to be equal, but this should normally not happen
+        return 1 - (union / intersect) * params.component_mult
 
 # ------------------------------------------------------------------------------
 # FITNESS RELATED STUFF --------------------------------------------------------
