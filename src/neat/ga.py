@@ -63,6 +63,10 @@ class GeneticAlgorithm:
         self.evaluate_curr_generation()
         self.is_curr_gen_evaluated = True
 
+        # innovs updates the component fitnesses
+        if params.use_t_vals:
+            innovs.update_component_fitnesses(self.population)
+
         # writes info into gen info dict
         self.log_gen_info()
 

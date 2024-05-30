@@ -98,6 +98,9 @@ t_exec_scoring_weight: list
 # ---------- MUTATIONS GENERAL
 mutation_type: str # "multi" / "atomic"
 
+# -------------------- guiding the mutations
+use_t_vals: bool
+
 """
 Parameters in list depend on the Mutation Rate, which is either 0 (normal) or 1 (high)
 When using atomic mutations, the same probabilities are used, however they are now

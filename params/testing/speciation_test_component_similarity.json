@@ -94,10 +94,7 @@
         0,
         0
     ],
-    "max_arcs_removed": [
-        1,
-        1
-    ],
+    "max_arcs_removed": 1,
     "prob_remove_arc": [
         0.2,
         0
@@ -113,5 +110,6 @@
     "num_trys_split_arc": 10,
     "distance_metric": "components",
     "component_mult": 5,
-    "mutation_type": "atomic"
+    "mutation_type": "atomic",
+    "use_t_vals": true
 }

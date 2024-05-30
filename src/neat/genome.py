@@ -71,6 +71,7 @@ class GeneticNet:
         # remove nodes that are no longer connected
         self.remove_unused_nodes()
         # clear the cache of methods depend on the genome structure
+        self.get_arc_t_values.cache_clear()
         self.build_petri.cache_clear()
         self.get_extensive_variants.cache_clear()
         self.get_component_set.cache_clear()
@@ -334,6 +335,16 @@ class GeneticNet:
             self.my_mutations.append('removed_an_arc')
 
 
+    @cache
+    def get_arc_t_values(self) -> dict:
+        arc_values = {}
+        associated_arcs = self.get_component_set()
+        for comp in associated_arcs.keys():
+            pop_fit_val = innovs.component_dict[comp]['t_val']
+            for arc_id in associated_arcs[comp]:
+                arc_values[arc_id] = pop_fit_val
+        return arc_values
+
 # ------------------------------------------------------------------------------
 # REPRODUCTION RELATED STUFF ---------------------------------------------------
 # ------------------------------------------------------------------------------
@@ -429,7 +440,7 @@ class GeneticNet:
 # ----- component compatibility
     @cache
     def get_component_set(self) -> set:
-        c_set = set()
+        comp_dict = {}
         net, im, fm = self.build_petri()
 
         def format_tname(t): # all hidden transitions are named "t"
@@ -437,7 +448,9 @@ class GeneticNet:
 
         for md in maximal_decomposition(net, im, fm): # loop the components
             a_multi_set = Counter() # multiset of arcs in the component
+            arc_ids = []
             for a in md[0].arcs:
+                arc_ids.append(innovs.get_arc(a.source.name, a.target.name)) # get the innov id of arc in component
                 if type(a.source) == PetriNet.Transition: # target must be a place
                     # pack into iterable (list) to avoid unpacking
                     a_multi_set.update([(format_tname(a.source), "p")]) # only one place per component
@@ -446,16 +459,16 @@ class GeneticNet:
 
             # convert multiset to tuple to make it hashable, order of tuples must be the same
             if res := tuple(sorted(a_multi_set.items())): # only add non-empty components
-                c_set.add(res)
+                comp_dict[res] = arc_ids
 
-        return c_set
+        return comp_dict
 
 
     def component_compatibility(self, other_genome) -> float:
         """Distance metric based on percentage of components that are not shared
         """
-        my_c = self.get_component_set()
-        other_c = other_genome.get_component_set()
+        my_c = set(self.get_component_set().keys())
+        other_c = set(other_genome.get_component_set().keys())
         return 1 - (len(my_c & other_c) / len(my_c | other_c)) * params.component_mult
 
 # ------------------------------------------------------------------------------
@@ -532,7 +545,7 @@ class GeneticNet:
         )
         
         # ---- TESTING THE COMPONENTS ---
-        self.my_components = self.get_component_set()
+        self.my_components = set(self.get_component_set().keys())
 
         if self.fitness < 0:
             raise Exception("Fitness below 0 should not be possible!!!")
