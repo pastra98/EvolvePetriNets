@@ -57,8 +57,6 @@ class GeneticNet:
         self.arcs = arcs
         # track mutations of that genome
         self.my_mutations = []
-        # ---- TESTING THE COMPONENTS ---
-        self.my_components: set = None
 
 # ------------------------------------------------------------------------------
 # MUTATIONS --------------------------------------------------------------------
@@ -470,8 +468,11 @@ class GeneticNet:
         union = len(my_c | other_c)
         intersect = len(my_c & other_c)
         if union == 0:
-            return 0 # they are assumed to be equal, but this should normally not happen
-        return 1 - (union / intersect) * params.component_mult
+            return 1 # they are assumed to be equal, but this should normally not happen
+        try:
+            return 1 - (intersect / union) * params.component_mult
+        except:
+            print("wtf")
 
 # ------------------------------------------------------------------------------
 # FITNESS RELATED STUFF --------------------------------------------------------
@@ -546,8 +547,6 @@ class GeneticNet:
             + self.execution_score
         )
         
-        # ---- TESTING THE COMPONENTS ---
-        self.my_components = set(self.get_component_set().keys())
 
         if self.fitness < 0:
             raise Exception("Fitness below 0 should not be possible!!!")
