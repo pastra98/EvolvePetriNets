@@ -64,6 +64,7 @@ pprint(list(sorted_component_fitness.items())[:10])
 ################################################################################
 #################### OPTIMIZED T TEST COMPARISON ###############################
 ################################################################################
+from scipy.stats import t as t_funcs
 
 def optimized_t(expanded_df: pd.DataFrame):
     comp_dict = {}
@@ -74,10 +75,12 @@ def optimized_t(expanded_df: pd.DataFrame):
 
     for component in tqdm(df_expanded.columns[1:]):
         inc = df_expanded[df_expanded[component] == 1]['fitness'].to_numpy()
-        comp_dict[component] = compute_t(inc, pop, pop_len, pop_sum, pop_df)
+        # comp_dict[component] = compute_t(inc, pop, pop_len, pop_sum, pop_df)
+        t, p = compute_t(inc, pop, pop_len, pop_sum, pop_df)
+        comp_dict[component] = {'t': t, 'p': p}
     return comp_dict
 
-@njit(parallel=True)
+# @njit(parallel=True)
 def compute_t(inc, pop, pop_len, pop_sum, pop_df):
     inc_sum, inc_len = inc.sum(), len(inc)
     inc_avg_fit = inc_sum / inc_len
@@ -95,7 +98,9 @@ def compute_t(inc, pop, pop_len, pop_sum, pop_df):
 
     pool_var = (inc_var*inc_df + exc_var*exc_df) / pop_df
     se = (pool_var/inc_len + pool_var/exc_len)**0.5
-    return mean_diff/se
+    t = mean_diff/se
+    p = t_funcs.sf(t, pop_df)
+    return t, p
 
 
 opt_comp_dict = optimized_t(df_expanded)
@@ -103,6 +108,74 @@ opt_comp_dict = optimized_t(df_expanded)
 with open('opt_comp_dict.pkl', 'wb') as f:
     pickle.dump(opt_comp_dict, f)
 
+# %%
+################################################################################
+#################### EXPERIMENTING WITH T-VAL RESULTS ##########################
+################################################################################
+
+# Extract 't' values and sort them
+ts = sorted([inner_dict['t'] for inner_dict in opt_comp_dict.values()])
+ps = sorted([inner_dict['p'] for inner_dict in opt_comp_dict.values()])
+
+
+def plot_hist(vals):
+    plt.hist(vals, bins=50)
+    # scale histogram y-axis to log scale
+    plt.yscale('log')
+
+# plot_hist(ps)
+# plot_hist(ts)
+
+def lineplot_t_p_comparison(t_vals, p_vals, scale_t=False):
+    fig, ax1 = plt.subplots(figsize=(10, 6))
+
+    # Create x values
+    x = range(len(t_vals))
+
+    # Plot t values
+    if scale_t:
+        biggest_t = max(t_vals)
+        smallest_t = min(t_vals)
+        total_range = biggest_t + abs(smallest_t)
+        ax1.plot(x, (abs(smallest_t) + t_vals)/total_range, label='t values', color='g')
+    else:
+        ax1.plot(x, t_vals, label='t values', color='g')
+    ax1.set_ylabel('t values', color='g')
+    ax1.tick_params('y', colors='g')
+
+    # Create a second y-axis that shares the same x-axis
+    ax2 = ax1.twinx()
+    # Plot p values
+    ax2.plot(x, p_vals, label='p values', color='b')
+    ax2.set_ylabel('p values', color='b')
+    ax2.tick_params('y', colors='b')
+
+    # Add labels and title
+    ax1.set_xlabel('Index')
+    plt.title('Line plot of t and p values')
+
+    fig.tight_layout()
+    plt.show()
+
+# lineplot_t_p_comparison(ts, ps)
+lineplot_t_p_comparison(ts, ps, scale_t=True)
+
+# %%
+# print top 10 highest t-values and their corresponding components
+from pprint import pprint
+
+sorted_opt_comp_dict = {k: v for k, v in sorted(opt_comp_dict.items(), key=lambda item: item[1]['t'], reverse=False)}
+pprint(list(sorted_opt_comp_dict.items())[:10])
+
+# %%
+#################### CONVERTING T-VALS INTO P-VALS
+from scipy.stats import t
+# t.sf
+
+for comp, t in list(sorted_opt_comp_dict.items())[:10]:
+    print(comp)
+    print(t)
+    print(t.sf(t))
 
 # %%
 ################################################################################
@@ -248,23 +321,3 @@ rules = association_rules(frequent_itemsets, metric="confidence", min_threshold=
 # Filter rules that imply high fitness
 high_fitness_rules = rules[rules['consequents'] == {True}]
 print(high_fitness_rules)
-
-# %%
-################################################################################
-#################### EXPERIMENTING WITH T-VAL RESULTS ##########################
-################################################################################
-
-# plot the t-values
-ts = unop_comp_dict.values()
-# ts = opt_comp_dict.values()
-
-plt.hist(ts, bins=50)
-# scale histogram y-axis to log scale
-plt.yscale('log')
-
-# %%
-# print top 10 highest t-values and their corresponding components
-from pprint import pprint
-
-sorted_unop_comp_dict = {k: v for k, v in sorted(unop_comp_dict.items(), key=lambda item: item[1], reverse=True)}
-pprint(list(sorted_unop_comp_dict.items())[:10])
