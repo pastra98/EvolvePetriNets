@@ -469,10 +469,7 @@ class GeneticNet:
         intersect = len(my_c & other_c)
         if union == 0:
             return 1 # they are assumed to be equal, but this should normally not happen
-        try:
-            return 1 - (intersect / union) * params.component_mult
-        except:
-            print("wtf")
+        return 1 - (intersect / union) * params.component_mult
 
 # ------------------------------------------------------------------------------
 # FITNESS RELATED STUFF --------------------------------------------------------
