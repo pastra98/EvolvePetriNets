@@ -252,11 +252,16 @@ def add_md_to_net(net): # of course this is total bullshit because we should not
                 a_multi_set.update([("p", format_tname(a.target))])
 
         # convert multiset to tuple to make it hashable, order of tuples must be the same
-        net["md"].add(tuple(sorted(a_multi_set.items())))
+        if res := tuple(sorted(a_multi_set.items())): # only add non-empty components
+            net['md'].add(res)
 
 for net in allnets:
     add_md_to_net(net)
 
+# pm4py.view_petri_net(allnets[0]['net'])
+allnets[0]['md']
+
+#%%
 
 def md_similarity(net1, net2):
     # return len(net1["md"].intersection(net2["md"]))/len(net1["md"].union(net2["md"]))
@@ -303,6 +308,10 @@ for n in allnets[:4]:
     rgs.append(rg)
 
 # %%
+################################################################################
+#################### MEASURING GENOMIC DRIFT ###################################
+################################################################################
+
 from pm4py.convert import convert_petri_net_to_networkx
 import networkx as nx
 import pandas as pd
@@ -397,3 +406,17 @@ def plot_averages(df):
     plt.show()
 
 plot_averages(df)
+
+# %%
+################################################################################
+############ UPDATING GENOME COMPONENT DECOMPOSITION TO INCLUDE IDS ############
+################################################################################
+
+fg = reload_module_and_get_fresh_genome()
+
+g = fg[1]
+
+pm4py.view_petri_net(*g.build_petri(), debug=True)
+c_set, arc_dict = g.get_component_set()
+print(c_set, 3*"\n")
+print(arc_dict)
