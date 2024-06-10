@@ -74,6 +74,9 @@ class GeneticNet:
         self.build_petri.cache_clear()
         self.get_component_list.cache_clear()
         self.get_unique_component_set.cache_clear()
+        # if a mutation failed (e.g. no arcs to remove/everything connected, call recursive)
+        if not self.my_mutations:
+            self.mutate(mutation_rate)
 
 
     def multi_mutation(self, mutation_rate):
