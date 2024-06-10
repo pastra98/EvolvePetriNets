@@ -72,7 +72,8 @@ class GeneticNet:
         # clear the cache of methods depend on the genome structure
         self.get_arc_t_values.cache_clear()
         self.build_petri.cache_clear()
-        self.get_component_set.cache_clear()
+        self.get_component_list.cache_clear()
+        self.get_unique_component_set.cache_clear()
 
 
     def multi_mutation(self, mutation_rate):
@@ -339,14 +340,14 @@ class GeneticNet:
 
     @cache
     def get_arc_t_values(self) -> dict:
-        # TODO: reimplement this somehow
-        arc_values = {a.id: 1 for a in self.arcs.values()}
-        # arc_values = {}
-        # associated_arcs = self.get_component_set()
-        # for comp in associated_arcs.keys():
-        #     pop_fit_val = innovs.component_dict[comp]['t_val']
-        #     for arc_id in associated_arcs[comp]:
-        #         arc_values[arc_id] = pop_fit_val
+        # extend this method for whatever info we need about arcs, places, transitions        # arc_values = {a.id: 1 for a in self.arcs.values()}
+        # from innovs during mutations
+        arc_values = {}
+        all_c = self.get_component_list()
+        for c_dict in all_c:
+            pop_fit_val = innovs.component_dict[c_dict['comp']]['t_val']
+            for arc_id in c_dict['arcs']:
+                arc_values[arc_id] = pop_fit_val
         return arc_values
 
 # ------------------------------------------------------------------------------
@@ -364,35 +365,51 @@ class GeneticNet:
 
 # ----- component compatibility
     @cache
-    def get_component_set(self) -> set:
-        comp_dict = {}
-        net, im, fm = self.build_petri()
+    def get_component_list(self) -> list:
 
         def format_tname(t): # all hidden transitions are named "t"
-            return t.label if t.label in innovs.get_task_list() else "t"
+            return t if t in innovs.get_task_list() else "t"
 
-        for md in maximal_decomposition(net, im, fm): # loop the components
-            a_multi_set = Counter() # multiset of arcs in the component
+        p_components = dict()
+        for p in self.places.values():
+            p_components[p.id] = {
+                'comp': Counter(),
+                'place': p.id,
+                'transitions': [],
+                'arcs': []
+                }
+        for a in self.arcs.values():
+            if a.source_id in p_components:   # p->t
+                p_components[a.source_id]['transitions'].append(a.target_id)
+                p_components[a.source_id]['arcs'].append(a.id)
+                p_components[a.source_id]['comp'].update([("p", format_tname(a.target_id))])
+            elif a.target_id in p_components: # t->p
+                p_components[a.target_id]['transitions'].append(a.source_id)
+                p_components[a.target_id]['arcs'].append(a.id)
+                p_components[a.target_id]['comp'].update([(format_tname(a.source_id), "p")])
+        
+        # now format components as sorted tuple to make comparisons with innov possible
+        for p in p_components:
+            p_components[p]['comp'] = tuple(sorted(p_components[p]['comp'].items()))
 
-            for a in md[0].arcs:
-                if type(a.source) == PetriNet.Transition: # target must be a place
-                    # pack into iterable (list) to avoid unpacking
-                    a_multi_set.update([(format_tname(a.source), "p")]) # only one place per component
-                else: # source must be a place, target must be a transition
-                    a_multi_set.update([("p", format_tname(a.target))])
-
-            # convert multiset to tuple to make it hashable, order of tuples must be the same
-            if res := tuple(sorted(a_multi_set.items())): # only add non-empty components
-                comp_dict[res] = [] # TODO: add the arc ids back to this
-
-        return comp_dict
+        return list(p_components.values())
+    
+    @cache
+    def get_unique_component_set(self) -> set:
+        # TODO: add cache
+        # point of this is to just get a set of the components
+        # this will be used for compatibility calc
+        unique_components = set() 
+        for c_dict in self.get_component_list():
+            unique_components.add(c_dict['comp'])
+        return unique_components
 
 
     def component_compatibility(self, other_genome) -> float:
         """Distance metric based on percentage of components that are not shared
         """
-        my_c = set(self.get_component_set().keys())
-        other_c = set(other_genome.get_component_set().keys())
+        my_c = self.get_unique_component_set()
+        other_c = other_genome.get_unique_component_set()   
         union = len(my_c | other_c)
         intersect = len(my_c & other_c)
         if union == 0:

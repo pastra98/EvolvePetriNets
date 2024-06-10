@@ -60,7 +60,7 @@ def update_component_fitnesses(population):
     fitness_components = []
     for g in population:
         # TODO: can later test different fitness metrics here, e.g. just perc_fit_traces
-        fitness_components.append((g.fitness, set(g.get_component_set().keys())))
+        fitness_components.append((g.fitness, g.get_unique_component_set()))
     if params.use_t_vals:
         component_dict = calculate_t_vals(fitness_components)
     # TODO: can do other stuff that influences the probability map here
