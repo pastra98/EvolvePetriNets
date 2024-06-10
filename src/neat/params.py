@@ -53,7 +53,6 @@ initial_te_gauss_dist: list[float, float]
 initial_as_gauss_dist: list[float, float]
 
 # -------------------- selection strategy: SPECIATION
-distance_metric: str # "innovs" / "behavior" / "components"
 species_boundary: float
 
 # component multiplier, if distance_metric == "components" increase importance of shared components

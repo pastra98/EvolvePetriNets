@@ -100,7 +100,6 @@
     ],
     "is_no_preference_for_tasks": false,
     "prob_pick_empty_trans": 0.3,
-    "distance_metric": "components",
     "component_mult": 5,
     "mutation_type": "atomic",
     "use_t_vals": true
