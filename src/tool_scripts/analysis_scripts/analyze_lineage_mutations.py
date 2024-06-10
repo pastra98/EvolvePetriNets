@@ -7,8 +7,9 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 
-population_path = "../results/data/compare_using_t_100_gen_05-30-2024_16-46-19/with_use_t_delete_good_arcs/1_05-30-2024_17-16-07/reports/population.pkl"
-df = pd.read_pickle(population_path)
+population_path = "../results/data/test_if_pickling_works_again_05-30-2024_18-12-37/whatever/1_05-30-2024_18-12-45/reports/population.pkl"
+# df = pd.read_pickle(population_path)
+df = pd.read_feather(population_path)
 # %%
 df
 list_of_mutations = [
@@ -45,44 +46,57 @@ for _, row in df_with_parents.iterrows():
 
 # Step 4: Aggregate and analyze the data
 # Calculate average fitness impact per mutation
-average_impacts = {mutation: sum(effects) / len(effects) for mutation, effects in mutation_effects.items()}
-average_impacts = {k: average_impacts[k] for k in sorted(average_impacts)}
-overall_average_impact = sum(df_with_parents['fitness_difference']) / len(df_with_parents)
-
-# Calculate relative frequency
+# average_impacts = {mutation: sum(effects) / len(effects) for mutation, effects in mutation_effects.items()}
+# average_impacts = {k: average_impacts[k] for k in sorted(average_impacts)}
+# overall_average_impact = sum(df_with_parents['fitness_difference']) / len(df_with_parents)
+mutation_effects = {m: mutation_effects[m] for m in sorted(mutation_effects)}
 total_mutations = sum(mutation_frequency.values())
 relative_frequencies = {mutation: count / total_mutations for mutation, count in mutation_frequency.items()}
 
 # Plot the results
-mutations = list(average_impacts.keys())
-average_fitness_impacts = list(average_impacts.values())
-frequencies = [relative_frequencies[mutation] for mutation in mutations]
+mutations = mutation_effects.keys()
+data_for_boxplot = mutation_effects.values()
 
 fig, ax1 = plt.subplots(figsize=(12, 6))
 
-# Bar plot for average fitness impact
+# Boxplot for fitness impact distribution per mutation
 color = 'tab:blue'
 ax1.set_xlabel('Mutation')
-ax1.set_ylabel('Average Fitness Impact', color=color)
-ax1.bar(mutations, average_fitness_impacts, color=color)
-ax1.tick_params(axis='y', labelcolor=color)
-ax1.set_xticks(range(len(mutations)))
+ax1.set_ylabel('Fitness Impact Distribution', color=color)
+bp = ax1.boxplot(data_for_boxplot, patch_artist=True, meanline=True, showmeans=True)
+
+# Coloring and styling
+for box in bp['boxes']:
+    box.set(color=color, linewidth=2)
+    box.set(facecolor='lightblue')
+
+# Set x-ticks to mutation names
+ax1.set_xticks(np.arange(1, len(mutations) + 1))
 ax1.set_xticklabels(mutations, rotation=45, ha='right')
+ax1.tick_params(axis='y', labelcolor=color)
 
 # Create a second y-axis to show relative frequency
 ax2 = ax1.twinx()
 color = 'tab:red'
 ax2.set_ylabel('Relative Frequency', color=color)
-ax2.plot(mutations, frequencies, color=color, marker='o', linestyle='-')
+ax2.plot(np.arange(1, len(mutations) + 1), [relative_frequencies[mutation] for mutation in mutations], color=color, marker='o', linestyle='-')
 ax2.tick_params(axis='y', labelcolor=color)
 
 # Final touches
-plt.title('Average Fitness Impact and Relative Frequency of Each Mutation')
+plt.title('Fitness Impact Distribution and Relative Frequency of Each Mutation')
 fig.tight_layout()
 plt.show()
+# %%
+summary_df = pd.DataFrame(columns=['Min', '25%', 'Median', '75%', 'Max', 'Mean', 'Frequency'])
 
-# Print overall average fitness impact
-print("Overall Average Fitness Impact:", overall_average_impact)
+for mutation, effects in mutation_effects.items():
+    df_temp = pd.DataFrame(effects, columns=['Effects'])
+    summary = df_temp['Effects'].describe(percentiles=[.25, .5, .75])
+    # Add 'Mean' and 'Frequency' (count) to the summary
+    summary_df.loc[mutation] = [
+        summary['min'], summary['25%'], summary['50%'], summary['75%'], summary['max'],
+        summary['mean'], summary['count']
+    ]
 
-#%%
-mutation_frequency
+summary_df.to_markdown('mutation_effects.txt')
+# %%
