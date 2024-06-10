@@ -72,7 +72,6 @@ class GeneticNet:
         # clear the cache of methods depend on the genome structure
         self.get_arc_t_values.cache_clear()
         self.build_petri.cache_clear()
-        self.get_extensive_variants.cache_clear()
         self.get_component_set.cache_clear()
 
 
@@ -94,8 +93,8 @@ class GeneticNet:
                 self.extend_new_trans()
             if rd.random() < params.prob_split_arc[mutation_rate]:
                 self.split_arc()
-            if rd.random() < params.prob_prune_extensions[mutation_rate]:
-                self.prune_extensions()
+            if rd.random() < params.prob_prune_leafs[mutation_rate]:
+                self.prune_leaves()
         except:
             print(traceback.format_exc()) # TODO: meh, aint got not time to do logging here
 
@@ -111,7 +110,7 @@ class GeneticNet:
             self.extend_new_place,
             self.extend_new_trans,
             self.split_arc,
-            self.prune_extensions
+            self.prune_leaves
         ]
         probabilities = [
             params.prob_remove_arc[mutation_rate],
@@ -121,27 +120,63 @@ class GeneticNet:
             params.prob_new_p[mutation_rate],
             params.prob_new_empty_t[mutation_rate],
             params.prob_split_arc[mutation_rate],
-            params.prob_prune_extensions[mutation_rate]
+            params.prob_prune_leafs[mutation_rate]
         ]
         mutation = rd.choices(mutations, weights=probabilities, k=1)[0]
         mutation()
+        # TODO: check if no mutation occured (e.g. no extensions to prune, no places to connect)
+        # and call itself again
+
+
+    def get_target(self, source) -> str:
+        """ given a source node, return a random node that
+         - isn't opposite node type
+         - isn't already connected
+         - doesn't already have a connection in the other direction
+        """
+        connected = set()
+        for a in self.arcs.values():
+            if source.id in [a.source_id, a.target_id]:
+                connected.add(a.target_id)
+
+        if type(source) == GTrans:
+            suitable_places = []
+            for p in self.places.values():
+                if p.id not in connected and not p.is_start:
+                    suitable_places.append(p.id)
+                if not suitable_places:
+                    return None
+            return rd.choice(suitable_places)
+
+        elif type(source) == GPlace:
+            # handle case where place is already connected to all trans
+            # might return none
+            return self.pick_trans_with_preference(filter_out=list(connected))
+
+        else:
+            raise Exception("This should only be called for places or transitions")
+
+
+    def get_new_id(self, obj_type) -> int:
+        # id is simply an increment of the current num of places/transitions/arcs
+        if obj_type == GPlace:
+            return f"p{len(self.places) + 1}"
+        elif obj_type == GTrans:
+            return f"t{len(self.transitions) + 1}"
+        elif obj_type == GArc:
+            return len(self.arcs) + 1
 
 
     def place_trans_arc(self, place_id=None, trans_id=None) -> None:
         if not place_id and not trans_id: # no trans/place specified in arguments
-            # search until a place/trans combi is found that is not already connected
-            for _try in range(params.num_trys_make_conn):
-                # pick a place that is not the end place, pick a trans
-                place_id = rd.choice([p for p in self.places if p != "end"])
-                trans_id = self.pick_trans_with_preference()
-                # check in innovs
-                arc_id = innovs.get_arc(place_id, trans_id)
-                if arc_id not in self.arcs:
-                    break
-        else: # if place/trans specified in arguments, just get that innov number
-            arc_id = innovs.get_arc(place_id, trans_id)
-            if arc_id in self.arcs:
-                return # no connection is made
+            # pick a place that is not the end place, pick a trans
+            place_id = rd.choice([p for p in self.places if p != "end"])
+            trans_id = self.get_target(self.places[place_id])
+            if not trans_id:
+                return # place already connected to all available transitions
+            arc_id = self.get_new_id(GArc)
+        else: # TODO: no checks happen here
+            arc_id = self.get_new_id(GArc)
         new_arc = GArc(arc_id, place_id, trans_id)
         self.arcs[arc_id] = new_arc
         self.my_mutations.append('place_trans_arc')
@@ -150,168 +185,139 @@ class GeneticNet:
 
     def trans_place_arc(self, trans_id=None, place_id=None) -> None:
         if not trans_id and not place_id: # no trans/place specified in arguments
-            # search until a place/trans combi is found that is not already connected
-            for _try in range(params.num_trys_make_conn):
-                # pick a trans, pick a place that is not the start place
-                trans_id = self.pick_trans_with_preference()
-                place_id = rd.choice([p for p in self.places if p != "start"])
-                # check in innovs
-                arc_id = innovs.get_arc(trans_id, place_id)
-                if arc_id not in self.arcs:
-                    break
-        else: # if place/trans specified in arguments, just get that innov number
-            arc_id = innovs.get_arc(trans_id, place_id)
-            if arc_id in self.arcs:
-                return # no connection is made
+            # pick a trans, pick a place that is not the start place
+            trans_id = self.pick_trans_with_preference()
+            place_id = self.get_target(self.transitions[trans_id])
+            if not place_id:
+                return # the only available places are already connected
+            arc_id = self.get_new_id(GArc)
+        else: # TODO: no checks happen here
+            arc_id = self.get_new_id(GArc)
         new_arc = GArc(arc_id, trans_id, place_id)
         self.arcs[arc_id] = new_arc
         self.my_mutations.append('trans_place_arc')
         return
 
 
-    def extend_new_place(self, trans_id=None) -> str:
-        if not trans_id:
-            for _try in range(params.num_trys_make_conn):
-                trans_id = self.pick_trans_with_preference()
-                ext_info = innovs.get_extension(trans_id)
-                if ext_info["node"] not in self.places: # check if place not already exist
-                    break
-                else: # place already exists, reset ext_info
-                    ext_info = None
-        else:
-            ext_info = innovs.get_extension(trans_id)
-            if ext_info["node"] in self.places:
-                print(f"trans {trans_id} has already been ext to {ext_info['node']}!")
-                return
-        if ext_info:
-            self.places[ext_info["node"]] = GPlace(ext_info["node"])
-            self.arcs[ext_info["arc"]] = GArc(ext_info["arc"], trans_id, ext_info["node"])
-            self.my_mutations.append('extend_new_place')
-            return ext_info["node"] # return id of new place
-        return # nothing found
+    def extend_new_place(self, trans_id=None) -> None:
+        if not trans_id: # TODO: could also filter out trans that have leaf extensions?
+            trans_id = self.pick_trans_with_preference()
+        new_place_id = self.get_new_id(GPlace)
+        new_arc_id = self.get_new_id(GArc)
+        self.places[new_place_id] = GPlace(new_place_id)
+        self.arcs[new_arc_id] = GArc(new_arc_id, trans_id, new_place_id)
+        self.my_mutations.append('extend_new_place')
+        return
 
 
     def extend_new_trans(self, place_id=None) -> str:
-        if len(self.places) <= 2:
-            return
-        if not place_id:
-            for _try in range(params.num_trys_make_conn):
-                place_id = rd.choice([p for p in self.places if p not in ["start", "end"]])
-                ext_info = innovs.get_extension(place_id)
-                if ext_info["node"] not in self.transitions: # check if transition not already exist
-                    break
-                else: # place already exists, reset ext_info
-                    ext_info = None
-        else:
-            ext_info = innovs.get_extension(place_id)
-            if ext_info["node"] in self.transitions:
-                print(f"place {place_id} has already been ext to {ext_info['node']}!")
-                return
-        if ext_info:
-            self.transitions[ext_info["node"]] = GTrans(ext_info["node"], is_task=False)
-            self.arcs[ext_info["arc"]] = GArc(ext_info["arc"], place_id, ext_info["node"])
-            self.my_mutations.append('extend_new_trans')
-            return ext_info["node"] # return id of new trans
-        return # nothing found
+        if not place_id: # TODO: could also filter out place that have leaf extensions?
+            place_id = rd.choice([p for p in self.places.values() if not p.is_end]).id
+        new_trans_id = self.get_new_id(GTrans)
+        new_arc_id = self.get_new_id(GArc)
+        self.transitions[new_trans_id] = GTrans(new_trans_id, is_task=False)
+        self.arcs[new_arc_id] = GArc(new_arc_id, place_id, new_trans_id)
+        self.my_mutations.append('extend_new_trans')
+        return 
 
 
     def trans_trans_conn(self, source_id=None, target_id=None):
-        # this pos function should check if the two are really transitions
         if not source_id and not target_id:
-            for _try in range(params.num_trys_make_conn):
-                source_id = self.pick_trans_with_preference()
-                target_id = self.pick_trans_with_preference()
-                a1_id, p_id, a2_id = innovs.get_trans_to_trans(source_id, target_id)
-                if p_id not in self.places and source_id != target_id: # check if valid
-                    break
-                else:
-                    p_id = None
-        else:
-            a1_id, p_id, a2_id = innovs.get_trans_to_trans(source_id, target_id)
-            if p_id in self.places:
-                print("trans-trans-conn already made")
-                return
-        if p_id:
-            self.arcs[a1_id] = GArc(a1_id, source_id, p_id)
-            self.places[p_id] = GPlace(p_id)
-            self.arcs[a2_id] = GArc(a2_id, p_id, target_id)
-            self.my_mutations.append('trans_trans_conn')
-            return 
+            source_id = self.pick_trans_with_preference()
+            target_id = rd.choice([t for t in self.transitions.keys() if t != source_id])
+        a1_id = self.get_new_id(GArc)
+        a2_id = self.get_new_id(GArc)
+        p_id = self.get_new_id(GPlace)
+        self.arcs[a1_id] = GArc(a1_id, source_id, p_id)
+        self.places[p_id] = GPlace(p_id)
+        self.arcs[a2_id] = GArc(a2_id, p_id, target_id)
+        self.my_mutations.append('trans_trans_conn')
+        return 
 
 
     def split_arc(self):
         if not self.arcs:
             return
-        for _try in range(params.num_trys_split_arc):
-            arc_to_split = rd.choice(list(self.arcs.values()))
-            all_nodes = self.places | self.transitions
-            source = all_nodes[arc_to_split.source_id]
-            target = all_nodes[arc_to_split.target_id]
-            # check if arc is trans -> place, and if this mutation should occur
-            is_t_p = isinstance(source, GTrans)
-            if (is_t_p and not target.is_start) or (not is_t_p and not source.is_end):
-                sp_d = innovs.get_split(source, target)
-                # check if mutation has already occured via place (could also be t or a)
-                if sp_d["p"] not in self.places:
-                    break
-                else:
-                    sp_d = None
-        if sp_d:
-            new_place = GPlace(sp_d["p"])
-            new_trans = GTrans(sp_d["t"], False)
-            if is_t_p:
-                a1 = GArc(sp_d["a1"], source.id, new_place.id)
-                a2 = GArc(sp_d["a2"], new_place.id, new_trans.id)
-                a3 = GArc(sp_d["a3"], new_trans.id, target.id)
-            else:
-                a1 = GArc(sp_d["a1"], source.id, new_trans.id)
-                a2 = GArc(sp_d["a2"], new_trans.id, new_place.id)
-                a3 = GArc(sp_d["a3"], new_place.id, target.id)
-            # insert new stuff to genome
-            self.places[sp_d["p"]] = new_place
-            self.transitions[sp_d["t"]] = new_trans
-            self.arcs.update({sp_d["a1"]:a1, sp_d["a2"]:a2, sp_d["a3"]:a3})
-            # remove old arc
-            del self.arcs[arc_to_split.id]
-            self.my_mutations.append('split_arc')
-            return # mutation success
-        return # nothing found
+
+        # TODO: should also consider arc t-values here
+        arc_to_split = rd.choice(list(self.arcs.values()))
+        all_nodes = self.places | self.transitions
+        source = all_nodes[arc_to_split.source_id]
+        target = all_nodes[arc_to_split.target_id]
+
+        is_t_p = isinstance(source, GTrans)
+
+        new_place_id = self.get_new_id(GPlace)
+        new_place = GPlace(new_place_id)
+        self.places[new_place_id] = new_place
+
+        new_trans_id = self.get_new_id(GTrans)
+        new_trans = GTrans(new_trans_id, is_task=False)
+        self.transitions[new_trans_id] = new_trans
+
+        if is_t_p:
+            a1 = GArc(self.get_new_id(GArc), source.id, new_place.id)
+            a2 = GArc(self.get_new_id(GArc), new_place.id, new_trans.id)
+            a3 = GArc(self.get_new_id(GArc), new_trans.id, target.id)
+        else:
+            a1 = GArc(self.get_new_id(GArc), source.id, new_trans.id)
+            a2 = GArc(self.get_new_id(GArc), new_trans.id, new_place.id)
+            a3 = GArc(self.get_new_id(GArc), new_place.id, target.id)
+        # insert new arcs into genome, delete old one
+        self.arcs.update({a1.id: a1, a2.id: a2, a3.id: a3})
+        del self.arcs[arc_to_split.id]
+        self.my_mutations.append('split_arc')
+        return
 
 
-    def pick_trans_with_preference(self) -> str:
+    def pick_trans_with_preference(self, filter_out=None) -> str:
         """Returns transition id according to preferences set in params
         """
         # set of task trans and empty trans
         task_trans = set(innovs.get_task_list())
         empty_trans = set(self.transitions.keys()).difference(task_trans)
+        all_trans = task_trans.union(empty_trans)
+        # if there are nodes to filter out (because already connected to them)
+        if filter_out:
+            task_trans = task_trans.difference(filter_out)
+            empty_trans = empty_trans.difference(filter_out)
+            all_trans = all_trans.difference(filter_out)
         # pick a trans
-        if params.is_no_preference_for_tasks: # choose from all trans
-            trans_id = rd.choice(list(self.transitions.keys()))
+        if params.is_no_preference_for_tasks and all_trans: # choose from all trans
+            return rd.choice(list(all_trans))
         elif rd.random() < params.prob_pick_empty_trans and empty_trans: # choose from empty trans (provided there are any)
-            trans_id = rd.choice(list(empty_trans)) 
-        else: # choose from tasks
-            trans_id = rd.choice(list(task_trans))
-        return trans_id
+            return rd.choice(list(empty_trans)) 
+        elif task_trans: # choose from tasks
+            return rd.choice(list(task_trans))
+        else:
+            return None # this should only happen when filtering out, called by get_target()
 
 
-    def prune_extensions(self) -> None:
-        source_nodes = map(lambda a: a.source_id, self.arcs.values())
-        for ext_info in innovs.extensions.values():
-            arc_id, node_id, ntype = ext_info["arc"], ext_info["node"], ext_info["ntype"]
-            if arc_id in self.arcs:
-                if node_id not in source_nodes:
-                    # delete node, delete arc
-                    if ntype == GTrans: del self.transitions[node_id]
-                    elif ntype == GPlace: del self.places[node_id]
-                    del self.arcs[arc_id]
-                    # delete all arcs pointing to extension (they shouldnt exist, don't know why still here) 
-                    arcs_to_ext = [a.id for a in self.arcs.values() if a.target_id == node_id]
-                    for arc_id in arcs_to_ext:
-                        del self.arcs[arc_id]
-                    self.my_mutations.append('pruned_an_extension')
+    def prune_leaves(self) -> None: # TODO: name this prune leafs later
+        filtered_places = {k: v for k, v in self.places.items() if not (v.is_start or v.is_end)}
+        all_nodes = filtered_places | self.transitions # exclude start and end
+        for a in self.arcs.values(): # remove all nodes that have outgoing conns
+           try: del all_nodes[a.source_id]
+           except: pass
+        
+        leaf_id = rd.choice(list(all_nodes.keys()))
+        # delete all arcs pointing to the leaf
+        arcs_to_del = [a.id for a in self.arcs.values() if a.target_id == leaf_id]
+        for a_id in arcs_to_del:
+            del self.arcs[a_id]
+
+        if type(all_nodes[leaf_id]) == GPlace:
+            del self.places[leaf_id]
+        else:
+            del self.transitions[leaf_id]
+        self.my_mutations.append("pruned_leaf")
+        return
 
 
     def remove_arcs(self, arcs_to_remove=None) -> None:
+        if len(self.arcs) <= 1:
+            # TODO: could add parameter here for min number of arcs before this mutation triggers
+            return # don't delete the last arc
         if not arcs_to_remove: # no arcs to remove specified
             arcs_to_remove = set()
             for _ in range(params.max_arcs_removed):
@@ -333,12 +339,14 @@ class GeneticNet:
 
     @cache
     def get_arc_t_values(self) -> dict:
-        arc_values = {}
-        associated_arcs = self.get_component_set()
-        for comp in associated_arcs.keys():
-            pop_fit_val = innovs.component_dict[comp]['t_val']
-            for arc_id in associated_arcs[comp]:
-                arc_values[arc_id] = pop_fit_val
+        # TODO: reimplement this somehow
+        arc_values = {a.id: 1 for a in self.arcs.values()}
+        # arc_values = {}
+        # associated_arcs = self.get_component_set()
+        # for comp in associated_arcs.keys():
+        #     pop_fit_val = innovs.component_dict[comp]['t_val']
+        #     for arc_id in associated_arcs[comp]:
+        #         arc_values[arc_id] = pop_fit_val
         return arc_values
 
 # ------------------------------------------------------------------------------
@@ -353,85 +361,6 @@ class GeneticNet:
         new_arcs = {k: v.get_copy() for k, v in self.arcs.items()}
         return GeneticNet(new_transitions, new_places, new_arcs, int(self.id))
 
-    def get_compatibility_score(self, other_genome, debug=False) -> float:
-        if params.distance_metric == "innovs":
-            return self.innov_compatibility(other_genome)
-        elif params.distance_metric == "behavior":
-            return self.behavior_compatibility(other_genome)
-        elif params.distance_metric == "components":
-            return self.component_compatibility(other_genome)
-
-# ----- innovs compatibility
-
-    def innov_compatibility(self, other_genome, debug=False) -> float:
-        """Calculates how similar this genome is to another genome according to the
-        formula proposed in the original NEAT Paper. See distance variable to see
-        how the formula works. It's parameters can be adjusted.
-        """
-        num_matched, num_disjoint, num_excess = 0, 0, 0
-        # get sorted arrays of both genomes innovation historys 
-        my_innovs = sorted(list(self.arcs.keys()))
-        other_innovs = sorted(list(other_genome.arcs.keys()))
-        # if both genomes don't have enabled links, they are compatible. stop calculations here
-        if not (my_innovs and other_innovs):
-            return params.species_boundary - 1
-        # if either of the two genomes has no innovs, all of the other genes are excess genes
-        # --> the first comparison for excess genes will evaluate true, and a score is calc.
-        if not (my_innovs or other_innovs):
-            older_innovs = [-1]
-        # if both have innovs, find the lower last innovation (genome with older innovs)
-        else:
-            older_innovs = my_innovs if my_innovs[-1] < other_innovs[-1] else other_innovs
-        # get a list of every shared innovation from both genomes, without duplicates
-        all_Innovations = sorted(set(my_innovs + other_innovs))
-        # the compat. score formula uses the num of enabled links in larger genome
-        longest = max(len(my_innovs), len(other_innovs))
-        # analyze every innovation and tally up matching, disjoint and excess scores
-        innov_count = 0
-        for innov in all_Innovations:
-            # match: both genomes have invented this arc, calculate difference in number of links
-            if innov in self.arcs and innov in other_genome.arcs:
-                num_matched += 1
-            # excess: elif innov_id exceeds last innov_id of older_Innovations genome, the
-            # remaining Innovations in all_Innovations are excess genes. stop the search.
-            elif innov > older_innovs[-1]:
-                num_excess = len(all_Innovations) - innov_count
-                break
-            # disjoint: if we are sure, that both genomes still have Innovations,
-            # (=not excess), and just one of them has the innov (xor check) -> disjoint
-            elif innov in self.arcs or innov in other_genome.arcs:
-                num_disjoint += 1
-            innov_count += 1
-        # calculate the distance TODO: this is still not perfect - maybe consider matched ones?
-        distance = ((params.coeff_disjoint * num_disjoint) / longest + # disjoint increase dist
-                    (params.coeff_excess * num_excess) / longest) # excess increase dist
-        if distance < 0:
-            raise Exception("Distance should not be < 0")
-        if debug:
-            print(f"""num_matched: {num_matched}\nnum_disjoint: {num_disjoint}
-                num_excess: {num_excess}\ncomputed distance: {distance}""")
-        return distance
-
-# ----- behavior compatibility - TODO: this is not working yet
-    @cache
-    def get_extensive_variants(self, maxlen=None):
-        net, im, fm = self.build_petri()
-        if maxlen:
-            res = extensive_playout(net, im, fm, parameters={"maxTraceLength": maxlen})
-        else:
-            res = extensive_playout(net, im, fm)
-        return set(get_variants(res).keys()) # return only the variants
-
-
-    def behavior_compatibility(self, other) -> float:
-        # this needs to be fetched fresh, bc. the genome might have changed
-        my_variants = self.get_extensive_variants()
-        other_variants = other.get_extensive_variants()
-        # calculate the fraction of overlapping traces
-        overlap = len(my_variants.intersection(other_variants))
-        union = len(my_variants.union(other_variants))
-        fraction = overlap / union if union else 0
-        return 1 - fraction # 0 means identical, 1 means completely different
 
 # ----- component compatibility
     @cache
@@ -444,9 +373,8 @@ class GeneticNet:
 
         for md in maximal_decomposition(net, im, fm): # loop the components
             a_multi_set = Counter() # multiset of arcs in the component
-            arc_ids = []
+
             for a in md[0].arcs:
-                arc_ids.append(innovs.get_arc(a.source.name, a.target.name)) # get the innov id of arc in component
                 if type(a.source) == PetriNet.Transition: # target must be a place
                     # pack into iterable (list) to avoid unpacking
                     a_multi_set.update([(format_tname(a.source), "p")]) # only one place per component
@@ -455,7 +383,7 @@ class GeneticNet:
 
             # convert multiset to tuple to make it hashable, order of tuples must be the same
             if res := tuple(sorted(a_multi_set.items())): # only add non-empty components
-                comp_dict[res] = arc_ids
+                comp_dict[res] = [] # TODO: add the arc ids back to this
 
         return comp_dict
 
@@ -610,7 +538,6 @@ class GeneticNet:
 
 
     def remove_unused_nodes(self) -> None:
-        # wow this is a piece of shit
         connected = self.get_connected()
         t_to_del = []
         for t in self.transitions:

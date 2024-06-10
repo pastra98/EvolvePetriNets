@@ -213,7 +213,7 @@ class GeneticAlgorithm:
 
     def pop_update(self) -> None:
         if self.is_timed: self.timer.start("pop_update", self.curr_gen)
-        self.old_innovnum = innovs.curr_arc_id
+        self.old_innovnum = 0
 
         if params.selection_strategy == "speciation":
             self.speciation_pop_update()
@@ -222,7 +222,7 @@ class GeneticAlgorithm:
         elif params.selection_strategy == "truncation": # https://www.researchgate.net/publication/259461147_Selection_Methods_for_Genetic_Algorithms
             self.truncation_pop_update()
 
-        self.new_innovnum = innovs.curr_arc_id
+        self.new_innovnum = 0 # TODO: return usefull stats again
 
         if self.is_timed: self.timer.stop("pop_update", self.curr_gen)
 
@@ -252,7 +252,7 @@ class GeneticAlgorithm:
                 else:
                     baby = s.asex_spawn()
                 # check if baby should speciate away from it's current species
-                if baby.get_compatibility_score(s.representative) > params.species_boundary:
+                if baby.component_compatibility(s.representative) > params.species_boundary:
                     # if the baby is too different, find an existing species to change
                     # into. If no compatible species is found, a new one is made and returned
                     found_species = self.find_and_add_to_species(baby)
@@ -307,8 +307,8 @@ class GeneticAlgorithm:
         # try to find an existing species to which the genome is close enough to be a member
         comp_score = params.species_boundary
         for s in self.species:
-            if new_genome.get_compatibility_score(s.representative) < comp_score:
-                comp_score = new_genome.get_compatibility_score(s.representative)
+            if new_genome.component_compatibility(s.representative) < comp_score:
+                comp_score = new_genome.component_compatibility(s.representative)
                 found_species = s
         # new genome matches no current species -> make a new one
         if not found_species:
@@ -326,7 +326,7 @@ class GeneticAlgorithm:
             else:
                 s = self.species[i]
             baby = s.elite_spawn_with_mutations()
-            if baby.get_compatibility_score(s.representative) > params.species_boundary:
+            if baby.component_compatibility(s.representative) > params.species_boundary:
                 found_species = self.find_and_add_to_species(baby)
             else:
                 s.add_member(baby)

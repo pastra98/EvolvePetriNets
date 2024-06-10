@@ -59,11 +59,6 @@ species_boundary: float
 # component multiplier, if distance_metric == "components" increase importance of shared components
 component_mult: float
 
-# innov multipliers
-coeff_disjoint: float
-coeff_excess: float
-coeff_matched: float
-
 # species relevant stuff
 enough_gens_to_change_things: int
 update_species_rep: bool
@@ -71,13 +66,11 @@ leader_is_rep: bool
 selection_threshold: int
 spawn_cutoff: float # actually also used by truncation_pop_update
 elitism: bool
-prob_asex: float
 
 allowed_gens_no_improvement: int
 old_age: int
 old_penalty: float
 youth_bonus: float
-random_mating: bool
 # -------------------- selection strategy: ROULETTE 
 # -------------------- selection strategy: TRUNCATION
 
@@ -121,15 +114,9 @@ prob_new_empty_t: list[float, float]
 # split an arc
 prob_split_arc: list[float, float]
 # prune extensions
-prob_prune_extensions: list[float, float]
+prob_prune_leafs: list[float, float]
 
 is_no_preference_for_tasks: bool # if this is True, prob pick_tasks_trans is ignored
 prob_pick_empty_trans: float # probability of picking a task transition
-
-num_trys_make_conn: int
-
-# -------------------- split arc
-prevent_chaining: bool
-num_trys_split_arc: int
 
 # ------------------------------------------------------------------------------
