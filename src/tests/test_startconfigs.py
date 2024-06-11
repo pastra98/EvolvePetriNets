@@ -7,6 +7,7 @@ log
 ################################################################################
 #################### SPLICING THE LOG AND MINING ON IT #########################
 ################################################################################
+from pm4py.analysis import maximal_decomposition
 
 from neatutils.splicing import balanced_splice
 from pm4py.stats import get_variants
@@ -53,8 +54,6 @@ def get_all_nets(log):
     return allnets
 
 allnets = get_all_nets(log)
-
-# %%
 
 # %%
 ################################################################################
@@ -168,24 +167,27 @@ def build_mined_nets(net_list):
     # It shall be responsible for creating the task list and setting it in innovs
     # generate genomes
     new_genomes = []
-    #
     for i, net in enumerate(net_list):
-        g = construct_genome_from_mined_net(net["net"], i+1)
+        net, im, fm = net['net'], net['im'], net['fm']
+        g = construct_genome_from_mined_net(net, im, fm, i+1)
         new_genomes.append(g)
     return new_genomes
 
-def construct_genome_from_mined_net(net, node_prefix: int):
+def construct_genome_from_mined_net(net, im, fm, node_prefix: int):
     # update the labels of the net for consistent naming for all mining algos
     pi, ti = 0, 0
     gplaces, gtransitions, garcs = dict(), dict(), dict()
-
+    # assumes there is only 1 start and end place
+    start_p, end_p = str(list(im.keys())[0]), str(list(fm.keys())[0])
+    
     for p in net.places:
-        if p.name not in ["start", "end"]:
+        if p.name not in [start_p, end_p]:
             p.label = f"p{node_prefix}0{pi}" # new property added
             pi += 1
             gplaces[p.label] = netobj.GPlace(p.label)
         else: # add label property also for start and end places
-            p.label = p.name
+            p.label = "start" if p.name == start_p else "end"
+            gplaces[p.label] = netobj.GPlace(p.label)
 
     for t in net.transitions:
         if t.label not in innovs.fp_log['activities']:
@@ -210,21 +212,8 @@ from pm4py.objects.petri_net.utils.reachability_graph import construct_reachabil
 
 # n = allnets[0]
 for n in allnets[:2] + [allnets[3]]:
-    ts = construct_reachability_graph(n["net"], n["im"], n["fm"], parameters={"max_elab_time": 1.0})
-    pm4py.vis.view_transition_system(ts)
-
-#%%
-################################################################################
-#################### TESTING MAXIMAL DECOMPOSITION #############################
-################################################################################
-from pm4py.analysis import maximal_decomposition
-
-# for net in allnets[:3]:
-#     print("initial net")
-#     pm4py.view_petri_net(net["net"])
-#     print("decomposed nets")
-#     for c in maximal_decomposition(net["net"], net["im"], net["fm"]):
-#         pm4py.view_petri_net(c[0])
+    tso = construct_reachability_graph(n["net"], n["im"], n["fm"], parameters={"max_elab_time": 1.0})
+    pm4py.vis.view_transition_system(tso)
 
 #%%
 ################################################################################
@@ -409,14 +398,23 @@ plot_averages(df)
 
 # %%
 ################################################################################
-############ UPDATING GENOME COMPONENT DECOMPOSITION TO INCLUDE IDS ############
+#################### CUSTOM COMPONENT FUNCTION ###################################
 ################################################################################
+from pprint import pprint
 
-fg = reload_module_and_get_fresh_genome()
+g = reload_module_and_get_fresh_genome()[2]
 
-g = fg[1]
+net, im, fm = g.build_petri()
+pm4py.view_petri_net(net, im, fm, debug=True)
+pprint(g.get_component_list())
 
-pm4py.view_petri_net(*g.build_petri(), debug=True)
-c_set, arc_dict = g.get_component_set()
-print(c_set, 3*"\n")
-print(arc_dict)
+# %%
+a = {1,2,3}
+b = {3,4,5}
+
+# %%
+s = set()
+print(s)
+
+s.update(g.get_unique_component_set())
+print(s)

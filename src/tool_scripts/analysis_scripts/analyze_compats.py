@@ -101,3 +101,9 @@ for key in ['sqrt_end_times', 'raw_end_times']:
 df.drop('start_time', inplace=True)
 
 df
+
+# %%
+# test uuids
+import uuid
+
+str(uuid.uuid4())
