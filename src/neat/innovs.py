@@ -1,9 +1,10 @@
 import sys, importlib # used for reset
-
 import numpy as np
-from numba import njit
 
+from numba import njit
+from copy import copy
 from typing import List
+
 from neat.netobj import GArc, GTrans, GPlace
 from neat import params
 
@@ -14,10 +15,11 @@ is_tasks_set = False
 fp_log = None
 
 nodes = {"start":GPlace, "end":GPlace}
-arcs = {}
+arcs = dict()
 
 # dict containing extended places and trans that are not yet connected to any other nodes
-component_dict = {}
+component_dict = dict()
+component_history = dict()
 
 curr_genome_id = 0
 
@@ -55,8 +57,13 @@ def get_task_list() -> List[str]:
     return list(fp_log["activities"])
 
 
-def update_component_fitnesses(population):
+def update_component_fitnesses(population: list, generation: int):
     global component_dict
+    # for the old generation, add the components to the history
+    for c in component_dict:
+        if c not in component_history:
+            component_history[c] = generation
+    # pair the components of the new population with their fitness values
     fitness_components = []
     for g in population:
         # TODO: can later test different fitness metrics here, e.g. just perc_fit_traces
@@ -70,15 +77,15 @@ def update_component_fitnesses(population):
 
 # @njit(parallel=True)
 def calculate_t_vals(fitness_components: list) -> dict:
-    comp_dict = {}
+    comp_fitness_dict = {}
 
     # TODO: this logic could also be handled in caller, especially if other
     # keys are added to the dict for other prob_map influences
-    pop_fit, comp_dict  = [], {}
+    pop_fit, comp_fitness_dict  = [], {}
     for fc in fitness_components: 
         pop_fit.append(fc[0])
         for component in fc[1]: # assort fitness val with every component
-                comp_dict.setdefault(component,
+                comp_fitness_dict.setdefault(component,
                                         {"all_fitnesses": [],
                                          "t_val": None}
                                     ).get("all_fitnesses").append(fc[0])
@@ -86,14 +93,14 @@ def calculate_t_vals(fitness_components: list) -> dict:
     pop_sum, pop_len = pop_fit.sum(), len(pop_fit)
     pop_df = pop_len - 2
 
-    for component in comp_dict:
-        included = np.array(comp_dict[component]["all_fitnesses"])
-        comp_dict[component]["t_val"] = compute_t(included, pop_fit, pop_len, pop_sum, pop_df)
+    for component in comp_fitness_dict:
+        included = np.array(comp_fitness_dict[component]["all_fitnesses"])
+        comp_fitness_dict[component]["t_val"] = compute_t(included, pop_fit, pop_len, pop_sum, pop_df)
         # this should only happen in the first gen, when the start and end connections
         # yield components, shared by everyone, making t value comparison impossible
         if len(included) == params.popsize:
-            comp_dict[component]["t_val"] = 1 # TODO: revisit this number maybe later
-    return comp_dict
+            comp_fitness_dict[component]["t_val"] = 1 # TODO: revisit this number maybe later
+    return comp_fitness_dict
 
 # @njit(parallel=True)
 def compute_t(inc, pop, pop_len, pop_sum, pop_df):

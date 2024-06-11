@@ -63,10 +63,6 @@ class GeneticAlgorithm:
         self.evaluate_curr_generation()
         self.is_curr_gen_evaluated = True
 
-        # innovs updates the component fitnesses
-        if params.use_t_vals:
-            innovs.update_component_fitnesses(self.population)
-
         # writes info into gen info dict
         self.log_gen_info()
 
@@ -90,6 +86,11 @@ class GeneticAlgorithm:
         if params.selection_strategy == "speciation":
             self.evaluate_curr_species()
         if self.is_timed: self.timer.stop("evaluate_curr_generation", self.curr_gen)
+        # innovs updates the component fitnesses
+        if params.use_t_vals:
+            innovs.update_component_fitnesses(self.population, self.curr_gen)
+        self.old_innovnum = self.new_innovnum
+        self.new_innovnum = len(innovs.component_history)
         return
 
 
@@ -212,7 +213,6 @@ class GeneticAlgorithm:
 
     def pop_update(self) -> None:
         if self.is_timed: self.timer.start("pop_update", self.curr_gen)
-        self.old_innovnum = 0
 
         if params.selection_strategy == "speciation":
             self.speciation_pop_update()
@@ -220,8 +220,6 @@ class GeneticAlgorithm:
             self.roulette_pop_update()
         elif params.selection_strategy == "truncation": # https://www.researchgate.net/publication/259461147_Selection_Methods_for_Genetic_Algorithms
             self.truncation_pop_update()
-
-        self.new_innovnum = 0 # TODO: return usefull stats again
 
         if self.is_timed: self.timer.stop("pop_update", self.curr_gen)
 
