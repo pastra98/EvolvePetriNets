@@ -12,6 +12,7 @@ import importlib
 import matplotlib
 import pickle
 import os
+import re
 
 
 def save_report(
@@ -146,13 +147,14 @@ def species_plot(full_history, savedir: str):
     gc.collect()
 
 
-def save_genome_gviz(genome, ftype: str, savedir: str, use_custom_gviz=False, name_prefix="") -> None:
-    # get gviz based on custom or default gviz from pm4py
-    if use_custom_gviz:
-        gviz = genome.get_graphviz()
-    else:
-        net, im, fm = genome.build_petri()
-        gviz = visualizer.apply(net, im, fm)
+def save_genome_gviz(genome, ftype: str, savedir: str, name_prefix="") -> None:
+    net, im, fm = genome.build_petri()
+    # remove the label for all non-task transitions (without task list)
+    empty_t = [t.id for t in genome.transitions.values() if not t.is_task]
+    for t in net.transitions:
+        if t.label in empty_t:
+            t.label = None
+    gviz = visualizer.apply(net, im, fm)
     # try saving in desired format
     try:
         gviz.format = ftype

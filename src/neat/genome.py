@@ -159,9 +159,6 @@ class GeneticNet:
             # might return none
             return self.pick_trans_with_preference(filter_out=list(connected))
 
-        else:
-            raise Exception("This should only be called for places or transitions")
-
 
     def place_trans_arc(self, place_id=None, trans_id=None) -> None:
         if not place_id and not trans_id: # no trans/place specified in arguments
@@ -502,54 +499,11 @@ class GeneticNet:
         return set(itertools.chain.from_iterable(connected))
 
 
-    def get_graphviz(self) -> Digraph:
-        # parameter stuff, TODO: think about where to put this
-        fsize = "12"
-        tcol = "yellow"
-        pcol = "lightblue"
-        ahead = "normal"
-        viz = Digraph(format="png")
-        viz.graph_attr["rankdir"] = "LR"
-        viz.attr("node", shape="box")
-        viz.attr(overlap="false")
-        # viz.attr(size="21, 21")
-        # viz.attr(size="11, 11")
-        connected = self.get_connected()
-        # transitions
-        for t in self.transitions:
-            if t in connected:
-                if self.transitions[t].is_task: # task
-                    viz.node(t, t, style='filled', fillcolor=tcol, border='1', fontsize=fsize)
-                else: # empty trans
-                    viz.node(t, t, style='filled', fontcolor="white", fillcolor="black", fontsize=fsize)
-        # places
-        for p in self.places:
-            if p in connected:
-                if p == "start":
-                    viz.node("start", style='filled', fillcolor="green", fontsize=fsize,
-                                shape='circle', fixedsize='true', width='0.75')
-                elif p == "end":
-                    viz.node("end", style='filled', fillcolor="orange", fontsize=fsize,
-                                shape='circle', fixedsize='true', width='0.75')
-                else:
-                    viz.node(p, p, style='filled', fillcolor=pcol, fontsize=fsize,
-                                shape='circle', fixedsize='true', width='0.75')
-        # arcs
-        for name, a in self.arcs.items():
-            viz.edge(a.source_id, a.target_id, label=str(name), fontsize=fsize, arrowhead=ahead)
-        return viz
-
-
     def get_curr_info(self) -> dict:
         """Used for serialization when not wanting to save the entire object
         """
         discard = ["transitions", "places", "arcs"]
         return {var: val for var, val in vars(self).items() if var not in discard}
-
-    def show_nb_graphviz(self) -> None:
-        from IPython.core.display import display, Image
-        gviz = self.get_graphviz()
-        display(Image(data=gviz.pipe(format="png"), unconfined=True, retina=True))
 
 
     def remove_unused_nodes(self) -> None:
