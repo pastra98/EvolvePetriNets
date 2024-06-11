@@ -296,6 +296,9 @@ class GeneticNet:
            try: del all_nodes[a.source_id]
            except: pass
         
+        if not all_nodes:
+            return # no suitable leaf nodes
+
         leaf_id = rd.choice(list(all_nodes.keys()))
         # delete all arcs pointing to the leaf
         arcs_to_del = [a.id for a in self.arcs.values() if a.target_id == leaf_id]
