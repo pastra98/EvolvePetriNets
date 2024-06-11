@@ -3,7 +3,7 @@ from copy import copy
 
 @dataclass(frozen=True)
 class GArc:
-    id: int
+    id: str
     source_id: str
     target_id: str
 
