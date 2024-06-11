@@ -3,12 +3,12 @@ from neat import params
 from neat.genome import GeneticNet
 
 class Species:
-    def __init__(self, name) -> None:
+    def __init__(self, name, founder: GeneticNet) -> None:
         self.name = name
         self.alive_members = []
 
         self.age = 0
-        self.representative = None
+        self.representative = founder
         self.leader = None
         self.alive_members = []
         self.num_members: int = 0
@@ -22,6 +22,7 @@ class Species:
         self.num_to_spawn = 0 # The amount of offspring to be spawned in the next generation
         self.num_gens_no_improvement = 0
         self.curr_mutation_rate = 0 # 0 -> normal or 1 -> high
+        self.component_set = founder.get_unique_component_set() # for first gen just use founder
 
     
     def add_member(self, new_genome) -> None:
@@ -74,10 +75,23 @@ class Species:
             self.avg_fitness = sum(map(lambda m: m.fitness, self.alive_members)) / len(self.alive_members)
             fit_modif = params.youth_bonus if self.age < params.old_age else params.old_penalty
             self.avg_fitness_adjusted = self.avg_fitness * fit_modif
+            # save the components of the last gen
+            if params.compat_to_multiple:
+                self.component_set = self.update_components()
             # reassign alive members to a new empty array, so new agents can be placed
             # in the next gen. Clearing it also clear the pool, since pool is a reference.
             self.alive_members = []
             
+
+    def update_components(self) -> set:
+        """Adds #species_component_pool_size component sets to a shared set of components
+        """
+        n_representatives = min(params.species_component_pool_size, len(self.alive_members))
+        representatives = rd.choices(self.alive_members, k=n_representatives)
+        components = set()
+        for rep in representatives:
+            components.update(rep.get_unique_component_set())
+        return components
     
     def calculate_offspring_amount(self, total_avg_species_fitness) -> None:
         """This func does not care about the fitness of individual members. It

@@ -55,8 +55,8 @@ initial_as_gauss_dist: list[float, float]
 # -------------------- selection strategy: SPECIATION
 species_boundary: float
 
-# component multiplier, if distance_metric == "components" increase importance of shared components
-component_mult: float
+compat_to_multiple: bool # if true, then new genomes are compared to components from multiple members
+species_component_pool_size: int
 
 # species relevant stuff
 enough_gens_to_change_things: int

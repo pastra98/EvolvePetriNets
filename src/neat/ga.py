@@ -198,14 +198,13 @@ class GeneticAlgorithm:
     def get_ga_final_info(self) -> dict:
         """Returns dict of history along with dict of param_values and max_fitnesss
         """ 
-        results = {
+        return {
             "history": self.history,
             "param_values": params.get_curr_curr_dict(),
             "best_genome": self.best_genome,
             "improvements": self.improvements,
             "max_fitness": self.best_genome.fitness
         }
-        return results
 
 # ------------------------------------------------------------------------------
 # POPULATION UPDATES -----------------------------------------------------------
@@ -252,7 +251,11 @@ class GeneticAlgorithm:
                 else:
                     baby = s.asex_spawn()
                 # check if baby should speciate away from it's current species
-                if baby.component_compatibility(s.representative) > params.species_boundary:
+                if params.compat_to_multiple: # get species component set
+                    cset = s.component_set
+                else:
+                    cset = s.representative.get_unique_component_set()
+                if baby.component_compatibility(cset) > params.species_boundary:
                     # if the baby is too different, find an existing species to change
                     # into. If no compatible species is found, a new one is made and returned
                     found_species = self.find_and_add_to_species(baby)
@@ -307,8 +310,12 @@ class GeneticAlgorithm:
         # try to find an existing species to which the genome is close enough to be a member
         comp_score = params.species_boundary
         for s in self.species:
-            if new_genome.component_compatibility(s.representative) < comp_score:
-                comp_score = new_genome.component_compatibility(s.representative)
+            if params.compat_to_multiple:
+                cset = s.component_set
+            else:
+                cset = s.representative.get_unique_component_set()
+            if new_genome.component_compatibility(cset) < comp_score:
+                comp_score = new_genome.component_compatibility(cset)
                 found_species = s
         # new genome matches no current species -> make a new one
         if not found_species:
@@ -326,7 +333,11 @@ class GeneticAlgorithm:
             else:
                 s = self.species[i]
             baby = s.elite_spawn_with_mutations()
-            if baby.component_compatibility(s.representative) > params.species_boundary:
+            if params.compat_to_multiple:
+                cset = s.component_set
+            else:
+                cset = s.representative.get_unique_component_set()
+            if baby.component_compatibility(cset) > params.species_boundary:
                 found_species = self.find_and_add_to_species(baby)
             else:
                 s.add_member(baby)
@@ -339,8 +350,7 @@ class GeneticAlgorithm:
         representative, and adds the new species to curr_species and returns it.
         """
         new_species_id = f"{self.curr_gen}_{founding_member.id}"
-        new_species = Species(new_species_id)
-        new_species.representative = founding_member
+        new_species = Species(new_species_id, founding_member)
         self.species.append(new_species)
         self.num_new_species += 1
         return new_species
