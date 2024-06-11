@@ -100,7 +100,8 @@
     ],
     "is_no_preference_for_tasks": false,
     "prob_pick_empty_trans": 0.3,
-    "component_mult": 5,
     "mutation_type": "atomic",
-    "use_t_vals": true
+    "use_t_vals": true,
+    "compat_to_multiple": true,
+    "species_component_pool_size": 5
 }

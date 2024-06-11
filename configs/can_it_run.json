@@ -1,8 +1,8 @@
 {
-    "name": "can_it_run",
+    "name": "new_ids_test",
     "setups": [
         {
-            "setupname": "component_test_mult5",
+            "setupname": "whatever",
             "parampath": "params/testing/speciation_test_component_similarity.json",
             "logpath": "pm_data/running_example.xes",
             "ga_kwargs": {
