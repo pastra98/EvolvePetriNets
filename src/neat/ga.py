@@ -1,6 +1,7 @@
 import numpy as np
 import random as rd
 from copy import copy
+from datetime import datetime
 
 from neatutils import timer
 from neatutils.splicing import get_spliced_log_on_gen
@@ -18,6 +19,7 @@ class GeneticAlgorithm:
             is_pop_serialized=True,
             is_timed=True)-> None:
 
+        self.start_time = datetime.now()
         self.history = {}
         self.improvements = {} # store every best genome that improved upon the previous one
         self.params_name = params_name
@@ -204,7 +206,8 @@ class GeneticAlgorithm:
             "param_values": params.get_curr_curr_dict(),
             "best_genome": self.best_genome,
             "improvements": self.improvements,
-            "max_fitness": self.best_genome.fitness
+            "max_fitness": self.best_genome.fitness,
+            "duration": str(datetime.now() - self.start_time)
         }
 
 # ------------------------------------------------------------------------------

@@ -53,7 +53,7 @@ def save_report(
         plot_mutation_effects(pop_df, savedir=savedir)
     except:
         pass # means that multi-mutation was used, making mut effects impossible
-    run_report(full_history, savedir=savedir)
+    run_report(ga_info, savedir=savedir)
     gc.collect()
 
 
@@ -211,12 +211,11 @@ def plot_detailed_fitness(full_history, savedir: str) -> None:
     plt.close("all")
 
 
-def run_report(full_history, savedir: str) -> None:
+def run_report(ga_info, savedir: str) -> None:
     try:
         with open(f"{savedir}/report.txt", "w") as f:
-            # can put usefull stuff here
-            best_fit = list(full_history.values())[-1]["best genome fitness"]
-            f.write(str(best_fit))
+            f.write(f"best fitness:\n{ga_info['best_genome'].fitness}\n")
+            f.write(f"duration of run:\n{ga_info['duration']}")
     except:
         print(f"couldn't save report in\n{savedir}")
         print(traceback.format_exc())
