@@ -74,6 +74,7 @@ for box in bp['boxes']:
 ax1.set_xticks(np.arange(1, len(mutations) + 1))
 ax1.set_xticklabels(mutations, rotation=45, ha='right')
 ax1.tick_params(axis='y', labelcolor=color)
+ax1.axhline(y=0, color='lightgray', linestyle='--')
 
 # Create a second y-axis to show relative frequency
 ax2 = ax1.twinx()

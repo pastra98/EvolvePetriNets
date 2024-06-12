@@ -283,6 +283,8 @@ def plot_mutation_effects(pop_df, savedir: str):
     color = 'tab:blue'
     ax1.set_xlabel('Mutation')
     ax1.set_ylabel('Fitness Impact Distribution', color=color)
+    ax1.axhline(y=0, color='lightgray', linestyle='--')
+
     bp = ax1.boxplot(data_for_boxplot, patch_artist=True, meanline=True, showmeans=True)
 
     for box in bp['boxes']:
