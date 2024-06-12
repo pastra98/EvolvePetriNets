@@ -1,9 +1,9 @@
 {
-    "name": "new_ids_test",
+    "name": "deprecate_log_splices",
     "setups": [
         {
-            "setupname": "whatever",
-            "parampath": "params/testing/speciation_test_component_similarity.json",
+            "setupname": "prob_01",
+            "parampath": "params/testing/test_params.json",
             "logpath": "pm_data/running_example.xes",
             "ga_kwargs": {
                 "is_pop_serialized": true,
@@ -12,7 +12,7 @@
             },
             "stop_cond": {
                 "var": "gen",
-                "val": 10
+                "val": 50
             },
             "n_runs": 1,
             "send_gen_info_to_console": true,
