@@ -1,10 +1,8 @@
 import numpy as np
-import random as rd
 from copy import copy
 from datetime import datetime
 
 from neatutils import timer
-from neatutils.splicing import get_spliced_log_on_gen
 
 from neat import params, innovs, initial_population
 from neat.genome import GeneticNet
@@ -97,15 +95,10 @@ class GeneticAlgorithm:
 
 
     def evaluate_curr_genomes(self) -> None:
-        # if log is spliced according to params, pass spliced log for curr gen here
-        if params.log_splices:
-            log = get_spliced_log_on_gen(self.curr_gen, self.log)
-        else:
-            log = self.log
         # calc fitness for every genome
         self.total_pop_fitness = 0
         for g in self.population:
-            g.evaluate_fitness(log)
+            g.evaluate_fitness(self.log)
             self.total_pop_fitness += g.fitness
         self.population.sort(key=lambda g: g.fitness, reverse=True)
         # check if fitness improvement happened

@@ -42,7 +42,6 @@ def get_curr_curr_dict() -> dict:
 start_config: str
 popsize: int
 selection_strategy: str # "speciation" / "roulette" / "truncation"
-log_splices: dict
 
 # -------------------- start config: random
 initial_tp_gauss_dist: list[float, float]
