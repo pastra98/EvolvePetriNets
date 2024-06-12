@@ -114,6 +114,8 @@ prob_new_empty_t: list[float, float]
 prob_split_arc: list[float, float]
 # prune extensions
 prob_prune_leafs: list[float, float]
+# flip arc
+prob_flip_arc: list[float, float]
 
 is_no_preference_for_tasks: bool # if this is True, prob pick_tasks_trans is ignored
 prob_pick_empty_trans: float # probability of picking a task transition

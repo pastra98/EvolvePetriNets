@@ -101,6 +101,8 @@ class GeneticNet:
                 self.split_arc()
             if rd.random() < params.prob_prune_leafs[mutation_rate]:
                 self.prune_leaves()
+            if rd.random() < params.prob_prune_leafs[mutation_rate]:
+                self.flip_arc()
         except:
             print(traceback.format_exc()) # TODO: meh, aint got not time to do logging here
 
@@ -116,7 +118,8 @@ class GeneticNet:
             self.extend_new_place,
             self.extend_new_trans,
             self.split_arc,
-            self.prune_leaves
+            self.prune_leaves,
+            self.flip_arc
         ]
         probabilities = [
             params.prob_remove_arc[mutation_rate],
@@ -126,7 +129,8 @@ class GeneticNet:
             params.prob_new_p[mutation_rate],
             params.prob_new_empty_t[mutation_rate],
             params.prob_split_arc[mutation_rate],
-            params.prob_prune_leafs[mutation_rate]
+            params.prob_prune_leafs[mutation_rate],
+            params.prob_flip_arc[mutation_rate],
         ]
         mutation = rd.choices(mutations, weights=probabilities, k=1)[0]
         mutation()
@@ -134,7 +138,7 @@ class GeneticNet:
         # and call itself again
 
 
-    def get_target(self, source) -> str:
+    def pick_target_node(self, source) -> str:
         """ given a source node, return a random node that
          - isn't opposite node type
          - isn't already connected
@@ -160,11 +164,26 @@ class GeneticNet:
             return self.pick_trans_with_preference(filter_out=list(connected))
 
 
+    def pick_arc(self) -> str:
+        """Returns a arc id, if use t-vals, return arcs with lower t-values
+        with higher probability i.e. arcs that might correlate with negative fitness
+        """
+        if params.use_t_vals:
+            arcdict = self.get_arc_t_values()
+            # since higher t is better, multiply ts with -1 for removal/flipping
+            arc_weights = np.array(list(arcdict.values()))
+            arc_weights = arc_weights * -1 + abs(arc_weights.sum())
+            arc = rd.choices(list(arcdict.keys()), weights=arc_weights, k=1)[0]
+        else:
+            arc = rd.choices(list(self.arcs.keys()), k=1)[0]
+        return arc
+
+
     def place_trans_arc(self, place_id=None, trans_id=None) -> None:
         if not place_id and not trans_id: # no trans/place specified in arguments
             # pick a place that is not the end place, pick a trans
             place_id = rd.choice([p for p in self.places if p != "end"])
-            trans_id = self.get_target(self.places[place_id])
+            trans_id = self.pick_target_node(self.places[place_id])
             if not trans_id:
                 return # place already connected to all available transitions
             arc_id = str(uuid4())
@@ -180,7 +199,7 @@ class GeneticNet:
         if not trans_id and not place_id: # no trans/place specified in arguments
             # pick a trans, pick a place that is not the start place
             trans_id = self.pick_trans_with_preference()
-            place_id = self.get_target(self.transitions[trans_id])
+            place_id = self.pick_target_node(self.transitions[trans_id])
             if not place_id:
                 return # the only available places are already connected
             arc_id = str(uuid4())
@@ -317,27 +336,27 @@ class GeneticNet:
 
 
     def remove_arcs(self, arcs_to_remove=None) -> None:
-        if len(self.arcs) <= 1:
-            # TODO: could add parameter here for min number of arcs before this mutation triggers
-            return # don't delete the last arc
+        if len(self.arcs) <= ((len(self.places) + len(self.transitions)) / 3):
+            return # if the number of arcs is less than third of all nodes, do not remove
         if not arcs_to_remove: # no arcs to remove specified
             arcs_to_remove = set()
             for _ in range(params.max_arcs_removed):
-                if params.use_t_vals:
-                    arcdict = self.get_arc_t_values()
-                    # since higher t is better, multiply ts with -1 for removal
-                    arc_weights = np.array(list(arcdict.values()))
-                    arc_weights = arc_weights * -1 + abs(arc_weights.sum())
-                    arc = rd.choices(list(arcdict.keys()), weights=arc_weights, k=1)[0]
-                else:
-                    arc = rd.choices(list(self.arcs.keys()), k=1)[0]
-                arcs_to_remove.add(arc) # use a set to prevent duplicates
+                # use a set to prevent duplicates
+                arcs_to_remove.add(self.pick_arc())
             arcs_to_remove = list(arcs_to_remove)
         # delete arcs in arcs to remove
         for a_id in arcs_to_remove:
             del self.arcs[a_id]
             self.my_mutations.append('removed_an_arc')
 
+    def flip_arc(self, arc_to_flip=None):
+        if not self.arcs:
+            return # no arcs left to flip
+        if not arc_to_flip:
+            arc_to_flip = self.arcs[self.pick_arc()]
+        new_arc = GArc(str(uuid4()), arc_to_flip.target_id, arc_to_flip.source_id)
+        del self.arcs[arc_to_flip.id]
+        self.my_mutations.append('flipped_an_arc')
 
     @cache
     def get_arc_t_values(self) -> dict:
