@@ -1,7 +1,7 @@
 # don't save results and pm_data
 results/data
 pm_data/
-results/test_compats_here
+results/results_used_in_analysis
 
 # don't save compiled modules
 *.pyc
