@@ -198,7 +198,10 @@ class GeneticNet:
         new_place_id = str(uuid4())
         new_arc_id = str(uuid4())
         self.places[new_place_id] = GPlace(new_place_id)
-        self.arcs[new_arc_id] = GArc(new_arc_id, trans_id, new_place_id)
+        if rd.random() < 0.5: # t -> p
+            self.arcs[new_arc_id] = GArc(new_arc_id, trans_id, new_place_id)
+        else: # p -> t
+            self.arcs[new_arc_id] = GArc(new_arc_id, new_place_id, trans_id)
         self.my_mutations.append('extend_new_place')
         return
 
@@ -209,7 +212,10 @@ class GeneticNet:
         new_trans_id = str(uuid4())
         new_arc_id = str(uuid4())
         self.transitions[new_trans_id] = GTrans(new_trans_id, is_task=False)
-        self.arcs[new_arc_id] = GArc(new_arc_id, place_id, new_trans_id)
+        if rd.random() < 0.5: # p -> t
+            self.arcs[new_arc_id] = GArc(new_arc_id, place_id, new_trans_id)
+        else: # t -> p
+            self.arcs[new_arc_id] = GArc(new_arc_id, new_trans_id, place_id)
         self.my_mutations.append('extend_new_trans')
         return 
 
