@@ -152,7 +152,7 @@ class GeneticNet:
         if type(source) == GTrans:
             suitable_places = []
             for p in self.places.values():
-                if p.id not in connected and not p.is_start:
+                if p.id not in connected.union({'start'}):
                     suitable_places.append(p.id)
                 if not suitable_places:
                     return None
@@ -164,25 +164,60 @@ class GeneticNet:
             return self.pick_trans_with_preference(filter_out=list(connected))
 
 
-    def pick_arc(self) -> str:
+    def pick_trans_with_preference(self, filter_out=None) -> str:
+        """Returns transition id according to preferences set in params
+        """
+        # set of task trans and empty trans
+        task_trans = set(innovs.get_task_list())
+        empty_trans = set(self.transitions).difference(task_trans)
+        all_trans = task_trans.union(empty_trans)
+        # if there are nodes to filter out (because already connected to them)
+        if filter_out:
+            task_trans = task_trans.difference(filter_out)
+            empty_trans = empty_trans.difference(filter_out)
+            all_trans = all_trans.difference(filter_out)
+        # pick a trans
+        if params.is_no_preference_for_tasks and all_trans: # choose from all trans
+            return rd.choice(list(all_trans))
+        elif rd.random() < params.prob_pick_empty_trans and empty_trans: # choose from empty trans (provided there are any)
+            return rd.choice(list(empty_trans)) 
+        elif task_trans: # choose from tasks
+            return rd.choice(list(task_trans))
+        else:
+            return None # this should only happen when filtering out, called by get_target()
+
+
+    def pick_arc(self, filter_out=set()) -> str:
         """Returns a arc id, if use t-vals, return arcs with lower t-values
         with higher probability i.e. arcs that might correlate with negative fitness
         """
+        choose_from = sorted(list(set(self.arcs).difference(filter_out)))
         if params.use_t_vals:
-            arcdict = self.get_arc_t_values()
-            # since higher t is better, multiply ts with -1 for removal/flipping
-            arc_weights = np.array(list(arcdict.values()))
-            arc_weights = arc_weights * -1 + abs(arc_weights.sum())
-            arc = rd.choices(list(arcdict.keys()), weights=arc_weights, k=1)[0]
+            a_weights_dict = self.get_arc_t_values()
+            arc_weights = [a_weights_dict[a] for a in choose_from]
+            arc = rd.choices(choose_from, weights=arc_weights, k=1)[0]
         else:
-            arc = rd.choices(list(self.arcs.keys()), k=1)[0]
+            arc = rd.choices(choose_from, k=1)[0]
         return arc
+
+
+    @cache
+    def get_arc_t_values(self) -> dict:
+        # extend this method for whatever info we need about arcs, places, transitions        # arc_values = {a.id: 1 for a in self.arcs.values()}
+        # from innovs during mutations
+        arc_values = {}
+        all_c = self.get_component_list()
+        for c_dict in all_c:
+            pop_fit_val = innovs.component_dict[c_dict['comp']]['t_val']
+            for arc_id in c_dict['arcs']:
+                arc_values[arc_id] = pop_fit_val
+        return arc_values
 
 
     def place_trans_arc(self, place_id=None, trans_id=None) -> None:
         if not place_id and not trans_id: # no trans/place specified in arguments
             # pick a place that is not the end place, pick a trans
-            place_id = rd.choice([p for p in self.places if p != "end"])
+            place_id = rd.choice(list(set(self.places).difference({'end'})))
             trans_id = self.pick_target_node(self.places[place_id])
             if not trans_id:
                 return # place already connected to all available transitions
@@ -227,7 +262,7 @@ class GeneticNet:
 
     def extend_new_trans(self, place_id=None) -> str:
         if not place_id: # TODO: could also filter out place that have leaf extensions?
-            place_id = rd.choice([p for p in self.places.values() if not p.is_end]).id
+            place_id = rd.choice(list(set(self.places).difference({'end'})))
         new_trans_id = str(uuid4())
         new_arc_id = str(uuid4())
         self.transitions[new_trans_id] = GTrans(new_trans_id, is_task=False)
@@ -288,35 +323,12 @@ class GeneticNet:
         return
 
 
-    def pick_trans_with_preference(self, filter_out=None) -> str:
-        """Returns transition id according to preferences set in params
-        """
-        # set of task trans and empty trans
-        task_trans = set(innovs.get_task_list())
-        empty_trans = set(self.transitions.keys()).difference(task_trans)
-        all_trans = task_trans.union(empty_trans)
-        # if there are nodes to filter out (because already connected to them)
-        if filter_out:
-            task_trans = task_trans.difference(filter_out)
-            empty_trans = empty_trans.difference(filter_out)
-            all_trans = all_trans.difference(filter_out)
-        # pick a trans
-        if params.is_no_preference_for_tasks and all_trans: # choose from all trans
-            return rd.choice(list(all_trans))
-        elif rd.random() < params.prob_pick_empty_trans and empty_trans: # choose from empty trans (provided there are any)
-            return rd.choice(list(empty_trans)) 
-        elif task_trans: # choose from tasks
-            return rd.choice(list(task_trans))
-        else:
-            return None # this should only happen when filtering out, called by get_target()
-
-
     def prune_leaves(self) -> None: # TODO: name this prune leafs later
-        filtered_places = {k: v for k, v in self.places.items() if not (v.is_start or v.is_end)}
-        all_nodes = filtered_places | self.transitions # exclude start and end
+        all_nodes = self.places | self.transitions
+        del all_nodes["start"], all_nodes["end"] # exclude start and end
+
         for a in self.arcs.values(): # remove all nodes that have outgoing conns
-           try: del all_nodes[a.source_id]
-           except: pass
+           all_nodes.pop(a.source_id, None)
         
         if not all_nodes:
             return # no suitable leaf nodes
@@ -349,26 +361,23 @@ class GeneticNet:
             del self.arcs[a_id]
             self.my_mutations.append('removed_an_arc')
 
+
     def flip_arc(self, arc_to_flip=None):
-        if not self.arcs:
+        if len(self.arcs) <= ((len(self.places) + len(self.transitions)) / 3):
             return # no arcs left to flip
         if not arc_to_flip:
-            arc_to_flip = self.arcs[self.pick_arc()]
+            # filter out arcs that connect to start or end
+            fo_list = []
+            for a in self.arcs.values():
+                if a.source_id == "start" or a.target_id == "end":
+                    fo_list.append(a.id)
+            # if the only arcs available are connected to start or end, don't flip
+            if len(fo_list) == len(self.arcs):
+                return
+            arc_to_flip = self.arcs[self.pick_arc(filter_out=fo_list)]
         new_arc = GArc(str(uuid4()), arc_to_flip.target_id, arc_to_flip.source_id)
         del self.arcs[arc_to_flip.id]
         self.my_mutations.append('flipped_an_arc')
-
-    @cache
-    def get_arc_t_values(self) -> dict:
-        # extend this method for whatever info we need about arcs, places, transitions        # arc_values = {a.id: 1 for a in self.arcs.values()}
-        # from innovs during mutations
-        arc_values = {}
-        all_c = self.get_component_list()
-        for c_dict in all_c:
-            pop_fit_val = innovs.component_dict[c_dict['comp']]['t_val']
-            for arc_id in c_dict['arcs']:
-                arc_values[arc_id] = pop_fit_val
-        return arc_values
 
 # ------------------------------------------------------------------------------
 # REPRODUCTION RELATED STUFF ---------------------------------------------------
