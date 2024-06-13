@@ -200,6 +200,7 @@ class GeneticAlgorithm:
             "best_genome": self.best_genome,
             "improvements": self.improvements,
             "max_fitness": self.best_genome.fitness,
+            "total innovs": len(innovs.component_history),
             "duration": str(datetime.now() - self.start_time)
         }
 

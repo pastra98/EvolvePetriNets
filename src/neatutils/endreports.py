@@ -213,9 +213,11 @@ def plot_detailed_fitness(full_history, savedir: str) -> None:
 
 def run_report(ga_info, savedir: str) -> None:
     try:
+        savedir = savedir.rstrip("/reports")
         with open(f"{savedir}/report.txt", "w") as f:
-            f.write(f"best fitness:\n{ga_info['best_genome'].fitness}\n")
-            f.write(f"duration of run:\n{ga_info['duration']}")
+            f.write(f"Best fitness:\n{ga_info['best_genome'].fitness}\n")
+            f.write(f"Total innovs discovered:\n{ga_info['total innovs']}\n")
+            f.write(f"Duration of run:\n{ga_info['duration']}")
     except:
         print(f"couldn't save report in\n{savedir}")
         print(traceback.format_exc())
