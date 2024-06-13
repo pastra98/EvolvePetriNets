@@ -46,12 +46,6 @@ def set_tasks(log):
         nodes[name] = (GTrans, True)
 
 
-def check_tasks_set():
-    global is_tasks_set
-    if not is_tasks_set:
-        raise Exception("Initial task list must be set!!")
-
-
 def get_task_list() -> List[str]:
     global fp_log
     return list(fp_log["activities"])
