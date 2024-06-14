@@ -38,9 +38,17 @@ def generate_n_random_genomes(n_genomes, log, component_tracker):
         new_genomes.append(gen_net)
         # TODO: remove this cheating later
         # connect all start and end activities to start and end - debateable
-        for sa in list(fp_log["start_activities"]):
+        has_start_conn, has_end_conn = False, False
+        sa = list(fp_log["start_activities"])[0]
+        ea = list(fp_log["end_activities"])[0]
+        for a in gen_net.arcs.values():
+            if a.source_id == "start" and a.target_id == sa:
+                has_start_conn = True
+            elif a.source_id == ea and a.target_id == "end":
+                has_end_conn = True
+        if not has_start_conn:
             gen_net.place_trans_arc("start", sa)
-        for ea in list(fp_log["end_activities"]):
+        if not has_end_conn:
             gen_net.trans_place_arc(ea, "end")
 
     return new_genomes
