@@ -9,7 +9,7 @@ from pm4py.algo.evaluation.simplicity.variants.arc_degree import apply as get_si
 from pm4py.algo.analysis.woflan.algorithm import apply as get_soundness
 
 from neatutils.fitnesscalc import transition_execution_quality
-from neat import params, innovs
+from neat import params
 
 import random as rd
 import numpy as np
@@ -44,14 +44,21 @@ class GPlace:
 
 
 class GeneticNet:
-    def __init__(self, transitions: dict, places: dict, arcs: dict, parent_id=None) -> None:
+    def __init__(
+            self,
+            transitions: dict,
+            places: dict,
+            arcs: dict,
+            parent_id=None,
+            task_list=[],
+            pop_component_tracker=None) -> None:
         """transitions, places and arcs must either be dicts containing valid id: netobj
         key-value pairings, or an empty dict.
         - Adds task transitions and start/end place automatically
         - make sure that argument dicts contain fresh genes
         Reasoning: Cannot use mutable default args, and didn't want to use *args or **kwargs
         """
-        self.id = innovs.get_new_genome_id()
+        self.id = str(uuid4())
         self.parent_id: int = parent_id
         self.species_id: str = None # gets assigned by species.add_member()
         self.fitness: float = None
@@ -67,13 +74,16 @@ class GeneticNet:
         self.fraction_tasks: float = None
         self.execution_score: float = None
         # make Transition genes for every task saved in innovs and add to genome
-        task_trans = {t: GTrans(t, True) for t in innovs.get_task_list()}
+        self.task_list = task_list
+        task_trans = {t: GTrans(t, True) for t in self.task_list}
         self.transitions = transitions | task_trans
         # make place genes for start and end places
         self.places = places | {"start":GPlace("start"), "end":GPlace("end")}
         self.arcs = arcs
         # track mutations of that genome
         self.my_mutations = []
+        # reference to the global component tracker
+        self.pop_component_tracker = pop_component_tracker
 
 # ------------------------------------------------------------------------------
 # MUTATIONS --------------------------------------------------------------------
@@ -183,7 +193,7 @@ class GeneticNet:
         """Returns transition id according to preferences set in params
         """
         # set of task trans and empty trans
-        task_trans = set(innovs.get_task_list())
+        task_trans = set(self.task_list)
         empty_trans = set(self.transitions).difference(task_trans)
         all_trans = task_trans.union(empty_trans)
         # if there are nodes to filter out (because already connected to them)
@@ -223,7 +233,7 @@ class GeneticNet:
         arc_values = {}
         all_c = self.get_component_list()
         for c_dict in all_c:
-            pop_fit_val = innovs.component_dict[c_dict['comp']]['t_val']
+            pop_fit_val = self.pop_component_tracker.component_dict[c_dict['comp']]['t_val']
             for arc_id in c_dict['arcs']:
                 arc_values[arc_id] = pop_fit_val
         return arc_values
@@ -404,7 +414,9 @@ class GeneticNet:
             transitions = copy(self.transitions),
             places = copy(self.places),
             arcs = copy(self.arcs),
-            parent_id = self.id
+            parent_id = self.id,
+            task_list = self.task_list,
+            pop_component_tracker = self.pop_component_tracker
             )
 
 
@@ -413,7 +425,7 @@ class GeneticNet:
     def get_component_list(self) -> list:
 
         def format_tname(t): # all hidden transitions are named "t"
-            return t if t in innovs.get_task_list() else "t"
+            return t if t in self.task_list else "t"
 
         p_components = dict()
         for p in self.places.values():
@@ -507,7 +519,7 @@ class GeneticNet:
         # get fraction of task trans represented in genome
         my_task_trans = [t for t in self.transitions.values() if t.is_task]
         if my_task_trans:
-            self.fraction_used_trans = len(my_task_trans) / len(innovs.get_task_list())
+            self.fraction_used_trans = len(my_task_trans) / len(self.task_list)
             self.fraction_tasks = len(my_task_trans) / len(self.transitions)
         else:
             self.fraction_used_trans = 0
@@ -552,7 +564,7 @@ class GeneticNet:
     def get_curr_info(self) -> dict:
         """Used for serialization when not wanting to save the entire object
         """
-        discard = ["transitions", "places", "arcs"]
+        discard = ["transitions", "places", "arcs", "pop_component_tracker"]
         return {var: val for var, val in vars(self).items() if var not in discard}
 
 
@@ -560,7 +572,7 @@ class GeneticNet:
         connected = self.get_connected()
         t_to_del = []
         for t in self.transitions:
-            if t not in connected and t not in innovs.get_task_list():
+            if t not in connected and t not in self.task_list:
                 t_to_del.append(t)
         for t in t_to_del:
             del self.transitions[t]

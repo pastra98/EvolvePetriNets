@@ -4,9 +4,13 @@ from datetime import datetime
 
 from neatutils import timer
 
-from neat import params, innovs, initial_population
+from neat import params, initial_population
 from neat.genome import GeneticNet
 from neat.species import Species
+
+# ------------------------------------------------------------------------------
+# GeneticAlgorithm class -------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 class GeneticAlgorithm:
     def __init__(
@@ -24,6 +28,8 @@ class GeneticAlgorithm:
         self.log = log
         self.curr_gen = 1
 
+        self.pop_component_tracker = PopulationComponentTracker()
+
         # not sure if I will use this, can set mutation rate context for non-neat
         self.global_mutation_rate = 0 # 0 -> normal or 1 -> high
 
@@ -36,8 +42,8 @@ class GeneticAlgorithm:
         self.best_genome = None
         self.total_pop_fitness = None
         self.avg_pop_fitness = None
-        self.old_innovnum = 0
-        self.new_innovnum = 0
+        self.old_comp_num = 0
+        self.new_comp_num = 0
         
         # measurements specific to speciation
         self.num_new_species = 0 # these are set by calling get_initial_pop (only used if strat speciation)
@@ -48,9 +54,6 @@ class GeneticAlgorithm:
         params.load(params_name)
         if params.mutation_type == "atomic":
             params.max_arcs_removed = 1 # bad practice, but I want to ensure this
-
-        innovs.reset()
-        innovs.set_tasks(log)
 
         self.set_initial_pop()
 
@@ -86,11 +89,11 @@ class GeneticAlgorithm:
         if params.selection_strategy == "speciation":
             self.evaluate_curr_species()
         if self.is_timed: self.timer.stop("evaluate_curr_generation", self.curr_gen)
-        # innovs updates the component fitnesses
-        if params.use_t_vals:
-            innovs.update_component_fitnesses(self.population, self.curr_gen)
-        self.old_innovnum = self.new_innovnum
-        self.new_innovnum = len(innovs.component_history)
+
+        # component_tracker updates the component fitnesses
+        self.pop_component_tracker.update_global_components(self.population, self.curr_gen)
+        self.old_comp_num = self.new_comp_num
+        self.new_comp_num = len(self.pop_component_tracker.component_history)
         return
 
 
@@ -139,8 +142,8 @@ class GeneticAlgorithm:
                     gen_info["best genome"] = copy(self.best_genome)
                     gen_info["population"] = [copy(g) for g in self.population]
 
-            gen_info["num total innovations"] = self.new_innovnum
-            gen_info["num new innovations"] = self.new_innovnum - self.old_innovnum
+            gen_info["num total innovations"] = self.new_comp_num
+            gen_info["num new innovations"] = self.new_comp_num - self.old_comp_num
             gen_info["best genome fitness"] = self.population[0].fitness
             gen_info["avg pop fitness"] = self.total_pop_fitness / params.popsize
             gen_info["total pop fitness"] = self.total_pop_fitness
@@ -178,7 +181,11 @@ class GeneticAlgorithm:
         if params.start_config == "concurrent_traces": # DEPRECATED
             initial_pop = initial_population.generate_n_traces_with_concurrency(params.popsize, self.log)
         elif params.start_config == "random":
-            initial_pop = initial_population.generate_n_random_genomes(params.popsize, self.log)
+            initial_pop = initial_population.generate_n_random_genomes(
+                params.popsize,
+                self.log,
+                self.pop_component_tracker
+                )
         else:
             raise NotImplementedError()
         # if using speciation, generate initial set of spec, place genomes there
@@ -200,7 +207,7 @@ class GeneticAlgorithm:
             "best_genome": self.best_genome,
             "improvements": self.improvements,
             "max_fitness": self.best_genome.fitness,
-            "total innovs": len(innovs.component_history),
+            "total innovs": len(self.pop_component_tracker.component_history),
             "duration": str(datetime.now() - self.start_time)
         }
 
@@ -397,3 +404,84 @@ class GeneticAlgorithm:
 
         new_genomes.append(self.best_genome.clone()) # add best g w.o. mutation
         self.population = new_genomes
+
+# ------------------------------------------------------------------------------
+# ComponentTracker class -------------------------------------------------------
+# ------------------------------------------------------------------------------
+
+class PopulationComponentTracker:
+    """This class tracks the components of the overall population
+    """
+    def __init__(self)-> None:
+        self.component_dict = dict()
+        self.component_history = dict()
+
+
+    def update_global_components(self, population: list, generation: int):
+        """Registers the unique components in the history, also pairs up components
+        of all genomes with their fitness, if use_t_vals this will be used to calculate
+        mean difference significance for all components in the population.
+        """
+        # pair the components of the new population with their fitness values
+        fitness_components = []
+        for g in population:
+            c_set = g.get_unique_component_set()
+            for c in list(c_set):
+                if c not in self.component_history:
+                    self.component_history[c] = generation
+            fitness_components.append((g.fitness, c_set))
+
+        # TODO: can do other stuff that influences the probability map here
+        # like check the best improvements
+        # TODO: maybe use info from more generations later
+        if params.use_t_vals:
+            self.component_dict = self.calculate_t_vals(fitness_components)
+
+            
+
+    # @njit(parallel=True)
+    def calculate_t_vals(self, fitness_components: list) -> dict:
+        comp_fitness_dict = {}
+
+        # TODO: this logic could also be handled in caller, especially if other
+        # keys are added to the dict for other prob_map influences
+        pop_fit, comp_fitness_dict  = [], {}
+        for fc in fitness_components: 
+            pop_fit.append(fc[0])
+            for component in fc[1]: # assort fitness val with every component
+                    comp_fitness_dict.setdefault(component,
+                                            {"all_fitnesses": [],
+                                            "t_val": None}
+                                        ).get("all_fitnesses").append(fc[0])
+        pop_fit = np.array(pop_fit)
+        pop_sum, pop_len = pop_fit.sum(), len(pop_fit)
+        pop_df = pop_len - 2
+
+        for component in comp_fitness_dict:
+            included = np.array(comp_fitness_dict[component]["all_fitnesses"])
+            comp_fitness_dict[component]["t_val"] = self.compute_t(included, pop_fit, pop_len, pop_sum, pop_df)
+            # this should only happen in the first gen, when the start and end connections
+            # yield components, shared by everyone, making t value comparison impossible
+            if len(included) == params.popsize:
+                comp_fitness_dict[component]["t_val"] = 1 # TODO: revisit this number maybe later
+        return comp_fitness_dict
+
+    # @njit(parallel=True)
+    def compute_t(inc, pop, pop_len, pop_sum, pop_df):
+        inc_sum, inc_len = inc.sum(), len(inc)
+        inc_avg_fit = inc_sum / inc_len
+        exc_len = pop_len - inc_len
+        exc_avg_fit = (pop_sum - inc_sum) / exc_len
+        mean_diff = inc_avg_fit - exc_avg_fit
+
+        inc_df, exc_df = inc_len-1, exc_len-1
+
+        inc_ss = ((inc - inc_avg_fit)**2).sum()
+        inc_var = inc_ss / inc_len
+        
+        exc_ss = ((pop - exc_avg_fit)**2).sum() - inc_ss - inc_len*mean_diff**2
+        exc_var = exc_ss / exc_len
+
+        pool_var = (inc_var*inc_df + exc_var*exc_df) / pop_df
+        se = (pool_var/inc_len + pool_var/exc_len)**0.5
+        return float(mean_diff/se)
