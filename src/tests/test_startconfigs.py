@@ -157,7 +157,7 @@ def reset_ga():
     neat_modules = [params, innovs, genome, netobj, initial_population]
     for module in neat_modules:
         reload(module)
-    params.load('../params/testing/speciation_test_component_similarity.json')
+    params.load('../params/testing/test_params.json')
     innovs.reset()
     innovs.set_tasks(log)
 
@@ -180,24 +180,24 @@ def construct_genome_from_mined_net(net, im, fm, node_prefix: int):
     # assumes there is only 1 start and end place
     start_p, end_p = str(list(im.keys())[0]), str(list(fm.keys())[0])
     
-    for p in net.places:
+    for p in sorted(net.places, key=lambda p: p.name):
         if p.name not in [start_p, end_p]:
             p.label = f"p{node_prefix}0{pi}" # new property added
             pi += 1
-            gplaces[p.label] = netobj.GPlace(p.label)
+            gplaces[p.label] = genome.GPlace(p.label)
         else: # add label property also for start and end places
             p.label = "start" if p.name == start_p else "end"
-            gplaces[p.label] = netobj.GPlace(p.label)
+            gplaces[p.label] = genome.GPlace(p.label)
 
-    for t in net.transitions:
+    for t in sorted(net.transitions, key=lambda p: p.name):
         if t.label not in innovs.fp_log['activities']:
             t.label = f"t{node_prefix}0{ti}" # insert 0 to avoid collision when ti>9
             ti += 1
-            gtransitions[t.label] = netobj.GTrans(t.label, is_task=False)
+            gtransitions[t.label] = genome.GTrans(t.label, is_task=False)
 
-    for i, a in enumerate(net.arcs):
+    for i, a in enumerate(sorted(net.arcs, key=lambda a: a.source.label)):
         arc_id = 100*node_prefix + i
-        garcs[arc_id] = netobj.GArc(arc_id, a.source.label, a.target.label)
+        garcs[arc_id] = genome.GArc(arc_id, a.source.label, a.target.label)
     
     return genome.GeneticNet(gtransitions, gplaces, garcs)
 
@@ -274,7 +274,8 @@ n1, n2, n3 = allnets[:3]
 
 def reload_module_and_get_fresh_genome():
     reload(genome)
-    return build_mined_nets(allnets[:4])
+    nets = mine_bootstrapped_nets(log)
+    return build_mined_nets(nets)
 
 
 fresh_genomes = reload_module_and_get_fresh_genome()
@@ -402,19 +403,96 @@ plot_averages(df)
 ################################################################################
 from pprint import pprint
 
-g = reload_module_and_get_fresh_genome()[2]
+g: genome.GeneticNet = reload_module_and_get_fresh_genome()[1] # alpha algo
 
+g.build_petri.cache_clear()
 net, im, fm = g.build_petri()
 pm4py.view_petri_net(net, im, fm, debug=True)
-pprint(g.get_component_list())
+print('fitness before deletions')
+g.evaluate_fitness(log)
+print(g.fitness)
+
+# turns out the arcs get different ids each time the genetic net is built.
+# because I am iterating a set, which is ordered differently every time
+# g.remove_arcs([215])
+# g.build_petri.cache_clear()
+
+# print("\nDeleted some arcs\n")
+
+# net, im, fm = g.build_petri()
+# pm4py.view_petri_net(net, im, fm, debug=True)
+
+# print('fitness after deletions')
+# g.evaluate_fitness(log)
+# print(g.fitness)
+
+# for a in g.arcs.values():
+#     # print(a.id, a.source_id, a.target_id)
+#     if a.source_id == 't303':
+#         print(a)
+
+
+# %%
+from pm4py.objects.petri_net.utils.networkx_graph import create_networkx_directed_graph
+from pm4py.objects.petri_net.utils.networkx_graph import create_networkx_undirected_graph
+from networkx import number_connected_components
+import matplotlib.pyplot as plt
+import networkx as nx
+
+reload(pm4py.objects.petri_net.utils.networkx_graph)
+
+# nx_graph, id = create_networkx_directed_graph(net)
+# nx_graph, *_ = create_networkx_undirected_graph(net, None, None)
+nx_graph, *_ = create_networkx_directed_graph(net)
+
+pos = nx.spring_layout(nx_graph)
+nx.draw(nx_graph, pos, with_labels=True, node_size=500, node_color="lightblue", font_size=10, font_color="black")
+plt.show()
+
+# num_components = number_connected_components(nx_graph)
+# print(num_components)
+
+# %%
+# need to define my own func bc. pm4py does not add labels
+
+def build_digraph(net: genome.GeneticNet):
+    graph = nx.DiGraph()
+    for p in net.places:
+        graph.add_node(p)
+    for t in net.transitions:
+        graph.add_node(t)
+    for a in net.arcs.values():
+        graph.add_edge(a.source_id, a.target_id)
+    return graph
+
+nx_graph = build_digraph(g)
+nx.draw(nx_graph, with_labels=True)
+
+nx.descendants(nx_graph, "start")
+
+# %%
+reload(netobj)
+
+et = genome.GTrans()
+
+sp = genome.GPlace(id="start")
+
+a = genome.GArc(source_id=sp.id, target_id=et.id)
+print(et)
+print(sp)
+print(a)
 
 # %%
 a = {1,2,3}
-b = {3,4,5}
+b = {0,2}
+
+print(a.difference_update(b))
+print(a)
 
 # %%
-s = set()
-print(s)
+import random as rd
 
-s.update(g.get_unique_component_set())
-print(s)
+d = {"a":1, "b":2}
+
+d.pop("a", None)
+print(d)

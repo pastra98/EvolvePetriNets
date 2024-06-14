@@ -29,7 +29,7 @@ from pm4py.algo.discovery.footprints import algorithm as footprints_discovery
 from pm4py.visualization.footprints import visualizer as fp_visualizer
 from pm4py import view_petri_net
 
-from src.neat import innovs, netobj, genome, params
+from src.neat import innovs, genome, params
 
 from copy import copy
 import pprint as pp
@@ -158,8 +158,8 @@ best_g = get_unpickled("results/data/hacked_fitness_fm_supersimple_only_tt_preci
 # best_g = get_unpickled("results/data/hacked_fitness_fm_supersimple_only_tt_precion_generalization_both_01-11-2022_17-57-32/supersimple_generalization/2_01-11-2022_17-57-32/reports/best_genome.pkl")
 # print(f"run 2 best g fit: {best_g.fitness}")
 
-decide_t = netobj.GTrans("decide", True)
-pay_t = netobj.GTrans("pay compensation", True)
+decide_t = genome.GTrans("decide", True)
+pay_t = genome.GTrans("pay compensation", True)
 
 best_g.transitions["decide"] = decide_t
 best_g.transitions["pay compensation"] = pay_t
