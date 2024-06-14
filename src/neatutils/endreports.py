@@ -49,10 +49,7 @@ def save_report(
     save_improvements(ga_info["improvements"], savedir=savedir)
     pickle_best_genome(best_genome, savedir=savedir)
     plot_detailed_fitness(full_history, savedir=savedir)
-    try:
-        plot_mutation_effects(pop_df, savedir=savedir)
-    except:
-        pass # means that multi-mutation was used, making mut effects impossible
+    plot_mutation_effects(pop_df, savedir=savedir)
     run_report(ga_info, savedir=savedir)
     gc.collect()
 
@@ -257,7 +254,7 @@ def get_population_df(full_history, is_min_serialize: bool):
 
 def plot_mutation_effects(pop_df, savedir: str):
     df_with_parents = pop_df.dropna(subset=['parent_id']).copy()
-    df_with_parents['parent_id'] = df_with_parents['parent_id'].astype(int)
+    df_with_parents['parent_id'] = df_with_parents['parent_id']
     fitness_dict = pop_df.set_index('id')['fitness'].to_dict()
 
     df_with_parents.loc[:, 'fitness_difference'] = df_with_parents.apply(lambda row: row['fitness'] - fitness_dict[row['parent_id']], axis=1)
