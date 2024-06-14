@@ -150,16 +150,18 @@ visualize_heatmap(log_transformed_df)
 ######################### FOR BUILDING THE MINED NETS ##########################
 ################################################################################
 from pm4py.algo.discovery.footprints.algorithm import apply as footprints
-from neat import params, innovs, genome, netobj, initial_population
+from neat import params, genome, initial_population
+from pm4py.objects.petri_net.obj import PetriNet as pn
 from importlib import reload
 
+footprints = footprints(log)
+task_list = list(footprints["activities"])
+
 def reset_ga():
-    neat_modules = [params, innovs, genome, netobj, initial_population]
+    neat_modules = [params, genome, initial_population]
     for module in neat_modules:
         reload(module)
     params.load('../params/testing/test_params.json')
-    innovs.reset()
-    innovs.set_tasks(log)
 
 def build_mined_nets(net_list):
     reset_ga()
@@ -176,30 +178,31 @@ def build_mined_nets(net_list):
 def construct_genome_from_mined_net(net, im, fm, node_prefix: int):
     # update the labels of the net for consistent naming for all mining algos
     pi, ti = 0, 0
-    gplaces, gtransitions, garcs = dict(), dict(), dict()
-    # assumes there is only 1 start and end place
-    start_p, end_p = str(list(im.keys())[0]), str(list(fm.keys())[0])
+    g = genome.GeneticNet(dict(), dict(), dict(), task_list=task_list)
+    place_dict = {"source":"start", "start":"start", "sink":"end", "end":"end"}
+    trans_dict = {t:t for t in task_list} # map t.label to genome id
     
-    for p in sorted(net.places, key=lambda p: p.name):
-        if p.name not in [start_p, end_p]:
-            p.label = f"p{node_prefix}0{pi}" # new property added
-            pi += 1
-            gplaces[p.label] = genome.GPlace(p.label)
-        else: # add label property also for start and end places
-            p.label = "start" if p.name == start_p else "end"
-            gplaces[p.label] = genome.GPlace(p.label)
+    for p in net.places:
+        if p.name not in ["start", "end", "source", "sink"]:
+            new_id = g.add_new_place()
+            place_dict[p.name] = new_id
 
-    for t in sorted(net.transitions, key=lambda p: p.name):
-        if t.label not in innovs.fp_log['activities']:
-            t.label = f"t{node_prefix}0{ti}" # insert 0 to avoid collision when ti>9
-            ti += 1
-            gtransitions[t.label] = genome.GTrans(t.label, is_task=False)
+    for t in net.transitions:
+        if t.label not in task_list:
+            new_id = g.add_new_trans()
+            trans_dict[t.label] = new_id
 
-    for i, a in enumerate(sorted(net.arcs, key=lambda a: a.source.label)):
-        arc_id = 100*node_prefix + i
-        garcs[arc_id] = genome.GArc(arc_id, a.source.label, a.target.label)
+    for a in net.arcs:
+        if type(a.source) == pn.Place:
+            p_id = place_dict[a.source.name]
+            t_id = trans_dict[a.target.label]
+            g.add_new_arc(p_id, t_id)
+        else:
+            t_id = trans_dict[a.source.label]
+            p_id = place_dict[a.target.name]
+            g.add_new_arc(t_id, p_id)
     
-    return genome.GeneticNet(gtransitions, gplaces, garcs)
+    return g
 
 genetic_nets = build_mined_nets(allnets)
 
@@ -399,7 +402,7 @@ plot_averages(df)
 
 # %%
 ################################################################################
-#################### CUSTOM COMPONENT FUNCTION ###################################
+#################### TEST CROSSOVER ###########################################
 ################################################################################
 from pprint import pprint
 
@@ -407,29 +410,12 @@ g: genome.GeneticNet = reload_module_and_get_fresh_genome()[1] # alpha algo
 
 g.build_petri.cache_clear()
 net, im, fm = g.build_petri()
-pm4py.view_petri_net(net, im, fm, debug=True)
-print('fitness before deletions')
-g.evaluate_fitness(log)
-print(g.fitness)
-
-# turns out the arcs get different ids each time the genetic net is built.
-# because I am iterating a set, which is ordered differently every time
-# g.remove_arcs([215])
-# g.build_petri.cache_clear()
-
-# print("\nDeleted some arcs\n")
-
-# net, im, fm = g.build_petri()
-# pm4py.view_petri_net(net, im, fm, debug=True)
-
-# print('fitness after deletions')
+pm4py.view_petri_net(net, im, fm)
+pprint(g.get_unique_component_set())
+# print('fitness before deletions')
 # g.evaluate_fitness(log)
 # print(g.fitness)
 
-# for a in g.arcs.values():
-#     # print(a.id, a.source_id, a.target_id)
-#     if a.source_id == 't303':
-#         print(a)
 
 
 # %%
@@ -486,8 +472,18 @@ print(a)
 a = {1,2,3}
 b = {0,2}
 
-print(a.difference_update(b))
+a = a.union(b)
 print(a)
+# %%
+def print_next_three_elements(lst):
+    length = len(lst)
+    for i in range(length):
+        next_elements = [(i + j) % length for j in range(1, 4)]
+        print([lst[index] for index in next_elements])
+
+# Example usage
+lst = [1, 2, 3, 4, 5]
+print_next_three_elements(lst)
 
 # %%
 import random as rd
