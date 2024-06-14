@@ -5,7 +5,8 @@ from numba import njit
 from copy import copy
 from typing import List
 
-from neat.netobj import GArc, GTrans, GPlace
+from neat.genome import GArc, GTrans
+from neat.genome import GPlace
 from neat import params
 
 from pm4py.algo.discovery.footprints.algorithm import apply as footprints

@@ -7,13 +7,8 @@ from pm4py.algo.evaluation.precision.variants.etconformance_token import apply a
 from pm4py.algo.evaluation.generalization.variants.token_based import get_generalization
 from pm4py.algo.evaluation.simplicity.variants.arc_degree import apply as get_simplicity
 from pm4py.algo.analysis.woflan.algorithm import apply as get_soundness
-from pm4py.algo.simulation.playout.petri_net.variants.extensive import apply as extensive_playout
-from pm4py.stats import get_variants
-from pm4py.analysis import maximal_decomposition
-
 
 from neatutils.fitnesscalc import transition_execution_quality
-from neat.netobj import GArc, GPlace, GTrans
 from neat import params, innovs
 
 import random as rd
@@ -21,11 +16,31 @@ import numpy as np
 import traceback
 import itertools
 
-from uuid import uuid4
+from copy import copy
 from functools import cache
 from collections import Counter
 from math import sqrt
 from graphviz import Digraph
+from dataclasses import dataclass, field
+from uuid import uuid4
+
+
+@dataclass(frozen=True)
+class GArc:
+    source_id: str
+    target_id: str
+    id: str = field(default_factory=lambda: str(uuid4()))
+
+
+@dataclass(frozen=True)
+class GTrans:
+    id: str = field(default_factory=lambda: str(uuid4()))
+    is_task: bool = False
+
+
+@dataclass(frozen=True)
+class GPlace:
+    id: str = field(default_factory=lambda: str(uuid4()))
 
 
 class GeneticNet:
@@ -55,7 +70,7 @@ class GeneticNet:
         task_trans = {t: GTrans(t, True) for t in innovs.get_task_list()}
         self.transitions = transitions | task_trans
         # make place genes for start and end places
-        self.places = places | {"start":GPlace("start", is_start=True), "end":GPlace("end", is_end=True)}
+        self.places = places | {"start":GPlace("start"), "end":GPlace("end")}
         self.arcs = arcs
         # track mutations of that genome
         self.my_mutations = []
@@ -195,10 +210,10 @@ class GeneticNet:
         if params.use_t_vals:
             a_weights_dict = self.get_arc_t_values()
             arc_weights = [a_weights_dict[a] for a in choose_from]
-            arc = rd.choices(choose_from, weights=arc_weights, k=1)[0]
+            arc_id = rd.choices(choose_from, weights=arc_weights, k=1)[0]
         else:
-            arc = rd.choices(choose_from, k=1)[0]
-        return arc
+            arc_id = rd.choices(choose_from, k=1)[0]
+        return arc_id
 
 
     @cache
@@ -214,6 +229,27 @@ class GeneticNet:
         return arc_values
 
 
+    def add_new_place(self, id=""):
+        new_place = GPlace() if not id else GPlace(id)
+        self.places[new_place.id] = new_place
+        return new_place.id
+
+
+    def add_new_trans(self, id="", is_task=False):
+        new_trans = GTrans() if not id else GTrans(id, is_task)
+        self.transitions[new_trans.id] = new_trans
+        return new_trans.id
+
+
+    def add_new_arc(self, source_id, target_id):
+        new_arc = GArc(source_id, target_id)
+        self.arcs[new_arc.id] = new_arc
+        return new_arc.id
+
+# ------------------------------------------------------------------------------
+# MUTATION METHODS -------------------------------------------------------------
+# ------------------------------------------------------------------------------
+
     def place_trans_arc(self, place_id=None, trans_id=None) -> None:
         if not place_id and not trans_id: # no trans/place specified in arguments
             # pick a place that is not the end place, pick a trans
@@ -221,11 +257,7 @@ class GeneticNet:
             trans_id = self.pick_target_node(self.places[place_id])
             if not trans_id:
                 return # place already connected to all available transitions
-            arc_id = str(uuid4())
-        else: # TODO: no checks happen here
-            arc_id = str(uuid4())
-        new_arc = GArc(arc_id, place_id, trans_id)
-        self.arcs[arc_id] = new_arc
+        self.add_new_arc(place_id, trans_id)
         self.my_mutations.append('place_trans_arc')
         return
 
@@ -237,11 +269,7 @@ class GeneticNet:
             place_id = self.pick_target_node(self.transitions[trans_id])
             if not place_id:
                 return # the only available places are already connected
-            arc_id = str(uuid4())
-        else: # TODO: no checks happen here
-            arc_id = str(uuid4())
-        new_arc = GArc(arc_id, trans_id, place_id)
-        self.arcs[arc_id] = new_arc
+        self.add_new_arc(trans_id, place_id)
         self.my_mutations.append('trans_place_arc')
         return
 
@@ -249,13 +277,11 @@ class GeneticNet:
     def extend_new_place(self, trans_id=None) -> None:
         if not trans_id: # TODO: could also filter out trans that have leaf extensions?
             trans_id = self.pick_trans_with_preference()
-        new_place_id = str(uuid4())
-        new_arc_id = str(uuid4())
-        self.places[new_place_id] = GPlace(new_place_id)
+        new_place_id = self.add_new_place()
         if rd.random() < 0.5: # t -> p
-            self.arcs[new_arc_id] = GArc(new_arc_id, trans_id, new_place_id)
+            self.add_new_arc(trans_id, new_place_id)
         else: # p -> t
-            self.arcs[new_arc_id] = GArc(new_arc_id, new_place_id, trans_id)
+            self.add_new_arc(new_place_id, trans_id)
         self.my_mutations.append('extend_new_place')
         return
 
@@ -263,13 +289,11 @@ class GeneticNet:
     def extend_new_trans(self, place_id=None) -> str:
         if not place_id: # TODO: could also filter out place that have leaf extensions?
             place_id = rd.choice(list(set(self.places).difference({'end'})))
-        new_trans_id = str(uuid4())
-        new_arc_id = str(uuid4())
-        self.transitions[new_trans_id] = GTrans(new_trans_id, is_task=False)
+        new_trans_id = self.add_new_trans()
         if rd.random() < 0.5: # p -> t
-            self.arcs[new_arc_id] = GArc(new_arc_id, place_id, new_trans_id)
+            self.add_new_arc(place_id, new_trans_id)
         else: # t -> p
-            self.arcs[new_arc_id] = GArc(new_arc_id, new_trans_id, place_id)
+            self.add_new_arc(new_trans_id, place_id)
         self.my_mutations.append('extend_new_trans')
         return 
 
@@ -278,12 +302,9 @@ class GeneticNet:
         if not source_id and not target_id:
             source_id = self.pick_trans_with_preference()
             target_id = rd.choice([t for t in self.transitions.keys() if t != source_id])
-        a1_id = str(uuid4())
-        a2_id = str(uuid4())
-        p_id = str(uuid4())
-        self.arcs[a1_id] = GArc(a1_id, source_id, p_id)
-        self.places[p_id] = GPlace(p_id)
-        self.arcs[a2_id] = GArc(a2_id, p_id, target_id)
+        new_place_id = self.add_new_place()
+        self.add_new_arc(source_id, new_place_id)
+        self.add_new_arc(new_place_id, target_id)
         self.my_mutations.append('trans_trans_conn')
         return 
 
@@ -292,32 +313,25 @@ class GeneticNet:
         if not self.arcs:
             return
 
-        # TODO: should also consider arc t-values here
-        arc_to_split = rd.choice(list(self.arcs.values()))
+        arc_to_split = self.arcs[self.pick_arc()]
         all_nodes = self.places | self.transitions
         source = all_nodes[arc_to_split.source_id]
         target = all_nodes[arc_to_split.target_id]
 
         is_t_p = isinstance(source, GTrans)
 
-        new_place_id = str(uuid4())
-        new_place = GPlace(new_place_id)
-        self.places[new_place_id] = new_place
-
-        new_trans_id = str(uuid4())
-        new_trans = GTrans(new_trans_id, is_task=False)
-        self.transitions[new_trans_id] = new_trans
+        new_place_id = self.add_new_place()
+        new_trans_id = self.add_new_trans()
 
         if is_t_p:
-            a1 = GArc(str(uuid4()), source.id, new_place.id)
-            a2 = GArc(str(uuid4()), new_place.id, new_trans.id)
-            a3 = GArc(str(uuid4()), new_trans.id, target.id)
+            self.add_new_arc(source.id, new_place_id)
+            self.add_new_arc(new_place_id, new_trans_id)
+            self.add_new_arc(new_trans_id, target.id)
         else:
-            a1 = GArc(str(uuid4()), source.id, new_trans.id)
-            a2 = GArc(str(uuid4()), new_trans.id, new_place.id)
-            a3 = GArc(str(uuid4()), new_place.id, target.id)
+            self.add_new_arc(source.id, new_trans_id)
+            self.add_new_arc(new_trans_id, new_place_id)
+            self.add_new_arc(new_place_id, target.id)
         # insert new arcs into genome, delete old one
-        self.arcs.update({a1.id: a1, a2.id: a2, a3.id: a3})
         del self.arcs[arc_to_split.id]
         self.my_mutations.append('split_arc')
         return
@@ -375,7 +389,7 @@ class GeneticNet:
             if len(fo_list) == len(self.arcs):
                 return
             arc_to_flip = self.arcs[self.pick_arc(filter_out=fo_list)]
-        new_arc = GArc(str(uuid4()), arc_to_flip.target_id, arc_to_flip.source_id)
+        self.add_new_arc(arc_to_flip.target_id, arc_to_flip.source_id)
         del self.arcs[arc_to_flip.id]
         self.my_mutations.append('flipped_an_arc')
 
@@ -386,10 +400,12 @@ class GeneticNet:
     def clone(self):
         """returns a deepcopy
         """
-        new_transitions = {k: v.get_copy() for k, v in self.transitions.items()}
-        new_places = {k: v.get_copy() for k, v in self.places.items()}
-        new_arcs = {k: v.get_copy() for k, v in self.arcs.items()}
-        return GeneticNet(new_transitions, new_places, new_arcs, int(self.id))
+        return GeneticNet(
+            transitions = copy(self.transitions),
+            places = copy(self.places),
+            arcs = copy(self.arcs),
+            parent_id = self.id
+            )
 
 
 # ----- component compatibility
