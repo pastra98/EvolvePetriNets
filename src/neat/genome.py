@@ -172,7 +172,7 @@ class GeneticNet:
         connected = set()
         for a in self.arcs.values():
             if source.id in [a.source_id, a.target_id]:
-                connected.add(a.target_id)
+                connected = connected.union({a.source_id, a.target_id})
 
         if type(source) == GTrans:
             suitable_places = []
