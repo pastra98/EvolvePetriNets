@@ -1,3 +1,4 @@
+from __future__ import annotations
 from pm4py.objects.petri_net.obj import PetriNet, Marking
 from pm4py.objects.petri_net.utils.petri_utils import add_arc_from_to
 
@@ -97,14 +98,17 @@ class GeneticNet:
         # remove nodes that are no longer connected
         self.remove_unused_nodes()
         # clear the cache of methods depend on the genome structure
-        self.get_arc_t_values.cache_clear()
-        self.build_petri.cache_clear()
-        self.get_component_list.cache_clear()
-        self.get_unique_component_set.cache_clear()
+        self.clear_cache()
         # if a mutation failed (e.g. no arcs to remove/everything connected, call recursive)
         if not self.my_mutations:
             self.mutate(mutation_rate)
 
+
+    def clear_cache(self):
+        self.get_arc_t_values.cache_clear()
+        self.build_petri.cache_clear()
+        self.get_component_list.cache_clear()
+        self.get_unique_component_set.cache_clear()
 
     def multi_mutation(self, mutation_rate):
         """multiple mutations can occur
@@ -296,10 +300,17 @@ class GeneticNet:
         return
 
 
-    def extend_new_trans(self, place_id=None) -> str:
+    def extend_new_trans(self, place_id=None, is_output=False) -> str:
+        new_trans_id = self.add_new_trans()
         if not place_id: # TODO: could also filter out place that have leaf extensions?
             place_id = rd.choice(list(set(self.places).difference({'end'})))
-        new_trans_id = self.add_new_trans()
+        else:
+            if is_output:
+                self.add_new_arc(place_id, new_trans_id)
+            else:
+                self.add_new_arc(new_trans_id, place_id)
+            return # do not add that as a mutation, because this extension was probably crossover
+
         if rd.random() < 0.5: # p -> t
             self.add_new_arc(place_id, new_trans_id)
         else: # t -> p
@@ -418,6 +429,88 @@ class GeneticNet:
             task_list = self.task_list,
             pop_component_tracker = self.pop_component_tracker
             )
+
+
+    def crossover(self, mate: GeneticNet):
+        """Finds components that share transitions, assigns such components to a
+        chromosomes list, chooses a pair from the chromosome list and inserts the
+        component from the mate in its place. Retains old connections.
+        """
+        def get_input_output_t(c: tuple):
+            inputs, outputs = set(), set()
+            for a in c:
+                if a[0][0] in self.task_list:
+                    inputs.add(a[0][0])
+                elif a[0][1] in self.task_list:
+                    outputs.add(a[0][1])
+            return {"in": inputs, "out": outputs}
+
+        # gets the inputs and outputs of all components
+        my_c = self.get_unique_component_set()
+        my_c_dict = [(c, get_input_output_t(c)) for c in list(my_c)]
+        mate_c = mate.get_unique_component_set()
+        mate_c_dict = [(c, get_input_output_t(c)) for c in list(mate_c)]
+        # assigns matching component pairs to chromosomes
+        chromosomes = []
+        for my_c, my_in_out in my_c_dict:
+            for mate_c, mate_in_out in mate_c_dict:
+                in_overlap = my_in_out["in"].intersection(mate_in_out["in"])
+                out_overlap = my_in_out["out"].intersection(mate_in_out["out"])
+                different_outputs = my_in_out["out"] != mate_in_out["out"]
+                different_inputs = my_in_out["in"] != mate_in_out["in"]
+                # if shared task-t in input and outputs are different or
+                # shared task-t in output and inputs are different add to chromosomes
+                if (in_overlap and different_outputs) or (out_overlap and different_inputs):
+                    chromosomes.append((my_c, mate_c))
+        # if there are no matching chromosomes, return None
+        if not chromosomes:
+            return
+        # TODO: could add probabilites here for selecting bad c and replace with good c
+        swap = rd.choice(chromosomes)
+        my_comp, new_comp = swap[0], swap[1]
+        # get the child genome and modify it
+        baby = self.clone()
+        # find the component to be replaced
+        for c_dict in baby.get_component_list():
+            if my_comp == c_dict["comp"]:
+                comp_to_del = c_dict
+                break
+        # check if we are deleting start or end place
+        p_id = comp_to_del["place"]
+        del baby.places[p_id]
+        p_id = p_id if p_id in ["start", "end"] else None
+        # delete all empty transitions
+        arcs_to_del = []
+        for t_id in comp_to_del["transitions"]:
+            # delete all arcs that pointed to dead transitions
+            if not baby.transitions[t_id].is_task:
+                del baby.transitions[t_id]
+                for a in baby.arcs.values():
+                    if t_id in [a.source_id, a.target_id]:
+                        arcs_to_del.append(a.id)
+        # delete all arcs within the old component + empty_trans conn
+        for a_id in comp_to_del["arcs"] + arcs_to_del:
+            baby.arcs.pop(a_id, None)
+        # add the new component
+        new_p_id = baby.add_new_place(p_id) if p_id else baby.add_new_place()
+        for a in new_comp:
+            source, target = a[0][0], a[0][1]
+            if source == "p":
+                if target == "t":
+                    for _ in range(a[1]): # if there are multiple empty output trans
+                        baby.extend_new_trans(new_p_id, is_output=True)
+                else:
+                    baby.add_new_arc(new_p_id, target)
+            else:
+                if source == "t":
+                    for _ in range(a[1]): # if there are multiple empty input trans
+                        baby.extend_new_trans(new_p_id, is_output=False)
+                else:
+                    baby.add_new_arc(source, new_p_id)
+
+        baby.my_mutations = ["crossover"] # replace all mutations with just crossover
+        baby.clear_cache()
+        return baby
 
 
 # ----- component compatibility

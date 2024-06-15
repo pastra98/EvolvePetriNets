@@ -52,6 +52,9 @@ initial_te_gauss_dist: list[float, float]
 initial_as_gauss_dist: list[float, float]
 
 # -------------------- selection strategy: SPECIATION
+pop_perc_crossover: float # percentage of population spawns that will be crossover
+species_perc_crossover: float
+start_crossover: int # [0-1], after what generation start crossover
 species_boundary: float
 
 compat_to_multiple: bool # if true, then new genomes are compared to components from multiple members

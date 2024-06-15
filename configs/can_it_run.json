@@ -1,8 +1,8 @@
 {
-    "name": "deprecate_log_splices",
+    "name": "test_crossover",
     "setups": [
         {
-            "setupname": "prob_01",
+            "setupname": "whatever",
             "parampath": "params/testing/test_params.json",
             "logpath": "pm_data/running_example.xes",
             "ga_kwargs": {
@@ -12,9 +12,9 @@
             },
             "stop_cond": {
                 "var": "gen",
-                "val": 50
+                "val": 500
             },
-            "n_runs": 1,
+            "n_runs": 4,
             "send_gen_info_to_console": true,
             "is_profiled": false,
             "save_reduced_history_df": true,

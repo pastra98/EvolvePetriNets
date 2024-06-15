@@ -92,5 +92,8 @@
     "mutation_type": "atomic",
     "use_t_vals": false,
     "compat_to_multiple": true,
-    "species_component_pool_size": 5
+    "species_component_pool_size": 5,
+    "pop_perc_crossover": 0.2,
+    "species_perc_crossover": 0.5,
+    "start_crossover": 20
 }

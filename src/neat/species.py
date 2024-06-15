@@ -9,7 +9,7 @@ class Species:
 
         self.age = 0
         self.representative = founder
-        self.leader = None
+        self.leader = founder
         self.alive_members = []
         self.num_members: int = 0
         self.pool = []

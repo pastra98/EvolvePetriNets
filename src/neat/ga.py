@@ -44,6 +44,10 @@ class GeneticAlgorithm:
         self.avg_pop_fitness = None
         self.old_comp_num = 0
         self.new_comp_num = 0
+        # makeup of the new generation
+        self.num_crossover = 0
+        self.num_asex = 0
+        self.num_elite = 0
         
         # measurements specific to speciation
         self.num_new_species = 0 # these are set by calling get_initial_pop (only used if strat speciation)
@@ -144,6 +148,9 @@ class GeneticAlgorithm:
 
             gen_info["num total innovations"] = self.new_comp_num
             gen_info["num new innovations"] = self.new_comp_num - self.old_comp_num
+            gen_info["num crossover"] = self.num_crossover
+            gen_info["num elite"] = self.num_elite
+            gen_info["num asex"] = self.num_asex
             gen_info["best genome fitness"] = self.population[0].fitness
             gen_info["avg pop fitness"] = self.total_pop_fitness / params.popsize
             gen_info["total pop fitness"] = self.total_pop_fitness
@@ -161,6 +168,7 @@ class GeneticAlgorithm:
         and writes nothing to it. Intended to print info during evolution runs.
         Can calculate new info that I don't want to save in history.
         """
+
         gen_info  = self.history[gen] # stuff to take info from
         print_info = {"gen": gen} # other stuff to put info into?
         keep = [
@@ -169,7 +177,8 @@ class GeneticAlgorithm:
             ]
         if params.selection_strategy == "speciation":
             keep += [
-                "num total species", "num new species", "best species avg fitness"
+                "num total species", "num new species", "best species avg fitness",
+                "num crossover", "num elite", "num asex"
             ]
         print_info = print_info | {k: gen_info[k] for k in keep}
         return print_info
@@ -232,15 +241,23 @@ class GeneticAlgorithm:
     def speciation_pop_update(self) -> None:
         """Get spawns from species, and add them to the population.
         """ 
+        # first get the crossover spawns
+        if self.curr_gen >= params.start_crossover:
+            n_crossover = int(params.popsize * params.pop_perc_crossover)
+            new_genomes = self.get_crossover_spawns(n_crossover)
+        else:
+            new_genomes = []
+        self.num_crossover = len(new_genomes)
+        # then get the remaining asex spawns
+        self.num_asex = params.popsize - self.num_crossover
         self.num_new_species = 0
-        new_genomes = []
         num_spawned = 0
-        for s in self.species:
+        for s in self.species: # species already sorted by fitness due to eval
             # reduce num_to_spawn if it would exceed population size
-            if num_spawned == params.popsize:
+            if num_spawned == self.num_asex:
                 break
-            elif num_spawned + s.num_to_spawn > params.popsize:
-                s.num_to_spawn = params.popsize - num_spawned
+            elif num_spawned + s.num_to_spawn > self.num_asex:
+                s.num_to_spawn = self.num_asex - num_spawned
             spawned_elite = False
             # spawn all the new members of a species
             for _ in range(s.num_to_spawn):
@@ -267,8 +284,9 @@ class GeneticAlgorithm:
                 num_spawned += 1
                 new_genomes.append(baby)
         # if all the current species didn't provide enough offspring, get some more
-        if params.popsize - num_spawned > 0:
-            new_genomes += self.get_more_mutated_leaders(params.popsize - num_spawned)
+        self.num_asex = num_spawned # update num_asex to correct value
+        self.num_elite = params.popsize - len(new_genomes)
+        new_genomes += self.get_more_mutated_leaders(self.num_elite)
         self.population = new_genomes
         return
 
@@ -326,10 +344,39 @@ class GeneticAlgorithm:
         return found_species
 
 
-    def get_more_mutated_leaders(self, num) -> list:
+    def get_crossover_spawns(self, num_to_spawn: int) -> list:
+        # select species that will cross over already sorted by fitness due to eval
+        cs = self.species[:int(len(self.species)*params.species_perc_crossover)]
+        # crossover spawns depend on relative fitness of each species
+        cs_fitnesses = [s.avg_fitness for s in cs]
+        cs_total_fit = sum(cs_fitnesses)
+        cs_spawn_counts = [int((f/cs_total_fit)*num_to_spawn) for f in cs_fitnesses]
+        # ensure that exactly num_to_spawn genomes get spawned
+        cs_spawn_counts[0] += num_to_spawn - sum(cs_spawn_counts)
+        new_genomes = []
+
+        for i, species in enumerate(cs): 
+            mom_species = cs[i]
+            for j in range(cs_spawn_counts[i]):
+                dad_species = cs[(i + j + 1) % len(cs)]
+                dad = dad_species.leader
+                mom = mom_species.leader
+                baby = mom.crossover(dad)
+                # if mom and dad are not able to reproduce, find a new dad lol
+                if not baby:
+                    for new_dad in dad_species.alive_members:
+                        baby = mom.crossover(new_dad)
+                        if baby: break
+                if baby:
+                    mom_species.add_member(baby)
+                    new_genomes.append(baby)
+        return new_genomes
+
+
+    def get_more_mutated_leaders(self, num_to_spawn) -> list:
         # iterate over species leaders, but mutate them
         new_genomes = []
-        for i in range(num):
+        for i in range(num_to_spawn):
             if i + 1 > len(self.species):
                 s = self.species[i % len(self.species)]
             else:
