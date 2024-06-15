@@ -77,13 +77,13 @@ def visualize_heatmap(df):
     plt.ylabel('Network Index')
     plt.show()
 
-overlap_df = compare_all_nets(allnets)
-log_transformed_df = np.log(overlap_df + 0.001) # Add a small value to avoid log(0)
+# overlap_df = compare_all_nets(allnets)
+# log_transformed_df = np.log(overlap_df + 0.001) # Add a small value to avoid log(0)
 
-print("normal heatmap")
-visualize_heatmap(overlap_df)
-print("log-transformed heatmap")
-visualize_heatmap(log_transformed_df)
+# print("normal heatmap")
+# visualize_heatmap(overlap_df)
+# print("log-transformed heatmap")
+# visualize_heatmap(log_transformed_df)
 
 
 # %%
@@ -153,23 +153,49 @@ def reload_module_and_get_fresh_genome():
 genetic_nets = build_mined_nets(allnets)
 
 # %%
-# %%
 ################################################################################
 #################### TEST CROSSOVER ###########################################
 ################################################################################
 from pprint import pprint
 
-g: genome.GeneticNet = reload_module_and_get_fresh_genome()[1] # alpha algo
+# order of algs: alpha, inductive (best), heuristics, ilp
 
-g.build_petri.cache_clear()
-net, im, fm = g.build_petri()
-pm4py.view_petri_net(net, im, fm)
-pprint(g.get_unique_component_set())
-# print('fitness before deletions')
-# g.evaluate_fitness(log)
-# print(g.fitness)
+dad: genome.GeneticNet = reload_module_and_get_fresh_genome()[1]
+mom: genome.GeneticNet = reload_module_and_get_fresh_genome()[1]
+
+def show_genome_petri(g: genome.GeneticNet):
+    g.build_petri.cache_clear()
+    net, im, fm = g.build_petri()
+    pm4py.view_petri_net(net, im, fm)
 
 
+def print_stuff():
+    print("dad")
+    show_genome_petri(dad)
+    pprint(dad.get_unique_component_set())
+
+    print("mom")
+    show_genome_petri(mom)
+    pprint(mom.get_unique_component_set())
+
+    dad_comp = dad.get_unique_component_set()
+    mom_comp = mom.get_unique_component_set()
+    print("\nshared components:")
+    shared = dad_comp.intersection(mom_comp)
+    pprint(shared)
+    print(f"\ncomponent compat: {dad.component_compatibility(mom.get_unique_component_set())}")
+    only_dad = dad_comp.difference(mom_comp)
+    print("\nonly dad:")
+    pprint(only_dad)
+    only_mom = mom_comp.difference(dad_comp)
+    print("\nonly mom:")
+    pprint(only_mom)
+
+baby = mom.crossover(dad)
+
+print("mom"); show_genome_petri(mom)
+print("dad"); show_genome_petri(dad)
+print("baby"); show_genome_petri(baby)
 
 # %%
 ################################################################################
@@ -187,7 +213,7 @@ def build_digraph(net: genome.GeneticNet):
         graph.add_edge(a.source_id, a.target_id)
     return graph
 
-nx_graph = build_digraph(g)
+nx_graph = build_digraph(mom)
 nx.draw(nx_graph, with_labels=True)
 
 nx.descendants(nx_graph, "start")
@@ -221,14 +247,14 @@ for i in tqdm(range(n_generations)):
         'graph_edit_distance': [],
         'simrank_similarity': []
     }
-    for ig, g in zip(unchanged, genomes):
-        g.mutate(0)
-        distance_dict[i]['innovation_distance'].append(ig.innov_compatibility(g))
-        distance_dict[i]['component_distance'].append(ig.component_compatibility(g))
+    for ig, mom in zip(unchanged, genomes):
+        mom.mutate(0)
+        distance_dict[i]['innovation_distance'].append(ig.innov_compatibility(mom))
+        distance_dict[i]['component_distance'].append(ig.component_compatibility(mom))
         
         # Convert Petri nets to NetworkX graphs
         initial_nx = convert_petri_net_to_networkx(*ig.build_petri())
-        mutated_nx = convert_petri_net_to_networkx(*g.build_petri())
+        mutated_nx = convert_petri_net_to_networkx(*mom.build_petri())
 
         # Calculate Graph Edit Distance
         for ep in nx.optimize_edit_paths(initial_nx, mutated_nx, timeout=5):
