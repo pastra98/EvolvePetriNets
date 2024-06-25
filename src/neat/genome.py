@@ -2,6 +2,8 @@ from __future__ import annotations
 from pm4py.objects.petri_net.obj import PetriNet, Marking
 from pm4py.objects.petri_net.utils.petri_utils import add_arc_from_to
 
+from pm4py.visualization.petri_net.common.visualize import graphviz_visualization
+
 from pm4py.algo.conformance.tokenreplay.variants.token_replay import apply as get_replayed_traces
 from pm4py.algo.evaluation.replay_fitness.variants.token_replay import evaluate as get_fitness_dict
 from pm4py.algo.evaluation.precision.variants.etconformance_token import apply as get_precision
@@ -418,14 +420,14 @@ class GeneticNet:
 # REPRODUCTION RELATED STUFF ---------------------------------------------------
 # ------------------------------------------------------------------------------
 
-    def clone(self):
+    def clone(self, self_is_parent=True):
         """returns a deepcopy
         """
         return GeneticNet(
             transitions = copy(self.transitions),
             places = copy(self.places),
             arcs = copy(self.arcs),
-            parent_id = self.id,
+            parent_id = self.id if self_is_parent else None,
             task_list = self.task_list,
             pop_component_tracker = self.pop_component_tracker
             )
@@ -641,11 +643,23 @@ class GeneticNet:
 
         if self.fitness < 0:
             raise Exception("Fitness below 0 should not be possible!!!")
-        return trace_fitness
+        return
 
 # ------------------------------------------------------------------------------
 # MISC STUFF -------------------------------------------------------------------
 # ------------------------------------------------------------------------------
+
+    def get_gviz(self) -> set:
+        """removes labels from dead transitions, uses start param for deterministic layout
+        """
+        net, im, fm = self.build_petri()
+        for t in net.transitions:
+            if t.label not in self.task_list:
+                t.label = None
+        viz = graphviz_visualization(net, initial_marking=im, final_marking=fm)
+        viz.graph_attr.update({"layout": 'neato', "start": "1"})
+        return viz
+
 
     def get_connected(self) -> set:
         # get set of all nodes that are connected to the network via arcs
