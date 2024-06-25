@@ -513,7 +513,7 @@ class GeneticNet:
         return baby
 
 
-# ----- component compatibility
+# ----- component distance
     @cache
     def get_component_list(self) -> list:
 
@@ -546,16 +546,15 @@ class GeneticNet:
     
     @cache
     def get_unique_component_set(self) -> set:
-        # TODO: add cache
-        # point of this is to just get a set of the components
-        # this will be used for compatibility calc
+        """get a set of the components that will be used for distance calc
+        """
         unique_components = set() 
         for c_dict in self.get_component_list():
             unique_components.add(c_dict['comp'])
         return unique_components
 
 
-    def component_compatibility(self, other_components: set) -> float:
+    def get_genetic_distance(self, other_components: set) -> float:
         """Distance metric based on percentage of components that are not shared
         """
         my_components = self.get_unique_component_set()
@@ -642,7 +641,7 @@ class GeneticNet:
 
         if self.fitness < 0:
             raise Exception("Fitness below 0 should not be possible!!!")
-        return
+        return trace_fitness
 
 # ------------------------------------------------------------------------------
 # MISC STUFF -------------------------------------------------------------------

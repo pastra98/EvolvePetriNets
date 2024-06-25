@@ -181,7 +181,7 @@ def print_stuff():
     print("\nshared components:")
     shared = dad_comp.intersection(mom_comp)
     pprint(shared)
-    print(f"\ncomponent compat: {dad.component_compatibility(mom.get_unique_component_set())}")
+    print(f"\ncomponent compat: {dad.get_genetic_distance(mom.get_unique_component_set())}")
     only_dad = dad_comp.difference(mom_comp)
     print("\nonly dad:")
     pprint(only_dad)
@@ -320,6 +320,7 @@ plot_averages(df)
 ################################################################################
 #################### WHAT IS WRONG WITH FITNESS ################################
 ################################################################################
+from pprint import pprint
 reload(genome)
 
 # genomes = reload_module_and_get_fresh_genome()
@@ -350,3 +351,5 @@ for miner in [alpha, inductive, heuristics, ilp]:
     t_fit = g.evaluate_fitness(log)
     pprint(t_fit)
 
+
+# %%

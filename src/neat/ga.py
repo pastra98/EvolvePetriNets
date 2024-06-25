@@ -278,7 +278,7 @@ class GeneticAlgorithm:
                     cset = s.component_set
                 else:
                     cset = s.representative.get_unique_component_set()
-                if baby.component_compatibility(cset) > params.species_boundary:
+                if baby.get_genetic_distance(cset) > params.species_boundary:
                     # if the baby is too different, find an existing species to change
                     # into. If no compatible species is found, a new one is made and returned
                     found_species = self.find_and_add_to_species(baby)
@@ -325,21 +325,21 @@ class GeneticAlgorithm:
         self.species = updated_species
 
 
-    def find_and_add_to_species(self, new_genome) -> Species:
+    def find_and_add_to_species(self, new_genome: GeneticNet) -> Species:
         """Tries to find a species to which the given genome is similar enough to be
         added as a member. If no compatible species is found, a new one is made. Returns
         the species (but the genome still needs to be added as a member).
         """
         found_species: Species = None
         # try to find an existing species to which the genome is close enough to be a member
-        comp_score = params.species_boundary
+        distance = params.species_boundary
         for s in self.species:
             if params.compat_to_multiple:
                 cset = s.component_set
             else:
                 cset = s.representative.get_unique_component_set()
-            if new_genome.component_compatibility(cset) < comp_score:
-                comp_score = new_genome.component_compatibility(cset)
+            if new_genome.get_genetic_distance(cset) < distance:
+                distance = new_genome.get_genetic_distance(cset)
                 found_species = s
         # new genome matches no current species -> make a new one
         if not found_species:
@@ -385,12 +385,12 @@ class GeneticAlgorithm:
                 s = self.species[i % len(self.species)]
             else:
                 s = self.species[i]
-            baby = s.elite_spawn_with_mutations()
+            baby: GeneticNet = s.elite_spawn_with_mutations()
             if params.compat_to_multiple:
                 cset = s.component_set
             else:
                 cset = s.representative.get_unique_component_set()
-            if baby.component_compatibility(cset) > params.species_boundary:
+            if baby.get_genetic_distance(cset) > params.species_boundary:
                 found_species = self.find_and_add_to_species(baby)
             else:
                 s.add_member(baby)
