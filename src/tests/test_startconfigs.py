@@ -112,13 +112,11 @@ def build_mined_nets(net_list):
     new_genomes = []
     for i, net in enumerate(net_list):
         net, im, fm = net['net'], net['im'], net['fm']
-        g = construct_genome_from_mined_net(net, im, fm, i+1)
+        g = construct_genome_from_mined_net(net)
         new_genomes.append(g)
     return new_genomes
 
-def construct_genome_from_mined_net(net, im, fm, node_prefix: int):
-    # update the labels of the net for consistent naming for all mining algos
-    pi, ti = 0, 0
+def construct_genome_from_mined_net(net):
     g = genome.GeneticNet(dict(), dict(), dict(), task_list=task_list)
     place_dict = {"source":"start", "start":"start", "sink":"end", "end":"end"}
     trans_dict = {t:t for t in task_list} # map t.label to genome id
@@ -317,3 +315,38 @@ def plot_averages(df):
     plt.show()
 
 plot_averages(df)
+
+# %%
+################################################################################
+#################### WHAT IS WRONG WITH FITNESS ################################
+################################################################################
+reload(genome)
+
+# genomes = reload_module_and_get_fresh_genome()
+# alpha_g      = genomes[0]
+# inductive_g  = genomes[1]
+# heuristics_g = genomes[2]
+# ilp_g        = genomes[3]
+
+# for i, miner in enumerate([alpha, inductive, heuristics, ilp]):
+#     g: genome.GeneticNet = genomes[i]
+#     print(miner)
+#     t_fit = g.evaluate_fitness(log)
+#     print(t_fit)
+#     print(g.perc_fit_traces)
+#     net, im, fm = g.build_petri()
+#     pm4py.view_petri_net(net, im, fm)
+
+mined_nets = []
+for miner in [alpha, inductive, heuristics, ilp]:
+    net, im, fm = miner(log)
+    mined_nets.append(net)
+    print(miner)
+    pm4py.view_petri_net(net, debug=True)
+    # converted into genome and back
+    g = construct_genome_from_mined_net(net)
+    net, im, fm = g.build_petri()
+    pm4py.view_petri_net(net, debug=True)
+    t_fit = g.evaluate_fitness(log)
+    pprint(t_fit)
+
