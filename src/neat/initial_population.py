@@ -27,7 +27,7 @@ def generate_n_random_genomes(n_genomes, log, component_tracker):
             transitions = dict(),
             places = dict(),
             arcs = dict(),
-            tl=tl,
+            task_list=tl,
             pop_component_tracker = component_tracker
             )
 
@@ -74,11 +74,11 @@ def get_bootstrapped_population(n_genomes, log, component_tracker):
         net, im, fm = miner(log)
         g = construct_genome_from_mined_net(net, im, fm, tl, component_tracker)
         for _ in range(int(n_genomes/len(miners))):
-            mined_nets.append(g.clone())
+            mined_nets.append(g.clone(self_is_parent=False))
     # if rounding errors lead to len(mined_nets) != n_genomes
     delta = n_genomes - len(mined_nets)
     if delta > 0:
-        mined_nets += [g.clone() for _ in range(delta)]
+        mined_nets += [g.clone(self_is_parent=False) for _ in range(delta)]
     elif delta < 0:
         mined_nets = mined_nets[:n_genomes]
     return mined_nets
