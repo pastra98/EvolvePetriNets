@@ -321,35 +321,48 @@ plot_averages(df)
 #################### WHAT IS WRONG WITH FITNESS ################################
 ################################################################################
 from pprint import pprint
-reload(genome)
+from IPython.display import display
+from typing import List
+reset_ga()
 
-# genomes = reload_module_and_get_fresh_genome()
-# alpha_g      = genomes[0]
-# inductive_g  = genomes[1]
-# heuristics_g = genomes[2]
-# ilp_g        = genomes[3]
+def print_all_fit_metrics(g: genome.GeneticNet):
+    print("perc_fit_traces", g.perc_fit_traces)
+    print("average_trace_fitness", g.average_trace_fitness)
+    print("log_fitness", g.log_fitness)
+    print("is_sound", g.is_sound)
+    print("precision", g.precision)
+    print("generalization", g.generalization)
+    print("simplicity", g.simplicity)
+    print("fraction_used_trans", g.fraction_used_trans)
+    print("fraction_tasks", g.fraction_tasks)
+    print("execution_score", g.execution_score)
+    print("---> overall fitness", g.fitness, "\n")
 
-# for i, miner in enumerate([alpha, inductive, heuristics, ilp]):
-#     g: genome.GeneticNet = genomes[i]
-#     print(miner)
-#     t_fit = g.evaluate_fitness(log)
-#     print(t_fit)
-#     print(g.perc_fit_traces)
-#     net, im, fm = g.build_petri()
-#     pm4py.view_petri_net(net, im, fm)
 
-mined_nets = []
-for miner in [alpha, inductive, heuristics, ilp]:
-    net, im, fm = miner(log)
-    mined_nets.append(net)
-    print(miner)
-    pm4py.view_petri_net(net, debug=True)
-    # converted into genome and back
-    g = construct_genome_from_mined_net(net)
-    net, im, fm = g.build_petri()
-    pm4py.view_petri_net(net, debug=True)
-    t_fit = g.evaluate_fitness(log)
-    pprint(t_fit)
+bs_list: List[genome.GeneticNet] = initial_population.get_bootstrapped_population(4, log, None)
+for g in bs_list:
+    display(g.get_gviz())
+    g.evaluate_fitness(log)
+    print_all_fit_metrics(g)
 
+# %%
+import pickle
+reset_ga()
+
+# Define the path to the .pkl file
+# path = "E:/migrate_o/github_repos/EvolvePetriNets/results/data/bootstrapped_only_perc_fit_trace_06-25-2024_14-17-26/whatever/1_06-25-2024_14-17-33/reports/best_genome.pkl"
+# path = "E:/migrate_o/github_repos/EvolvePetriNets/results/data/bs_oops_now_actual_perc_fit_tr_06-25-2024_15-30-29/whatever/1_06-25-2024_15-30-36/reports/best_genome.pkl"
+path = "E:/migrate_o/github_repos/EvolvePetriNets/results/data/bs__perc_fit_tr_gen_prec_06-25-2024_15-59-21/whatever/1_06-25-2024_15-59-31/reports/best_genome.pkl"
+
+def get_best_genome(path):
+    with open(path, 'rb') as file:
+        best_genome: genome.GeneticNet = pickle.load(file)
+    best_genome.clear_cache()
+    best_genome.evaluate_fitness(log)
+    return best_genome
+
+best_genome = get_best_genome(path)
+display(best_genome.get_gviz())
+print_all_fit_metrics(best_genome)
 
 # %%
