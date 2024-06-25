@@ -628,7 +628,7 @@ class GeneticNet:
         self.execution_score = transition_execution_quality(aligned_traces)
 
         self.fitness = (
-            + params.perc_fit_traces_weight * (self.perc_fit_traces / 100)
+            + params.perc_fit_traces_weight * self.perc_fit_traces
             + params.average_trace_fitness_weight * (self.average_trace_fitness**2)
             + params.log_fitness_weight * self.log_fitness
             + params.soundness_weight * int(self.is_sound)
@@ -657,7 +657,7 @@ class GeneticNet:
             if t.label not in self.task_list:
                 t.label = None
         viz = graphviz_visualization(net, initial_marking=im, final_marking=fm)
-        viz.graph_attr.update({"layout": 'neato', "start": "1"})
+        # viz.graph_attr.update({"layout": 'neato', "start": "1"})
         return viz
 
 
