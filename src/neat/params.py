@@ -39,7 +39,7 @@ def get_curr_curr_dict() -> dict:
 
 
 # ---------- GENERAL GA SETTINGS
-start_config: str
+start_config: str # "random" / "bootstrap"
 popsize: int
 selection_strategy: str # "speciation" / "roulette" / "truncation"
 

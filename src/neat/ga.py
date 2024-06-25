@@ -168,7 +168,6 @@ class GeneticAlgorithm:
         and writes nothing to it. Intended to print info during evolution runs.
         Can calculate new info that I don't want to save in history.
         """
-
         gen_info  = self.history[gen] # stuff to take info from
         print_info = {"gen": gen} # other stuff to put info into?
         keep = [
@@ -187,10 +186,15 @@ class GeneticAlgorithm:
     def set_initial_pop(self) -> None:
         """
         """ 
-        if params.start_config == "concurrent_traces": # DEPRECATED
-            initial_pop = initial_population.generate_n_traces_with_concurrency(params.popsize, self.log)
-        elif params.start_config == "random":
+        # TODO: consider moving this stuff into one function and start_config as arg
+        if params.start_config == "random":
             initial_pop = initial_population.generate_n_random_genomes(
+                params.popsize,
+                self.log,
+                self.pop_component_tracker
+                )
+        elif params.start_config == "bootstrap":
+            initial_pop = initial_population.get_bootstrapped_population(
                 params.popsize,
                 self.log,
                 self.pop_component_tracker
