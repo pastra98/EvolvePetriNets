@@ -1,5 +1,5 @@
 {
-    "start_config": "random",
+    "start_config": "bootstrap",
     "popsize": 500,
     "selection_strategy": "speciation",
     "initial_tp_gauss_dist": [
@@ -11,7 +11,7 @@
         1.0
     ],
     "initial_tt_gauss_dist": [
-        5.0,
+        4.0,
         2.0
     ],
     "initial_pe_gauss_dist": [
@@ -26,23 +26,23 @@
         0.0,
         0.0
     ],
-    "species_boundary": 0.7,
-    "enough_gens_to_change_things": 10000,
+    "species_boundary": 0.8,
+    "enough_gens_to_change_things": 99999,
     "update_species_rep": true,
     "leader_is_rep": true,
     "selection_threshold": 30,
     "spawn_cutoff": 0.7,
     "elitism": true,
-    "allowed_gens_no_improvement": 10000,
+    "allowed_gens_no_improvement": 99999,
     "old_age": 30,
     "old_penalty": 0.8,
     "youth_bonus": 1.4,
-    "perc_fit_traces_weight": 1,
-    "average_trace_fitness_weight": 4,
+    "perc_fit_traces_weight": 0,
+    "average_trace_fitness_weight": 0,
     "log_fitness_weight": 0,
-    "soundness_weight": 2,
-    "precision_weight": 4,
-    "generalization_weight": 2,
+    "soundness_weight": 0,
+    "precision_weight": 0,
+    "generalization_weight": 1,
     "simplicity_weight": 2,
     "fraction_used_trans_weight": 0,
     "fraction_tasks_weight": 0,
@@ -95,5 +95,5 @@
     "species_component_pool_size": 5,
     "pop_perc_crossover": 0.2,
     "species_perc_crossover": 0.5,
-    "start_crossover": 20
+    "start_crossover": 30
 }
