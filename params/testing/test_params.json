@@ -11,7 +11,7 @@
         1.0
     ],
     "initial_tt_gauss_dist": [
-        4.0,
+        5.0,
         2.0
     ],
     "initial_pe_gauss_dist": [
@@ -26,7 +26,12 @@
         0.0,
         0.0
     ],
+    "pop_perc_crossover": 0.2,
+    "species_perc_crossover": 0.5,
+    "start_crossover": 9999999,
     "species_boundary": 0.8,
+    "compat_to_multiple": true,
+    "species_component_pool_size": 5,
     "enough_gens_to_change_things": 99999,
     "update_species_rep": true,
     "leader_is_rep": true,
@@ -37,19 +42,26 @@
     "old_age": 30,
     "old_penalty": 0.8,
     "youth_bonus": 1.4,
-    "perc_fit_traces_weight": 0,
+    "perc_fit_traces_weight": 10,
     "average_trace_fitness_weight": 0,
     "log_fitness_weight": 0,
     "soundness_weight": 0,
-    "precision_weight": 0,
+    "precision_weight": 1,
     "generalization_weight": 1,
-    "simplicity_weight": 2,
+    "simplicity_weight": 0,
     "fraction_used_trans_weight": 0,
     "fraction_tasks_weight": 0,
     "t_exec_scoring_weight": [
         0.1,
         1
     ],
+    "mutation_type": "atomic",
+    "use_t_vals": false,
+    "prob_remove_arc": [
+        0.1,
+        0
+    ],
+    "max_arcs_removed": 1,
     "prob_t_p_arc": [
         0.2,
         0
@@ -74,26 +86,14 @@
         0.02,
         0
     ],
-    "max_arcs_removed": 1,
-    "prob_remove_arc": [
+    "prob_prune_leafs": [
         0.1,
-        0
+        0.0
     ],
     "prob_flip_arc": [
         0.1,
         0
     ],
-    "prob_prune_leafs": [
-        0.1,
-        0.0
-    ],
     "is_no_preference_for_tasks": false,
-    "prob_pick_empty_trans": 0.3,
-    "mutation_type": "atomic",
-    "use_t_vals": false,
-    "compat_to_multiple": true,
-    "species_component_pool_size": 5,
-    "pop_perc_crossover": 0.2,
-    "species_perc_crossover": 0.5,
-    "start_crossover": 30
+    "prob_pick_empty_trans": 0.3
 }
