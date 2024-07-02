@@ -145,14 +145,7 @@ def species_plot(full_history, savedir: str):
 
 
 def save_genome_gviz(genome, ftype: str, savedir: str, name_prefix="") -> None:
-    net, im, fm = genome.build_petri()
-    # remove the label for all non-task transitions (without task list)
-    empty_t = [t.id for t in genome.transitions.values() if not t.is_task]
-    for t in net.transitions:
-        if t.label in empty_t:
-            t.label = None
-    gviz = visualizer.apply(net, im, fm)
-    # try saving in desired format
+    gviz = genome.get_gviz()
     try:
         gviz.format = ftype
         with open(f"{savedir}/{name_prefix}_id-{genome.id}.{ftype}", "wb") as f:
