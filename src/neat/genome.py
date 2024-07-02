@@ -313,10 +313,10 @@ class GeneticNet:
                 self.add_new_arc(new_trans_id, place_id)
             return # do not add that as a mutation, because this extension was probably crossover
 
-        if rd.random() < 0.5: # p -> t
-            self.add_new_arc(place_id, new_trans_id)
-        else: # t -> p
+        if rd.random() < 0.5 and place_id != "start": # t -> p
             self.add_new_arc(new_trans_id, place_id)
+        else: # p -> t
+            self.add_new_arc(place_id, new_trans_id)
         self.my_mutations.append('extend_new_trans')
         return 
 
