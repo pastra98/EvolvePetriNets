@@ -154,6 +154,7 @@ def save_genome_gviz(genome, ftype: str, savedir: str, name_prefix="") -> None:
         print(f"couldn't save gviz in\n{savedir}")
 
 def pickle_best_genome(best_genome, savedir: str) -> None:
+    best_genome.clear_cache()
     try:
         with open(f"{savedir}/best_genome.pkl", "wb") as f:
             pickle.dump(best_genome, f)
