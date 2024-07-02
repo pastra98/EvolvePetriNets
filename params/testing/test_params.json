@@ -1,5 +1,5 @@
 {
-    "start_config": "bootstrap",
+    "start_config": "random",
     "popsize": 500,
     "selection_strategy": "speciation",
     "initial_tp_gauss_dist": [
@@ -47,7 +47,7 @@
     "log_fitness_weight": 0,
     "soundness_weight": 0,
     "precision_weight": 1,
-    "generalization_weight": 1,
+    "generalization_weight": 0,
     "simplicity_weight": 0,
     "fraction_used_trans_weight": 0,
     "fraction_tasks_weight": 0,
