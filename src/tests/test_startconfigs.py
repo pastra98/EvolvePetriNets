@@ -346,23 +346,21 @@ for g in bs_list:
     print_all_fit_metrics(g)
 
 # %%
-import pickle
-reset_ga()
+# %%
+log_sepsis = pm4py.read_xes("E:/migrate_o/github_repos/EvolvePetriNets/pm_data/bigger_logs/sepsis/sepsis_log.xes")
+# print_variants(log_sepsis)
+var = get_variants(log_sepsis)
+# %%
+import matplotlib.pyplot as plt
 
-# Define the path to the .pkl file
-# path = "E:/migrate_o/github_repos/EvolvePetriNets/results/data/bootstrapped_only_perc_fit_trace_06-25-2024_14-17-26/whatever/1_06-25-2024_14-17-33/reports/best_genome.pkl"
-# path = "E:/migrate_o/github_repos/EvolvePetriNets/results/data/bs_oops_now_actual_perc_fit_tr_06-25-2024_15-30-29/whatever/1_06-25-2024_15-30-36/reports/best_genome.pkl"
-path = "E:/migrate_o/github_repos/EvolvePetriNets/results/data/bs__perc_fit_tr_gen_prec_06-25-2024_15-59-21/whatever/1_06-25-2024_15-59-31/reports/best_genome.pkl"
+# Assuming 'var' is your nested list
+lengths = [len(inner_list) for inner_list in var]
 
-def get_best_genome(path):
-    with open(path, 'rb') as file:
-        best_genome: genome.GeneticNet = pickle.load(file)
-    best_genome.clear_cache()
-    best_genome.evaluate_fitness(log)
-    return best_genome
-
-best_genome = get_best_genome(path)
-display(best_genome.get_gviz())
-print_all_fit_metrics(best_genome)
+plt.hist(lengths, bins='auto')  # 'auto' lets matplotlib decide the number of bins
+plt.title('Distribution of List Lengths within var')
+plt.xlabel('Length of Lists')
+plt.ylabel('Frequency')
+plt.show()
 
 # %%
+mine_bootstrapped_nets(log_sepsis, debug=True)
