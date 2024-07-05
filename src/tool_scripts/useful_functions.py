@@ -25,6 +25,7 @@ def load_genome(path):
     return g
 
 def show_genome(g: genome.GeneticNet):
+    g.clear_cache()
     display(g.get_gviz())
 
 def get_aligned_traces(g: genome.GeneticNet, log, print=False):
@@ -36,9 +37,9 @@ def get_aligned_traces(g: genome.GeneticNet, log, print=False):
         pprint(aligned_traces)
     return aligned_traces
 
-def get_log_variants(log, print=False):
+def get_log_variants(log, debug=False):
     variants = get_variants(log)
-    if print:
+    if debug:
         for variant in variants:
             print(' -> '.join(variant))
     return [list(v) for v in variants.keys()]
