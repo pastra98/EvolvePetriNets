@@ -39,6 +39,7 @@ class Transition:
         self.inputs: Dict[str, Place] = dict()
         self.outputs: Dict[str, Place] = dict()
     
+
     def add_place(self, place_id: str, place: Place, is_input: bool):
         if is_input:
             self.inputs[place_id] = place
@@ -59,8 +60,10 @@ class Transition:
         for p in self.outputs.values():
             p.insert_t()
     
+
     def is_enabled(self):
         return all([p.has_tokens() for p in self.inputs.values()])
+
 
     def _enable(self):
         # maybe bad design to have a fruitful function that mutates state, but this is practical
@@ -77,35 +80,35 @@ class Petri:
         self.places = places
         self.transitions = transitions
         self.hidden_transitions = {
-            id: t for id, t in transitions.items() if not t.is_task
+            t_id: t for t_id, t in transitions.items() if not t.is_task
             }
 
-    def replay_trace(self, trace: Tuple[str]):
+
+    def _replay_trace(self, trace: Tuple[str]):
         self.set_initial_marking()
         replay: List[Tuple[str, List[int]]] = []
         c, p, m, r = 0, 0, 0, 0 # consumed, produced, missing, remaining
         for task in trace:
             if task not in self.transitions:
-                replay.append((task, None)) # Quality = None if nonexsistent
+                replay.append((task, (0, 0, 0))) 
                 continue
             # if trans exists, fire it (enable if necessary), save quality
             trans = self.transitions[task]
             if not trans.is_enabled():
-                fired_hiddens, ht_c, ht_p = self.try_enable_trans_through_hidden(trans)
+                fired_hiddens, ht_c, ht_p = self._try_enable_trans_through_hidden(trans)
                 if fired_hiddens:
                     replay += fired_hiddens
                     c += ht_c; p += ht_p
             quality = trans.fire_and_get_quality()
             c += quality[0]; p += quality[1]; m += quality[2]
             replay.append((task, quality))
-
         # at the end of the replay, count the missing
-        r = sum([p.n_tokens for id, p in self.places.items() if id != "end"])
-
+        r = sum([p.n_tokens for p_id, p in self.places.items() if p_id != "end"])
         return {"replay": replay, "consumed": c, "produced": p,
                 "missing": m, "remaining": r}
 
-    def try_enable_trans_through_hidden(self, trans: Transition):
+
+    def _try_enable_trans_through_hidden(self, trans: Transition):
         """In the current version of this method, I do not recurse into ht further back.
         Returns the list [(ht_id, quality), ...], as well as total tokens
         consumed and produced by firing all hidden trans required to enable trans.
@@ -116,29 +119,69 @@ class Petri:
         # find the places that miss tokens, then find potential hidden trans
         places_missing_token = {id for id, p in trans.inputs.items() if not p.has_tokens()}
         hidden_trans = list(self.hidden_transitions.items()); rd.shuffle(hidden_trans)
-        for id, ht in hidden_trans: # shuffled to not give pref to any ht
+        for t_id, ht in hidden_trans: # shuffled to not give pref to any ht
             overlap = set(ht.outputs.keys()).intersection(places_missing_token)
             if overlap and ht.is_enabled(): # overlap contains the place(s) that connect to ht
                 quality = ht.fire_and_get_quality()
                 c += quality[0]; p += quality[1]
-                fired_hiddens.append((id, quality))
+                fired_hiddens.append((t_id, quality))
                 places_missing_token -= overlap
                 if not places_missing_token:
                     break # stop if there are no more places missing a token
         return fired_hiddens, c, p
-
-    def replay_log(self, variants: List[List[str]]):
-        # TODO: factor in cardinalities of how many traces per variant
-        log_replay: List[Dict] = []
-        for trace in variants:
-            log_replay.append(self.replay_trace(trace))
-        return log_replay
 
 
     def set_initial_marking(self):
         for p in self.places.values():
             p.n_tokens = 0
         self.places["start"].n_tokens = 1
+
+
+    def replay_log(self, variants: List[List[str]]):
+        # TODO: factor in cardinalities of how many traces per variant
+        log_replay: List[Dict] = []
+        for trace in variants:
+            trace_replay = self._replay_trace(trace)
+            trace_fitness = self._get_trace_fitness(trace_replay, True)
+            log_replay.append(trace_replay | {"fitness": trace_fitness})
+        agg_fitness = self._aggregate_trace_fitness(log_replay)
+        return {"log_replay": log_replay, "fitness": agg_fitness}
+
+
+    def _get_trace_fitness(self, trace_replay: dict, use_mult: bool):
+        MULT = 1.5
+        MAX_PTS = 1
+        NO_INPUTS_PENAL = 0.5
+        NO_OUTPUTS_PENAL = 0.5
+        MISSING_PENAL = 0.25
+        REMAINING_PENAL = 0.25
+        agg_fit, n_flawless = 0, 0
+        execution_qualities = [e[1] for e in trace_replay["replay"]] 
+        for q in execution_qualities:
+            pts = MAX_PTS
+            consumed, produced, missing = q[0], q[1], q[2]
+            # subtract input/output penalties
+            if not consumed: pts -= NO_INPUTS_PENAL
+            if not produced: pts -= NO_OUTPUTS_PENAL
+            # missing token penalty
+            if missing:
+                pts -= MISSING_PENAL * (consumed/missing)
+            # update multiplier
+            if pts == MAX_PTS:
+                n_flawless += 1
+            else:
+                n_flawless = 0
+            agg_fit += pts * max(1, MULT * (n_flawless-1))
+        # penalize for remaining tokens
+        agg_fit -= REMAINING_PENAL * trace_replay["remaining"]
+        return agg_fit / len(execution_qualities)
+
+
+    def _aggregate_trace_fitness(self, log_replay: list):
+        agg_fitness = 0
+        for trace in log_replay:
+            agg_fitness += trace["fitness"]
+        return agg_fitness
 
 
 """this will later be a method in the genome, still worth considering if
@@ -165,23 +208,24 @@ def get_petri(g: genome.GeneticNet):
 
 
 # %%
+def compare_replays(g: genome.GeneticNet, log):
+    variants = get_log_variants(log)
+    g.clear_cache()
+    show_genome(g)
 
-variants = get_log_variants(log)
+    pnet = get_petri(g)
+    my_replay = pnet.replay_log(variants)
+    print("my agg fit", my_replay["fitness"])
+    pm4py_replay = get_aligned_traces(g, log)
 
-replay_g = inductive_g
+    for mr, pr in zip(my_replay["log_replay"], pm4py_replay):
+        pprint(mr); print()
+        pprint(pr)
+        print(80*"-", "\n")
 
-replay_g.clear_cache()
-show_genome(replay_g)
-
-pnet = get_petri(replay_g)
-my_replay = pnet.replay_log(variants)
-pm4py_replay = get_aligned_traces(replay_g, log)
-
-for mr, pr in zip(my_replay, pm4py_replay):
-    pprint(mr); print()
-    pprint(pr)
-    print(80*"-", "\n")
-
+path = "./tool_scripts/tbr_output_analysis/"
+test_g = load_genome(path + "crappy_g1" + ".pkl")
+compare_replays(test_g, log)
 
 # %%
 _ = get_log_variants(log, debug=True)
