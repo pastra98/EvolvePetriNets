@@ -9,10 +9,13 @@ from pprint import pprint
 from importlib import reload
 
 # %%
-alpha_g = load_genome("./tool_scripts/tbr_output_analysis/alpha_bootstrap.pkl")
-inductive_g = load_genome("./tool_scripts/tbr_output_analysis/inductive_bootstrap.pkl")
-ilp_g = load_genome("./tool_scripts/tbr_output_analysis/inductive_bootstrap.pkl")
+path = "./tool_scripts/model_analysis/"
+alpha_g = load_genome(path + "alpha_bootstrap.pkl")
+inductive_g = load_genome(path + "inductive_bootstrap.pkl")
+ilp_g = load_genome(path + "inductive_bootstrap.pkl")
+spaghetti_g2 = load_genome(path + "inductive_bootstrap.pkl")
 show_genome(alpha_g)
+
 
 # %%
 eval_and_print_fitness(alpha_g, log)
@@ -31,7 +34,6 @@ def compare_replays(g: genome.GeneticNet, log):
         pprint(pr)
         print(80*"-", "\n")
 
-path = "./tool_scripts/tbr_output_analysis/"
 test_g = load_genome(path + "crappy_g1" + ".pkl")
 compare_replays(test_g, log)
 
