@@ -1,4 +1,5 @@
 from __future__ import annotations
+from typing import Tuple, Dict, List
 from pm4py.objects.petri_net.obj import PetriNet, Marking
 from pm4py.objects.petri_net.utils.petri_utils import add_arc_from_to
 
@@ -11,7 +12,7 @@ from pm4py.algo.evaluation.generalization.variants.token_based import get_genera
 from pm4py.algo.evaluation.simplicity.variants.arc_degree import apply as get_simplicity
 from pm4py.algo.analysis.woflan.algorithm import apply as get_soundness
 
-from neatutils.fitnesscalc import transition_execution_quality
+import neatutils.fitnesscalc as fc
 from neat import params
 
 import random as rd
@@ -570,6 +571,27 @@ class GeneticNet:
 # ------------------------------------------------------------------------------
 # FITNESS RELATED STUFF --------------------------------------------------------
 # ------------------------------------------------------------------------------
+    def build_fc_petri(self):
+        # TODO: make final decision on whether to include replay functionality into GeneticNet
+        # TODO: eventually deprecate pm4py build_petri()
+        # add places
+        p_dict: Dict[str, fc.Place] = {}
+        for p in self.places.values():
+            p_dict[p.id] = fc.Place()
+        # add trans
+        t_dict: Dict[str, fc.Transition] = {}
+        for t in self.transitions.values():
+            t_dict[t.id] = fc.Transition(t.is_task)
+        # connect them
+        for a in self.arcs.values():
+            if a.source_id in self.transitions: # t -> p
+                p = p_dict[a.target_id]
+                t_dict[a.source_id].add_place(a.target_id, p, is_input=False)
+            else: # p -> t
+                p = p_dict[a.source_id]
+                t_dict[a.target_id].add_place(a.source_id, p, is_input=True)
+        return fc.Petri(p_dict, t_dict)
+
 
     @cache
     def build_petri(self):
@@ -600,16 +622,11 @@ class GeneticNet:
 
 
     def evaluate_fitness(self, log) -> None:
-        # remove nodes that are no longer connected (again, just to make sure)
-        self.remove_unused_nodes()
-        net, im, fm = self.build_petri()
+        # TODO: eventually deprecate pm4py log
         # fitness eval
-        default_params = {"show_progress_bar": False}
-        aligned_traces = get_replayed_traces(log, net, im, fm, default_params)
-        trace_fitness = get_fitness_dict(aligned_traces)
-        self.perc_fit_traces = trace_fitness["perc_fit_traces"] / 100
-        self.average_trace_fitness = trace_fitness["average_trace_fitness"]
-        self.log_fitness = trace_fitness["log_fitness"]
+        pnet = self.build_fc_petri()
+        replay = pnet.replay_log(log)
+
         # get fraction of task trans represented in genome
         my_task_trans = [t for t in self.transitions.values() if t.is_task]
         if my_task_trans:
@@ -618,28 +635,24 @@ class GeneticNet:
         else:
             self.fraction_used_trans = 0
             self.fraction_tasks = 0
-        # soundness check
-        soundness_params = {"return_asap_when_not_sound": True, "print_diagnostics": False}
-        self.is_sound = get_soundness(net, im, fm, soundness_params)
-        # precision, generalization, simplicity, execution score
-        self.precision = get_precision(log, net, im, fm, default_params)
-        self.generalization = get_generalization(net, aligned_traces)
-        self.simplicity = get_simplicity(net)
-        self.execution_score = transition_execution_quality(aligned_traces)
 
-        self.fitness = (
-            + params.perc_fit_traces_weight * self.perc_fit_traces
-            + params.average_trace_fitness_weight * (self.average_trace_fitness**2)
-            + params.log_fitness_weight * self.log_fitness
-            + params.soundness_weight * int(self.is_sound)
-            + params.precision_weight * (self.precision**2)
-            + params.generalization_weight * (self.generalization**2)
-            + params.simplicity_weight * (self.simplicity**2)
-            + params.fraction_used_trans_weight * self.fraction_used_trans
-            + params.fraction_tasks_weight * self.fraction_tasks
-            + self.execution_score
-        )
-        
+        # # soundness check
+        # soundness_params = {"return_asap_when_not_sound": True, "print_diagnostics": False}
+        # self.is_sound = get_soundness(net, im, fm, soundness_params)
+        # # precision, generalization, simplicity, execution score
+        # self.precision = get_precision(log, net, im, fm, {"show_progress_bar": False})
+        net, _, _ = self.build_petri()
+        self.simplicity = get_simplicity(net)
+
+        # self.fitness = (
+        #     + params.soundness_weight * int(self.is_sound)
+        #     + params.precision_weight * (self.precision**2)
+        #     + params.simplicity_weight * (self.simplicity**2)
+        #     + params.fraction_used_trans_weight * self.fraction_used_trans
+        #     + params.fraction_tasks_weight * self.fraction_tasks
+        # )
+
+        self.fitness = self.simplicity * replay["fitness"]        
 
         if self.fitness < 0:
             raise Exception("Fitness below 0 should not be possible!!!")
