@@ -65,18 +65,18 @@ class GeneticNet:
         self.id = str(uuid4())
         self.parent_id: int = parent_id
         self.species_id: str = None # gets assigned by species.add_member()
-        self.fitness: float = None
+        self.fitness: float = 0
         # fitness measures
-        self.perc_fit_traces: float = None
-        self.average_trace_fitness: float = None
-        self.log_fitness: float = None
-        self.is_sound: bool = None
-        self.precision: float = None
-        self.generalization: float = None
-        self.simplicity: float = None
-        self.fraction_used_trans: float = None
-        self.fraction_tasks: float = None
-        self.execution_score: float = None
+        self.perc_fit_traces: float = 0
+        self.average_trace_fitness: float = 0
+        self.log_fitness: float = 0
+        self.is_sound: bool = 0
+        self.precision: float = 0
+        self.generalization: float = 0
+        self.simplicity: float = 0
+        self.fraction_used_trans: float = 0
+        self.fraction_tasks: float = 0
+        self.execution_score: float = 0
         # make Transition genes for every task saved in innovs and add to genome
         self.task_list = task_list
         task_trans = {t: GTrans(t, True) for t in self.task_list}
@@ -625,38 +625,16 @@ class GeneticNet:
         # TODO: eventually deprecate pm4py log
         # fitness eval
         pnet = self.build_fc_petri()
-        replay = pnet.replay_log(log)
+        fitness = pnet.get_fitness(log)
 
-        # get fraction of task trans represented in genome
-        my_task_trans = [t for t in self.transitions.values() if t.is_task]
-        if my_task_trans:
-            self.fraction_used_trans = len(my_task_trans) / len(self.task_list)
-            self.fraction_tasks = len(my_task_trans) / len(self.transitions)
-        else:
-            self.fraction_used_trans = 0
-            self.fraction_tasks = 0
+        self.execution_score = fitness["replay_score"]
+        self.simplicity = fitness["simplicity"]
+        self.fitness = self.execution_score * self.simplicity
 
-        # # soundness check
-        # soundness_params = {"return_asap_when_not_sound": True, "print_diagnostics": False}
-        # self.is_sound = get_soundness(net, im, fm, soundness_params)
-        # # precision, generalization, simplicity, execution score
-        # self.precision = get_precision(log, net, im, fm, {"show_progress_bar": False})
-        net, _, _ = self.build_petri()
-        self.simplicity = get_simplicity(net)
-
-        # self.fitness = (
-        #     + params.soundness_weight * int(self.is_sound)
-        #     + params.precision_weight * (self.precision**2)
-        #     + params.simplicity_weight * (self.simplicity**2)
-        #     + params.fraction_used_trans_weight * self.fraction_used_trans
-        #     + params.fraction_tasks_weight * self.fraction_tasks
-        # )
-
-        self.fitness = self.simplicity * replay["fitness"]        
-
-        if self.fitness < 0:
-            raise Exception("Fitness below 0 should not be possible!!!")
-        return
+        self.fitness = max(self.fitness, 0) # TODO: investigate wtf hapenned here
+        # if self.fitness < 0:
+        #     raise Exception("Fitness below 0 should not be possible!!!")
+        # return
 
 # ------------------------------------------------------------------------------
 # MISC STUFF -------------------------------------------------------------------

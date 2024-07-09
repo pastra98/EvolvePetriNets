@@ -2,6 +2,7 @@ from neat import params
 from pm4py.stats import get_variants
 
 from typing import Tuple, Dict, List
+from statistics import mean
 import random as rd
 
 class Place:
@@ -62,8 +63,9 @@ class Transition:
 
 class Petri:
     def __init__(self, places: Dict[str, Place], transitions: Dict[str, Transition]):
-        self.places = places
+        
         self.transitions = transitions
+        self.places = places # TODO: figure out if I really need this
         self.hidden_transitions = {
             t_id: t for t_id, t in transitions.items() if not t.is_task
             }
@@ -121,17 +123,22 @@ class Petri:
             p.n_tokens = 0
         self.places["start"].n_tokens = 1
 
+    def get_fitness(self, log):
+        replay = self.replay_log(log)
+        replay["simplicity"] = self.get_simplicity(replay)
+        return replay
 
-    def replay_log(self, log):
+
+    def replay_log(self, log) -> dict:
         # TODO: factor in cardinalities of how many traces per variant
         variants = [list(v) for v in get_variants(log).keys()]
-        log_replay: List[Dict] = []
+        log_replay: List[dict] = []
         for trace in variants:
             trace_replay = self._replay_trace(trace)
             trace_fitness = self._get_trace_fitness(trace_replay, True)
             log_replay.append(trace_replay | {"fitness": trace_fitness})
         agg_fitness = self._aggregate_trace_fitness(log_replay)
-        return {"log_replay": log_replay, "fitness": agg_fitness}
+        return {"log_replay": log_replay, "replay_score": agg_fitness}
 
 
     def _get_trace_fitness(self, trace_replay: dict, use_mult: bool):
@@ -142,6 +149,11 @@ class Petri:
         MISSING_PENAL = 0.25
         REMAINING_PENAL = 0.25
         agg_fit, n_flawless = 0, 0
+
+        # TODO: hacky shit to just iterate over empty trans
+        # tasks = [tid for tid, t in self.transitions.items() if t.is_task]
+        # execution_qualities = [e[1] for e in trace_replay["replay"] if e[0] in tasks] 
+
         execution_qualities = [e[1] for e in trace_replay["replay"]] 
         for q in execution_qualities:
             pts = MAX_PTS
@@ -168,3 +180,66 @@ class Petri:
         for trace in log_replay:
             agg_fitness += trace["fitness"]
         return agg_fitness
+
+
+    def get_simplicity(self, replay):
+        # higher value = better
+        node_degrees = self._get_node_degrees()
+        # various simplicity metrics
+        io = self._io_connectedness_simplicity(node_degrees)
+        mbm = self._mean_by_max_simplicity(node_degrees)
+        ftt = self._fraction_task_trans()
+        return io + mbm + ftt
+    
+
+    def _get_node_degrees(self):
+        # penalize uneven degree distribution
+        p_degrees = {p: [0, 0] for p in self.places}
+        t_degrees = {t: [0, 0] for t in self.transitions}
+        for t in self.transitions.values():
+            t_degrees[t] = [len(t.inputs), len(t.outputs)]
+            for p in list(t.inputs.keys()):
+                p_degrees[p][0] += 1
+            for p in list(t.outputs.keys()):
+                p_degrees[p][1] += 1
+        return {"places": p_degrees, "transitions": t_degrees}
+    
+
+    def _mean_by_max_simplicity(self, node_degrees):
+        # idea is to penalize the max being further away from the mean
+        # TODO: could also use variance maybe?
+        p_degrees = [sum(p) for p in list(node_degrees["places"].values())]
+        t_degrees = [sum(t) for t in list(node_degrees["transitions"].values())]
+        all_degrees = [d for d in t_degrees + t_degrees if d > 0]
+        return mean(all_degrees) / max(all_degrees)
+    
+
+    def _mean_by_max_simplicity(self, node_degrees):
+        # idea is to penalize the max being further away from the mean
+        # TODO: could also use variance maybe?
+        p_degrees = [sum(p) for p in list(node_degrees["places"].values())]
+        t_degrees = [sum(t) for t in list(node_degrees["transitions"].values())]
+        all_degrees = [d for d in t_degrees + t_degrees if d > 0]
+        return mean(all_degrees) / max(all_degrees)
+    
+
+    def _io_connectedness_simplicity(self, node_degrees):
+        # idea is to punish leaf places
+        # TODO: could do similar thing for transitions, but for now just disable
+        # empty
+        io_connected = [p for p in node_degrees["places"].values() if p[0]>0 and p[1]>0]
+        return len(io_connected) / len(self.places)
+
+
+    def _fraction_task_trans(self):
+        # get fraction of task trans from overall trans, i.e. penalize for every hidden trans
+        my_task_trans = [t for t in self.transitions.values() if t.is_task]
+        if my_task_trans:
+            return len(my_task_trans) / len(self.transitions)
+        else:
+            return 0 # TODO: this is bullshit, but basically if a model has 0 task trans its fitness is 0
+
+
+    def _fraction_used_trans(self, replay):
+        # this could be used to penalize specific dead transitions
+        return 1
