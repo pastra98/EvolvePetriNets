@@ -69,7 +69,8 @@ def get_bootstrapped_population(n_genomes, log, component_tracker):
     fp_log = get_log_footprints(log)
     tl = [a for a in fp_log["activities"]]
     mined_nets = []
-    miners = [alpha, inductive, heuristics, ilp]
+    # miners = [alpha, inductive, heuristics, ilp]
+    miners = [alpha]
     for miner in miners:
         net, im, fm = miner(log)
         g = construct_genome_from_mined_net(net, im, fm, tl, component_tracker)
