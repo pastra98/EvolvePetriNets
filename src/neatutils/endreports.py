@@ -43,7 +43,10 @@ def save_report(
         pop_df = get_population_df(full_history, is_min_serialize)
         pop_df.to_feather(f"{savedir}/population.feather")
     if use_species:
-        species_plot(full_history, savedir=savedir)
+        try: # TODO: this is bullshit
+            species_plot(full_history, savedir=savedir)
+        except:
+            pass
     history_plots(plotting_history_df, use_species, savedir=savedir)
     save_genome_gviz(best_genome, "pdf", savedir=savedir, name_prefix="best_genome")
     save_improvements(ga_info["improvements"], savedir=savedir)
@@ -161,46 +164,61 @@ def pickle_best_genome(best_genome, savedir: str) -> None:
     except:
         print(f"couldn't save best_genome in\n{savedir}")
 
+import matplotlib.pyplot as plt
+from statistics import fmean
+
 def plot_detailed_fitness(full_history, savedir: str) -> None:
     plotvars = {
         "fitness": {"best": [], "pop_avg": []},
-        "perc_fit_traces": {"best": [], "pop_avg": []},
-        "average_trace_fitness": {"best": [], "pop_avg": []},
-        "log_fitness": {"best": [], "pop_avg": []},
+        "io": {"best": [], "pop_avg": []},
+        "mbm": {"best": [], "pop_avg": []},
+        "ftt": {"best": [], "pop_avg": []},
+        "tbt": {"best": [], "pop_avg": []},
         "precision": {"best": [], "pop_avg": []},
-        "generalization": {"best": [], "pop_avg": []},
-        "simplicity": {"best": [], "pop_avg": []},
-        "is_sound": {"best": [], "pop_avg": []},
-        "fraction_used_trans": {"best": [], "pop_avg": []},
-        "fraction_tasks": {"best": [], "pop_avg": []},
         "execution_score": {"best": [], "pop_avg": []}
     }
     # read data into plotvars
     for info_d in full_history.values():
         best, pop = info_d["best genome"], info_d["population"]
         for vname in plotvars:
-            try: # object
+            try:  # object
                 plotvars[vname]["best"].append(getattr(best, vname))
                 plotvars[vname]["pop_avg"].append(fmean([getattr(g, vname) for g in pop]))
-            except: # dict
+            except:  # dict
                 plotvars[vname]["best"].append(best[vname])
                 plotvars[vname]["pop_avg"].append(fmean([g[vname] for g in pop]))
-    # iterate over plotvars to plot shit
-    for vname, d in plotvars.items():
+
+    # Separate plots for 'fitness' and 'execution_score'
+    for special_var in ["fitness", "execution_score"]:
+        d = plotvars.pop(special_var)  # Remove and retrieve special_var data
         fig, ax = plt.subplots()
         for metricname, values in d.items():
-            ax.plot(values)
-        ax.legend(d.keys())
-        plt.title(vname)
+            ax.plot(values, label=metricname)
+        ax.legend()
+        plt.title(special_var)
         try:
-            fig.savefig(f"{savedir}/{vname}.pdf", dpi=300)
+            fig.savefig(f"{savedir}/{special_var}.pdf", dpi=300)
         except:
             print(f"could not save in the given path\n{savedir}")
-        fig.clf()
-        del fig
-        gc.collect()
-    plt.close("all")
+        plt.close(fig)
 
+
+    # Combined plots for the rest
+    fig, ax_best = plt.subplots()
+    fig, ax_pop_avg = plt.subplots()
+    for vname, d in plotvars.items():
+        ax_best.plot(d["best"], label=vname)
+        ax_pop_avg.plot(d["pop_avg"], label=vname)
+    ax_best.legend()
+    ax_best.set_title("Best of Each Variable")
+    ax_pop_avg.legend()
+    ax_pop_avg.set_title("Population Average of Each Variable")
+    try:
+        ax_best.figure.savefig(f"{savedir}/combined_best.pdf", dpi=300)
+        ax_pop_avg.figure.savefig(f"{savedir}/combined_pop_avg.pdf", dpi=300)
+    except:
+        print(f"could not save in the given path\n{savedir}")
+    plt.close("all")
 
 def run_report(ga_info, savedir: str) -> None:
     try:
