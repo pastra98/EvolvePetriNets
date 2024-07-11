@@ -19,20 +19,20 @@
         0.5
     ],
     "initial_te_gauss_dist": [
-        1.0,
-        0.5
+        0.0,
+        0.0
     ],
     "initial_as_gauss_dist": [
         0.0,
         0.0
     ],
-    "pop_perc_crossover": 0.2,
-    "species_perc_crossover": 0.5,
-    "start_crossover": 9999999,
+    "pop_perc_crossover": 0.3,
+    "species_perc_crossover": 1.0,
+    "start_crossover": 50,
     "species_boundary": 0.8,
     "compat_to_multiple": true,
-    "species_component_pool_size": 5,
-    "enough_gens_to_change_things": 99999,
+    "species_component_pool_size": 3,
+    "enough_gens_to_change_things": 5,
     "update_species_rep": true,
     "leader_is_rep": true,
     "selection_threshold": 30,
@@ -59,16 +59,16 @@
     "use_t_vals": false,
     "prob_remove_arc": [
         0.1,
-        0
+        0.4
     ],
     "max_arcs_removed": 1,
     "prob_t_p_arc": [
         0.2,
-        0
+        0.05
     ],
     "prob_p_t_arc": [
         0.2,
-        0
+        0.05
     ],
     "prob_t_t_conn": [
         0.05,
@@ -79,15 +79,15 @@
         0
     ],
     "prob_new_empty_t": [
-        0.1,
+        0.0,
         0
     ],
     "prob_split_arc": [
-        0.02,
+        0.0,
         0
     ],
     "prob_prune_leafs": [
-        0.1,
+        0.2,
         0.0
     ],
     "prob_flip_arc": [
