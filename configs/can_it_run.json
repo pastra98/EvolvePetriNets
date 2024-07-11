@@ -1,10 +1,10 @@
 {
-    "name": "bs_percfit_new_exec_score_prec",
+    "name": "test_over_enabled",
     "setups": [
         {
             "setupname": "whatever",
             "parampath": "params/testing/test_params.json",
-            "logpath": "pm_data/running_example.xes",
+            "logpath": "pm_data/running_example.xesm_data/running_example.xes",
             "ga_kwargs": {
                 "is_pop_serialized": true,
                 "is_minimal_serialization": true,
@@ -12,7 +12,7 @@
             },
             "stop_cond": {
                 "var": "gen",
-                "val": 50
+                "val": 300
             },
             "n_runs": 2,
             "send_gen_info_to_console": true,
