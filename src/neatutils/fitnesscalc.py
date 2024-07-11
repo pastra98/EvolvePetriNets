@@ -1,5 +1,4 @@
 from neat import params
-from pm4py.stats import get_variants
 
 from typing import Tuple, Dict, List
 from statistics import mean
@@ -62,13 +61,18 @@ class Transition:
 
 
 class Petri:
-    def __init__(self, places: Dict[str, Place], transitions: Dict[str, Transition]):
+    def __init__(
+            self,
+            places: Dict[str, Place],
+            transitions: Dict[str, Transition],
+            log: Dict[str, dict]):
         
         self.transitions = transitions
-        self.places = places # TODO: figure out if I really need this
+        self.places = places
         self.hidden_transitions = {
             t_id: t for t_id, t in transitions.items() if not t.is_task
             }
+        self.log = log
 
 
     def _replay_trace(self, trace: Tuple[str]):
@@ -77,7 +81,7 @@ class Petri:
         c, p, m, r = 0, 0, 0, 0 # consumed, produced, missing, remaining
         for task in trace:
             if task not in self.transitions:
-                replay.append((task, (0, 0, 0))) 
+                replay.append((task, (0, 0, 0), [])) # TODO: this is not the final datastructure
                 continue
             # if trans exists, fire it (enable if necessary), save quality
             trans = self.transitions[task]
@@ -88,7 +92,9 @@ class Petri:
                     c += ht_c; p += ht_p
             quality = trans.fire_and_get_quality()
             c += quality[0]; p += quality[1]; m += quality[2]
-            replay.append((task, quality))
+            # TODO: this is hacky, just add number of enabled trans for testing
+            enabled_t = [t_id for t_id, t in self.transitions.items() if t.is_enabled()]
+            replay.append((task, quality, enabled_t))
         # at the end of the replay, count the missing
         r = sum([p.n_tokens for p_id, p in self.places.items() if p_id != "end"])
         return {"replay": replay, "consumed": c, "produced": p,
@@ -123,22 +129,16 @@ class Petri:
             p.n_tokens = 0
         self.places["start"].n_tokens = 1
 
-    def get_fitness(self, log):
-        replay = self.replay_log(log)
-        replay["simplicity"] = self.get_simplicity(replay)
-        return replay
 
-
-    def replay_log(self, log) -> dict:
+    def replay_log(self) -> dict:
         # TODO: factor in cardinalities of how many traces per variant
-        variants = [list(v) for v in get_variants(log).keys()]
+        variants = [list(v) for v in self.log["variants"].keys()]
         log_replay: List[dict] = []
-        for trace in variants:
+        for trace in self.log["variants"].keys():
             trace_replay = self._replay_trace(trace)
             trace_fitness = self._get_trace_fitness(trace_replay, True)
             log_replay.append(trace_replay | {"fitness": trace_fitness})
-        agg_fitness = self._aggregate_trace_fitness(log_replay)
-        return {"log_replay": log_replay, "replay_score": agg_fitness}
+        return log_replay
 
 
     def _get_trace_fitness(self, trace_replay: dict, use_mult: bool):
@@ -182,16 +182,6 @@ class Petri:
         return agg_fitness
 
 
-    def get_simplicity(self, replay):
-        # higher value = better
-        node_degrees = self._get_node_degrees()
-        # various simplicity metrics
-        io = self._io_connectedness_simplicity(node_degrees)
-        mbm = self._mean_by_max_simplicity(node_degrees)
-        ftt = self._fraction_task_trans()
-        return io + mbm + ftt
-    
-
     def _get_node_degrees(self):
         # penalize uneven degree distribution
         p_degrees = {p: [0, 0] for p in self.places}
@@ -214,21 +204,29 @@ class Petri:
         return mean(all_degrees) / max(all_degrees)
     
 
-    def _mean_by_max_simplicity(self, node_degrees):
-        # idea is to penalize the max being further away from the mean
-        # TODO: could also use variance maybe?
-        p_degrees = [sum(p) for p in list(node_degrees["places"].values())]
-        t_degrees = [sum(t) for t in list(node_degrees["transitions"].values())]
-        all_degrees = [d for d in t_degrees + t_degrees if d > 0]
-        return mean(all_degrees) / max(all_degrees)
-    
-
     def _io_connectedness_simplicity(self, node_degrees):
         # idea is to punish leaf places
         # TODO: could do similar thing for transitions, but for now just disable
         # empty
         io_connected = [p for p in node_degrees["places"].values() if p[0]>0 and p[1]>0]
         return len(io_connected) / len(self.places)
+
+
+    def _precision(self, replay):
+        # TODO: maybe this computation should happen during replay??
+        all_enabled = 0
+        for trace in replay:
+            for q in trace["replay"]:
+                all_enabled += len(q[2])
+        return 1 / max(all_enabled, 1)
+
+
+    def _transitions_by_tokens(self, replay):
+        all_produced = 0
+        for trace in replay:
+            for q in trace["replay"]:
+                all_produced += q[1][1]
+        return len(self.transitions) / max(all_produced, 1)
 
 
     def _fraction_task_trans(self):
@@ -239,7 +237,42 @@ class Petri:
         else:
             return 0 # TODO: this is bullshit, but basically if a model has 0 task trans its fitness is 0
 
+    def _over_enabled_transitions(self, replay):
+        s_dict = {t: [] for t in self.log["footprints"]["activities"]}
+        for s in self.log["footprints"]["dfg"]:
+            s_dict[s[0]].append(s[1])
+
+        enabled_too_much = 0
+        for t in replay:
+            for q in t["replay"]:
+                should_enable = s_dict[q[0]]
+                enables = q[2]
+                if len(enables) > len(should_enable):
+                    enabled_too_much += len(enables) - len(should_enable)
+
+        return len(self.transitions) / max(enabled_too_much, 1)
 
     def _fraction_used_trans(self, replay):
         # this could be used to penalize specific dead transitions
         return 1
+
+    def evaluate(self):
+        """Get all fitness metrics
+        """
+        # get replay & node degrees
+        replay = self.replay_log()
+        node_degrees = self._get_node_degrees()
+        # simplicity / generalization metrics
+        metrics = {
+            "aggregated_replay_fitnesss": self._aggregate_trace_fitness(replay),
+            "io_connectedness": self._io_connectedness_simplicity(node_degrees),
+            "mean_by_max": self._mean_by_max_simplicity(node_degrees),
+            "trans_by_tasks": self._fraction_task_trans(),
+            "precision": self._precision(replay),
+            "trans_by_tokens": self._transitions_by_tokens(replay),
+            "over_enabled_trans": self._over_enabled_transitions(replay)
+        }
+        return {
+            "replay": replay,
+            "metrics": metrics
+        }
