@@ -21,7 +21,6 @@ def load_genome(path):
     with open(path, 'rb') as file:
         g: genome.GeneticNet = pickle.load(file)
     g.clear_cache()
-    g.evaluate_fitness(log)
     return g
 
 def show_genome(g: genome.GeneticNet):
