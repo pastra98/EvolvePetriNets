@@ -105,7 +105,7 @@ class GeneticAlgorithm:
         # calc fitness for every genome
         self.total_pop_fitness = 0
         for g in self.population:
-            g.evaluate_fitness(self.log)
+            g.evaluate_fitness(self.log, self.curr_gen)
             self.total_pop_fitness += g.fitness
         self.population.sort(key=lambda g: g.fitness, reverse=True)
         # check if fitness improvement happened

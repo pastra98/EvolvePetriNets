@@ -571,7 +571,7 @@ class GeneticNet:
 # ------------------------------------------------------------------------------
 # FITNESS RELATED STUFF --------------------------------------------------------
 # ------------------------------------------------------------------------------
-    def build_fc_petri(self):
+    def build_fc_petri(self, log) -> fc.Petri:
         # TODO: make final decision on whether to include replay functionality into GeneticNet
         # TODO: eventually deprecate pm4py build_petri()
         # add places
@@ -590,7 +590,7 @@ class GeneticNet:
             else: # p -> t
                 p = p_dict[a.source_id]
                 t_dict[a.target_id].add_place(a.source_id, p, is_input=True)
-        return fc.Petri(p_dict, t_dict)
+        return fc.Petri(p_dict, t_dict, log)
 
 
     @cache
@@ -621,16 +621,16 @@ class GeneticNet:
         return net, im, fm
 
 
-    def evaluate_fitness(self, log) -> None:
+    def evaluate_fitness(self, log, curr_gen=0) -> None:
         # TODO: eventually deprecate pm4py log
+        # TODO: curr_gen argument? keep it?
         # fitness eval
-        pnet = self.build_fc_petri()
-        fitness = pnet.get_fitness(log)
+        model_eval = self.build_fc_petri(log).evaluate()
 
-        self.execution_score = fitness["replay_score"]
-        self.simplicity = fitness["simplicity"]
-        self.fitness = self.execution_score * self.simplicity
-
+        self.fitness_metrics = model_eval["metrics"]
+        self.fitness = model_eval["metrics"]["aggregated_replay_fitnesss"]
+        # if curr_gen >= 100:
+        #     self.fitness *= self.oe
         self.fitness = max(self.fitness, 0) # TODO: investigate wtf hapenned here
         # if self.fitness < 0:
         #     raise Exception("Fitness below 0 should not be possible!!!")
