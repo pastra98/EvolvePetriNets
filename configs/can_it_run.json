@@ -1,10 +1,10 @@
 {
-    "name": "test_over_enabled",
+    "name": "test",
     "setups": [
         {
             "setupname": "whatever",
             "parampath": "params/testing/test_params.json",
-            "logpath": "pm_data/running_example.xesm_data/running_example.xes",
+            "logpath": "pm_data/running_example.xes",
             "ga_kwargs": {
                 "is_pop_serialized": true,
                 "is_minimal_serialization": true,
@@ -12,9 +12,9 @@
             },
             "stop_cond": {
                 "var": "gen",
-                "val": 300
+                "val": 150
             },
-            "n_runs": 2,
+            "n_runs": 1,
             "send_gen_info_to_console": true,
             "is_profiled": false,
             "save_reduced_history_df": true,
