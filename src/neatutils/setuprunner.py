@@ -1,4 +1,4 @@
-import cProfile, os, json, traceback, datetime, pickle, pprint, gc, logging
+import cProfile, os, json, traceback, datetime, pickle, pprint, gc, logging, shutil
 from pm4py.objects.log.importer.xes import importer as xes_importer
 
 from neatutils import endreports as er
@@ -18,6 +18,9 @@ def run_setup(run_nr, main_logger, setup, results_path) -> dict:
     run_name = f"{run_nr}_{nl.fs_compatible_time(run_start)}"
     run_dir = f"{setup_path}/{run_name}"
     os.makedirs(f"{run_dir}/reports")
+
+    # save params
+    shutil.copy(setup["parampath"], f"{run_dir}/{run_name}_params.json")
 
     # setup run_logger, use setup config to determine if send to console
     run_logger = nl.get_logger(run_dir, run_name, setup["send_gen_info_to_console"])
@@ -48,7 +51,7 @@ def run_setup(run_nr, main_logger, setup, results_path) -> dict:
     # write results of run to pkl file
     if "EXCEPTION" in run_result:
         run_name += "___EXCEPTION"
-    elif setup["save_reports"]:
+    else:
         er.save_report(
             run_result,
             f"{run_dir}/reports",
@@ -56,21 +59,6 @@ def run_setup(run_nr, main_logger, setup, results_path) -> dict:
             setup["ga_kwargs"]["is_minimal_serialization"]
         )
         main_logger.info(f"reports saved at:\n{run_dir}/reports")
-
-    try:
-        if setup["save_params"] and not "EXCEPTION" in run_result:
-            params_name = f"{run_dir}/{run_name}_params.json"
-            with open(params_name, "w") as f:
-                json.dump(run_result["param_values"], f, indent=4)
-    except:
-        run_logger.exception("Error while trying to save params")
-
-    if setup["dump_pickle"]:
-        results_name = f"{run_dir}/{run_name}_results.pkl"
-        run_logger.info(f"Dumping results in pickle file!")
-        with open(results_name, "wb") as f:
-            pickle.dump(run_result, f)
-        run_logger.info(f"File saved as:\n{results_name}")
 
     gc.collect()
     return {

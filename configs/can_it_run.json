@@ -1,5 +1,5 @@
 {
-    "name": "test",
+    "name": "test_copy_params",
     "setups": [
         {
             "setupname": "whatever",
@@ -12,15 +12,12 @@
             },
             "stop_cond": {
                 "var": "gen",
-                "val": 150
+                "val": 300
             },
-            "n_runs": 1,
+            "n_runs": 4,
             "send_gen_info_to_console": true,
             "is_profiled": false,
-            "save_reduced_history_df": true,
-            "save_reports": true,
-            "save_params": true,
-            "dump_pickle": false
+            "save_reduced_history_df": true
         }
     ]
 }
