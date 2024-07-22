@@ -18,8 +18,7 @@ def get_log_footprints(log) -> list:
 
 # TODO - this can be improved
 def generate_n_random_genomes(n_genomes, log, component_tracker):
-    fp_log = get_log_footprints(log)
-    tl = [a for a in fp_log["activities"]]
+    tl = [a for a in log["footprints"]["activities"]]
     # generate n random genomes
     new_genomes = []
     for _ in range(n_genomes):
@@ -47,8 +46,8 @@ def generate_n_random_genomes(n_genomes, log, component_tracker):
         # TODO: remove this cheating later
         # connect all start and end activities to start and end - debateable
         has_start_conn, has_end_conn = False, False
-        sa = list(fp_log["start_activities"])[0]
-        ea = list(fp_log["end_activities"])[0]
+        sa = list(log["footprints"]["start_activities"])[0]
+        ea = list(log["footprints"]["end_activities"])[0]
         for a in gen_net.arcs.values():
             if a.source_id == "start" and a.target_id == sa:
                 has_start_conn = True
@@ -66,6 +65,7 @@ def get_bootstrapped_population(n_genomes, log, component_tracker):
     """This is just the simplest implementation to test how the fitness func
     will deal with mined nets
     """
+    # TODO: bootstrapping requires legacy log format
     fp_log = get_log_footprints(log)
     tl = [a for a in fp_log["activities"]]
     mined_nets = []
