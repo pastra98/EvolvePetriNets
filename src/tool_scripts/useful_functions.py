@@ -1,4 +1,5 @@
 from neat import params, genome, initial_population
+from neatutils import log as lg
 
 import pm4py
 from pm4py.stats import get_variants
@@ -11,8 +12,8 @@ import pickle
 from importlib import reload
 
 params.load('../params/testing/test_params.json')
-log = pm4py.read_xes("../pm_data/running_example.xes")
-log
+# log = pm4py.read_xes("../pm_data/running_example.xes")
+log = lg.get_log_from_xes("../pm_data/running_example.xes")
 
 # path = "E:/migrate_o/github_repos/EvolvePetriNets/results/data/bs_oops_now_actual_perc_fit_tr_06-25-2024_15-30-29/whatever/1_06-25-2024_15-30-36/reports/best_genome.pkl"
 # path = "E:/migrate_o/github_repos/EvolvePetriNets/results/data/bs__perc_fit_tr_gen_prec_06-25-2024_15-59-21/whatever/1_06-25-2024_15-59-31/reports/best_genome.pkl"

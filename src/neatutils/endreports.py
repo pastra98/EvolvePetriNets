@@ -5,6 +5,7 @@ import pandas as pd
 import numpy as np
 from statistics import fmean
 from math import ceil
+from copy import copy
 
 import traceback
 import gc
@@ -51,7 +52,7 @@ def save_report(
     save_genome_gviz(best_genome, "pdf", savedir=savedir, name_prefix="best_genome")
     save_improvements(ga_info["improvements"], savedir=savedir)
     pickle_best_genome(best_genome, savedir=savedir)
-    plot_detailed_fitness(full_history, savedir=savedir)
+    plot_metrics_timeseries(full_history, savedir=savedir)
     plot_mutation_effects(pop_df, savedir=savedir)
     run_report(ga_info, savedir=savedir)
     gc.collect()
@@ -167,58 +168,41 @@ def pickle_best_genome(best_genome, savedir: str) -> None:
 import matplotlib.pyplot as plt
 from statistics import fmean
 
-def plot_detailed_fitness(full_history, savedir: str) -> None:
-    plotvars = {
-        "fitness": {"best": [], "pop_avg": []},
-        "io": {"best": [], "pop_avg": []},
-        "mbm": {"best": [], "pop_avg": []},
-        "ftt": {"best": [], "pop_avg": []},
-        "tbt": {"best": [], "pop_avg": []},
-        "precision": {"best": [], "pop_avg": []},
-        "execution_score": {"best": [], "pop_avg": []}
-    }
-    # read data into plotvars
+
+def plot_metrics_timeseries(full_history, savedir: str) -> None:
+    seperate_plot = ["aggregated_replay_fitnesss"]
+    all_metrics = [m for m in full_history[1]["best genome"]["fitness_metrics"]]
+    best_metrics = {m: [] for m in all_metrics}
+    pop_metrics = copy(best_metrics)
     for info_d in full_history.values():
         best, pop = info_d["best genome"], info_d["population"]
-        for vname in plotvars:
-            try:  # object
-                plotvars[vname]["best"].append(getattr(best, vname))
-                plotvars[vname]["pop_avg"].append(fmean([getattr(g, vname) for g in pop]))
-            except:  # dict
-                plotvars[vname]["best"].append(best[vname])
-                plotvars[vname]["pop_avg"].append(fmean([g[vname] for g in pop]))
+        for metric in best["fitness_metrics"]:
+            best_metrics[metric].append(best["fitness_metrics"][metric])
+            pop_metrics[metric].append(fmean([g["fitness_metrics"][metric] for g in pop]))
 
-    # Separate plots for 'fitness' and 'execution_score'
-    for special_var in ["fitness", "execution_score"]:
-        d = plotvars.pop(special_var)  # Remove and retrieve special_var data
-        fig, ax = plt.subplots()
-        for metricname, values in d.items():
-            ax.plot(values, label=metricname)
-        ax.legend()
-        plt.title(special_var)
-        try:
-            fig.savefig(f"{savedir}/{special_var}.pdf", dpi=300)
-        except:
-            print(f"could not save in the given path\n{savedir}")
-        plt.close(fig)
+    # # Separate plots for 'fitness' and 'execution_score'
+    # for special_var in ["fitness", "execution_score"]:
+    #     d = plotvars.pop(special_var)  # Remove and retrieve special_var data
 
+
+    # this sucks
+    for m in seperate_plot:
+        del best_metrics[m]
+        del pop_metrics[m]
 
     # Combined plots for the rest
-    fig, ax_best = plt.subplots()
-    fig, ax_pop_avg = plt.subplots()
-    for vname, d in plotvars.items():
-        ax_best.plot(d["best"], label=vname)
-        ax_pop_avg.plot(d["pop_avg"], label=vname)
-    ax_best.legend()
-    ax_best.set_title("Best of Each Variable")
-    ax_pop_avg.legend()
-    ax_pop_avg.set_title("Population Average of Each Variable")
-    try:
-        ax_best.figure.savefig(f"{savedir}/combined_best.pdf", dpi=300)
-        ax_pop_avg.figure.savefig(f"{savedir}/combined_pop_avg.pdf", dpi=300)
-    except:
-        print(f"could not save in the given path\n{savedir}")
-    plt.close("all")
+    save_timeseries_plot("Best Combined Metrics", best_metrics, savedir)
+    save_timeseries_plot("Population Combined Metrics", pop_metrics, savedir)
+
+def save_timeseries_plot(title: str, data: dict, savedir: str):
+    fig, ax = plt.subplots()
+    plt.title(title)
+    for metricname, values in data.items():
+        ax.plot(values, label=metricname)
+    ax.legend()
+    fig.savefig(f"{savedir}/{title}.pdf", dpi=300)
+    plt.close(fig)
+
 
 def run_report(ga_info, savedir: str) -> None:
     try:

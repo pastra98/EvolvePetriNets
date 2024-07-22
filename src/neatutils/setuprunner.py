@@ -2,6 +2,7 @@ import cProfile, os, json, traceback, datetime, pickle, pprint, gc, logging
 from pm4py.objects.log.importer.xes import importer as xes_importer
 
 from neatutils import endreports as er
+from neatutils import log as lg
 from neatutils import neatlogger as nl
 from neat import ga
 
@@ -81,7 +82,7 @@ def run_setup(run_nr, main_logger, setup, results_path) -> dict:
 
 
 def run_ga(setup: logging.Logger, logger):
-    log = xes_importer.apply(setup["logpath"])
+    log = lg.get_log_from_xes(setup["logpath"])
     stopvar, stopval = setup["stop_cond"]["var"], setup["stop_cond"]["val"]
     # initialize GeneticAlgorithm with setup info
     curr_ga = ga.GeneticAlgorithm(

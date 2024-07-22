@@ -67,16 +67,7 @@ class GeneticNet:
         self.species_id: str = None # gets assigned by species.add_member()
         self.fitness: float = 0
         # fitness measures
-        self.perc_fit_traces: float = 0
-        self.average_trace_fitness: float = 0
-        self.log_fitness: float = 0
-        self.is_sound: bool = 0
-        self.precision: float = 0
-        self.generalization: float = 0
-        self.simplicity: float = 0
-        self.fraction_used_trans: float = 0
-        self.fraction_tasks: float = 0
-        self.execution_score: float = 0
+        self.fitness_metrics: dict = {}
         # make Transition genes for every task saved in innovs and add to genome
         self.task_list = task_list
         task_trans = {t: GTrans(t, True) for t in self.task_list}
@@ -621,7 +612,7 @@ class GeneticNet:
         return net, im, fm
 
 
-    def evaluate_fitness(self, log, curr_gen=0) -> None:
+    def evaluate_fitness(self, log, curr_gen=0):
         # TODO: eventually deprecate pm4py log
         # TODO: curr_gen argument? keep it?
         # fitness eval
@@ -634,7 +625,7 @@ class GeneticNet:
         self.fitness = max(self.fitness, 0) # TODO: investigate wtf hapenned here
         # if self.fitness < 0:
         #     raise Exception("Fitness below 0 should not be possible!!!")
-        # return
+        return model_eval
 
 # ------------------------------------------------------------------------------
 # MISC STUFF -------------------------------------------------------------------
