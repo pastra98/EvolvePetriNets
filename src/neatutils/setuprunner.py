@@ -39,6 +39,7 @@ def run_setup(run_nr, main_logger, setup, results_path) -> dict:
             run_result = run_ga(setup, run_logger)
     except: # woops, maybe config or log path or something messed up
         run_result = {"EXCEPTION": traceback.format_exc()}
+        run_name += "___EXCEPTION"
         exc_str = f"Error while running {setup['setupname']}, check log at: {run_logger.handlers[1].baseFilename}"
         run_logger.exception(exc_str)
         main_logger.exception(exc_str)
@@ -48,10 +49,9 @@ def run_setup(run_nr, main_logger, setup, results_path) -> dict:
     run_result |= {"start": run_start, "end": run_end, "time": run_end - run_start}
     run_logger.info(f"{80*'/'}\nRun finished at {run_end}")
     main_logger.info(f"{80*'/'}\nRun {run_nr} of setup {setup['setupname']} finished at {run_end}")
-    # write results of run to pkl file
-    if "EXCEPTION" in run_result:
-        run_name += "___EXCEPTION"
-    else:
+
+    # if run successfull, save endreports
+    if not "EXCEPTION" in run_result:
         er.save_report(
             run_result,
             f"{run_dir}/reports",
