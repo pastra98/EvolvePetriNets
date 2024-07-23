@@ -5,17 +5,15 @@ from neat.genome import GeneticNet
 class Species:
     def __init__(self, name, founder: GeneticNet) -> None:
         self.name = name
-        self.alive_members = []
-
+        self.members = []
         self.age = 0
         self.representative = founder
         self.leader = founder
-        self.alive_members = []
         self.num_members: int = 0
         self.pool = []
         self.expected_offspring = 0
         self.spawn_count = 0 # number of spawns the species got during the last generation it was active
-        self.avg_fitness = 0 # average fitness of all alive members
+        self.avg_fitness = 0 # average fitness of all new members
         self.avg_fitness_adjusted = 0 # average fitness adjusted by the age modifier
         self.best_ever_fitness = 0 # best ever fitness witnessed in this species
         self.obliterate = False
@@ -26,9 +24,9 @@ class Species:
 
     
     def add_member(self, new_genome) -> None:
-        """Just appends a new genome to the alive_members and updates the new_members count.
+        """Just appends a new genome to the members and updates the members count.
         """
-        self.alive_members.append(new_genome)
+        self.members.append(new_genome)
         new_genome.species_id = self.name
 
     
@@ -41,17 +39,17 @@ class Species:
         # first check if the species hasn't spawned new members in the last gen or if it
         # survived for too many generations without improving, in which case it is marked
         # for obliteration.
-        if not self.alive_members or self.num_gens_no_improvement > params.allowed_gens_no_improvement:
+        if not self.members or self.num_gens_no_improvement > params.allowed_gens_no_improvement:
             self.obliterate = True
         else:
             # the species survives into the next generation
             self.spawn_count = 0
             self.num_to_spawn = 0
             self.age += 1
-            # first sort the alive members, and determine the fittest member
-            self.alive_members.sort(key=lambda m: m.fitness, reverse=True)
-            self.leader = self.alive_members[0]
-            self.num_members = len(self.alive_members)
+            # first sort the new members, and determine the fittest member
+            self.members.sort(key=lambda m: m.fitness, reverse=True)
+            self.leader = self.members[0]
+            self.num_members = len(self.members)
             # check if current best member is fitter than previous best
             if self.leader.fitness > self.best_ever_fitness:
                 # this means the species is improving -> normal mutation rate
@@ -64,30 +62,30 @@ class Species:
                     self.curr_mutation_rate = 1 # high mutation rate
             # if the representative should be updated, do so now
             if params.update_species_rep:
-                self.representative = self.leader if params.leader_is_rep else rd.choice(self.alive_members)
-            # pool is a reference to the alive members of the last gen
+                self.representative = self.leader if params.leader_is_rep else rd.choice(self.members)
+            # pool is a reference to the new members of the last gen
             # If a species reaches selection_threshold, not every member gets in the pool
-            if len(self.alive_members) > params.selection_threshold:
-                self.pool = self.alive_members[:int(len(self.alive_members)*params.spawn_cutoff)]
+            if len(self.members) > params.selection_threshold:
+                self.pool = self.members[:int(len(self.members)*params.spawn_cutoff)]
             else:
-                self.pool = self.alive_members
+                self.pool = self.members
             # calculate the average fitness and adjusted fitness of this species
-            self.avg_fitness = sum(map(lambda m: m.fitness, self.alive_members)) / len(self.alive_members)
+            self.avg_fitness = sum(map(lambda m: m.fitness, self.members)) / len(self.members)
             fit_modif = params.youth_bonus if self.age < params.old_age else params.old_penalty
             self.avg_fitness_adjusted = self.avg_fitness * fit_modif
             # save the components of the last gen
             if params.compat_to_multiple:
                 self.component_set = self.update_components()
-            # reassign alive members to a new empty array, so new agents can be placed
+            # reassign new members to a new empty array, so new agents can be placed
             # in the next gen. Clearing it also clear the pool, since pool is a reference.
-            self.alive_members = []
+            self.members = []
             
 
     def update_components(self) -> set:
         """Adds #species_component_pool_size component sets to a shared set of components
         """
-        n_representatives = min(params.species_component_pool_size, len(self.alive_members))
-        representatives = rd.choices(self.alive_members, k=n_representatives)
+        n_representatives = min(params.species_component_pool_size, len(self.members))
+        representatives = rd.choices(self.members, k=n_representatives)
         components = set()
         for rep in representatives:
             components.update(rep.get_unique_component_set())
@@ -138,7 +136,6 @@ class Species:
         """
         info_d = {}
         info_d["name"] = self.name
-        info_d["alive_member_ids"] = [g.id for g in self.alive_members]
         info_d["age"] = self.age
         info_d["representative_id"] = self.representative.id
         info_d["leader_id"] = self.leader.id
