@@ -13,13 +13,7 @@ from neat.species import Species
 # ------------------------------------------------------------------------------
 
 class GeneticAlgorithm:
-    def __init__(
-            self,
-            params_name:str,
-            log,
-            is_minimal_serialization=False,
-            is_pop_serialized=True,
-            is_timed=True)-> None:
+    def __init__(self, params_name:str, log)-> None:
 
         self.start_time = datetime.now()
         self.history = {}
@@ -34,16 +28,13 @@ class GeneticAlgorithm:
         self.global_mutation_rate = 0 # 0 -> normal or 1 -> high
 
         # measurement stuff general
-        if is_timed:
-            self.timer = timer.Timer()
-            self.is_timed = True
-        self.is_minimal_serialization = is_minimal_serialization
-        self.is_pop_serialized = is_pop_serialized
-        self.best_genome = None
+        self.timer = timer.Timer()
+        self.curr_best_genome = None
         self.total_pop_fitness = None
         self.avg_pop_fitness = None
         self.old_comp_num = 0
         self.new_comp_num = 0
+
         # makeup of the new generation
         self.num_crossover = 0
         self.num_asex = 0
@@ -52,6 +43,7 @@ class GeneticAlgorithm:
         # measurements specific to speciation
         self.num_new_species = 0 # these are set by calling get_initial_pop (only used if strat speciation)
         self.species = [] 
+        self.surviving_species = []
         self.population = []
         self.best_species = None
 
@@ -88,11 +80,11 @@ class GeneticAlgorithm:
         """Evaluates genomes (and species if necessary)
         """
         # evaluate current genomes and species
-        if self.is_timed: self.timer.start("evaluate_curr_generation", self.curr_gen)
+        self.timer.start("evaluate_curr_generation", self.curr_gen)
         self.evaluate_curr_genomes()
         if params.selection_strategy == "speciation":
             self.evaluate_curr_species()
-        if self.is_timed: self.timer.stop("evaluate_curr_generation", self.curr_gen)
+        self.timer.stop("evaluate_curr_generation", self.curr_gen)
 
         # component_tracker updates the component fitnesses
         self.pop_component_tracker.update_global_components(self.population, self.curr_gen)
@@ -109,10 +101,10 @@ class GeneticAlgorithm:
             self.total_pop_fitness += g.fitness
         self.population.sort(key=lambda g: g.fitness, reverse=True)
         # check if fitness improvement happened
-        if self.curr_gen > 1 and self.population[0].fitness > self.best_genome.fitness:
+        if self.curr_gen > 1 and self.population[0].fitness > self.curr_best_genome.fitness:
             self.improvements[self.curr_gen] = self.population[0]
         # update best genome
-        self.best_genome = self.population[0]
+        self.curr_best_genome = self.population[0]
         return
 
 
@@ -124,40 +116,30 @@ class GeneticAlgorithm:
             # dict for evaluation of current gen
             gen_info = self.history[self.curr_gen] = {}
 
-            # save info about species
+            # save current species & info about them
             if params.selection_strategy == "speciation":
-                if self.is_pop_serialized:
-                    if self.is_minimal_serialization:
-                        gen_info["species"] = [s.get_curr_info() for s in self.species]
-                        gen_info["best species"] = self.best_species.get_curr_info()
-                    else:
-                        gen_info["species"] = [copy(s) for s in self.species]
-                        gen_info["best species"] = copy(self.best_species)
-                gen_info["num total species"] = len(self.species)
-                gen_info["num new species"] = self.num_new_species
-                gen_info["best species avg fitness"] = self.best_species.avg_fitness
+                gen_info["species"] = [s.get_curr_info() for s in self.species]
+                gen_info["best_species"] = self.best_species.name
+                gen_info["num_total_species"] = len(self.species)
+                gen_info["num_new_species"] = self.num_new_species
+                gen_info["best_species_avg_fitness"] = self.best_species.avg_fitness
+
+            # save current population
+            gen_info["population"] = [g.get_curr_info() for g in self.population]
 
             # save info about generation in general
-            if self.is_pop_serialized:
-                if self.is_minimal_serialization:
-                    gen_info["best genome"] = self.best_genome.get_curr_info()
-                    gen_info["population"] = [g.get_curr_info() for g in self.population]
-                else:
-                    gen_info["best genome"] = copy(self.best_genome)
-                    gen_info["population"] = [copy(g) for g in self.population]
-
-            gen_info["num total innovations"] = self.new_comp_num
-            gen_info["num new innovations"] = self.new_comp_num - self.old_comp_num
-            gen_info["num crossover"] = self.num_crossover
-            gen_info["num elite"] = self.num_elite
-            gen_info["num asex"] = self.num_asex
-            gen_info["best genome fitness"] = self.population[0].fitness
-            gen_info["avg pop fitness"] = self.total_pop_fitness / params.popsize
-            gen_info["total pop fitness"] = self.total_pop_fitness
-            if self.is_timed:
-                gen_info["times"] = self.timer.get_gen_times(self.curr_gen)
-                if self.curr_gen == 0:
-                    gen_info["times"]["pop_update"] = 0
+            gen_info["best_genome"] = self.curr_best_genome.id
+            gen_info["num_total_components"] = self.new_comp_num
+            gen_info["num_new_components"] = self.new_comp_num - self.old_comp_num
+            gen_info["num_crossover"] = self.num_crossover
+            gen_info["num_elite"] = self.num_elite
+            gen_info["num_asex"] = self.num_asex
+            gen_info["best_genome_fitness"] = self.curr_best_genome.fitness
+            gen_info["avg_pop_fitness"] = self.total_pop_fitness / params.popsize
+            gen_info["total_pop_fitness"] = self.total_pop_fitness
+            gen_info["times"] = self.timer.get_gen_times(self.curr_gen)
+            if self.curr_gen == 0:
+                gen_info["times"]["pop_update"] = 0
         else:
             raise Exception("Tried to log gen before evaluating")
         return
@@ -169,15 +151,15 @@ class GeneticAlgorithm:
         Can calculate new info that I don't want to save in history.
         """
         gen_info  = self.history[gen] # stuff to take info from
-        print_info = {"gen": gen} # other stuff to put info into?
+        print_info = {"gen": gen, "best_fitness": self.curr_best_genome.fitness}
         keep = [
-            "avg pop fitness", "num total innovations", "num new innovations",
-            "total pop fitness", "best genome fitness", "times"
+            "avg_pop_fitness", "num_total_components", "num_new_components",
+            "total_pop_fitness", "times"
             ]
         if params.selection_strategy == "speciation":
             keep += [
-                "num total species", "num new species", "best species avg fitness",
-                "num crossover", "num elite", "num asex"
+                "num_total_species", "num_new_species", "best_species_avg_fitness",
+                "num_crossover", "num_elite", "num_asex"
             ]
         print_info = print_info | {k: gen_info[k] for k in keep}
         return print_info
@@ -216,12 +198,9 @@ class GeneticAlgorithm:
         """ 
         return {
             "history": self.history,
-            "param_values": params.get_curr_curr_dict(),
-            "best_genome": self.best_genome,
+            "best_genome": self.curr_best_genome,
             "improvements": self.improvements,
-            "max_fitness": self.best_genome.fitness,
             "total innovs": len(self.pop_component_tracker.component_history),
-            "duration": str(datetime.now() - self.start_time)
         }
 
 # ------------------------------------------------------------------------------
@@ -229,7 +208,7 @@ class GeneticAlgorithm:
 # ------------------------------------------------------------------------------
 
     def pop_update(self) -> None:
-        if self.is_timed: self.timer.start("pop_update", self.curr_gen)
+        self.timer.start("pop_update", self.curr_gen)
 
         if params.selection_strategy == "speciation":
             self.speciation_pop_update()
@@ -238,13 +217,15 @@ class GeneticAlgorithm:
         elif params.selection_strategy == "truncation": # https://www.researchgate.net/publication/259461147_Selection_Methods_for_Genetic_Algorithms
             self.truncation_pop_update()
 
-        if self.is_timed: self.timer.stop("pop_update", self.curr_gen)
+        self.timer.stop("pop_update", self.curr_gen)
 
 # SPECIATION -------------------------------------------------------------------
 
     def speciation_pop_update(self) -> None:
         """Get spawns from species, and add them to the population.
         """ 
+        # remove all species that won't go into next gen after logging
+        self.species = self.surviving_species
         # first get the crossover spawns
         if self.curr_gen >= params.start_crossover:
             n_crossover = int(params.popsize * params.pop_perc_crossover)
@@ -296,9 +277,9 @@ class GeneticAlgorithm:
 
 
     def evaluate_curr_species(self) -> None:
-        """update species, kill off stale ones, and update spawn amounts
+        """update species and update spawn amounts
         """
-        updated_species = []
+        self.surviving_species = []
         total_adjusted_species_avg_fitness = 0
         total_species_avg_fitness = 0
         num_dead_species = 0
@@ -311,18 +292,18 @@ class GeneticAlgorithm:
         # now that best species is determined, kill off stale species and update spawn amount
         for s in self.species:
             # don't kill off best species or species containing curr best genome
-            if (not s.obliterate) or (s == self.best_species) or (self.best_genome.species_id == s.name):
-                updated_species.append(s)
+            if (not s.obliterate) or (s == self.best_species) or (self.curr_best_genome.species_id == s.name):
+                self.surviving_species.append(s)
                 total_species_avg_fitness += s.avg_fitness
                 total_adjusted_species_avg_fitness += s.avg_fitness_adjusted 
             else:
                 num_dead_species += 1 # dont add it to updated species
-        if not updated_species or total_adjusted_species_avg_fitness == 0:
+        if not self.surviving_species or total_adjusted_species_avg_fitness == 0:
             raise Exception("mass extinction")
         # calculate offspring amt based on fitness relative to the total_adjusted_species_avg_fitness
-        for s in updated_species:
+        for s in self.surviving_species:
             s.calculate_offspring_amount(total_adjusted_species_avg_fitness)
-        self.species = updated_species
+        return
 
 
     def find_and_add_to_species(self, new_genome: GeneticNet) -> Species:
@@ -453,7 +434,7 @@ class GeneticAlgorithm:
             new_g.mutate(1)
             new_genomes.append(new_g)
 
-        new_genomes.append(self.best_genome.clone()) # add best g w.o. mutation
+        new_genomes.append(self.curr_best_genome.clone()) # add best g w.o. mutation
         self.population = new_genomes
 
 # ------------------------------------------------------------------------------

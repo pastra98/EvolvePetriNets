@@ -46,18 +46,13 @@ def run_setup(run_nr, main_logger, setup, results_path) -> dict:
         
     # update results of this run with times
     run_end = datetime.datetime.now()
-    run_result |= {"start": run_start, "end": run_end, "time": run_end - run_start}
+    run_result |= {"start": run_start, "end": run_end, "time": str(run_end - run_start)}
     run_logger.info(f"{80*'/'}\nRun finished at {run_end}")
     main_logger.info(f"{80*'/'}\nRun {run_nr} of setup {setup['setupname']} finished at {run_end}")
 
     # if run successfull, save endreports
     if not "EXCEPTION" in run_result:
-        er.save_report(
-            run_result,
-            f"{run_dir}/reports",
-            setup["save_reduced_history_df"],
-            setup["ga_kwargs"]["is_minimal_serialization"]
-        )
+        er.save_report(run_result, f"{run_dir}/reports")
         main_logger.info(f"reports saved at:\n{run_dir}/reports")
 
     gc.collect()
@@ -73,13 +68,7 @@ def run_ga(setup: logging.Logger, logger):
     log = lg.get_log_from_xes(setup["logpath"])
     stopvar, stopval = setup["stop_cond"]["var"], setup["stop_cond"]["val"]
     # initialize GeneticAlgorithm with setup info
-    curr_ga = ga.GeneticAlgorithm(
-        setup["parampath"],
-        log,
-        is_minimal_serialization=setup["ga_kwargs"]["is_minimal_serialization"],
-        is_pop_serialized=setup["ga_kwargs"]["is_pop_serialized"],
-        is_timed=setup["ga_kwargs"]["is_timed"]
-    )
+    curr_ga = ga.GeneticAlgorithm(setup["parampath"], log)
     # run current ga
     stop_ga = False
     while not stop_ga:
