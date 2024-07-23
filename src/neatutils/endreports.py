@@ -1,77 +1,70 @@
-from pm4py.visualization.petri_net import visualizer
-
 import matplotlib.pyplot as plt
+import matplotlib
 import pandas as pd
 import numpy as np
 from statistics import fmean
 from math import ceil
-from copy import copy
 
-import traceback
 import gc
-import importlib
-import matplotlib
 import pickle
 import os
-import re
 
 
-def save_report(
-        ga_info: dict,
-        savedir: str,
-        save_df: bool,
-        is_min_serialize: bool
-    ) -> None:
+def save_report(ga_info: dict, savedir: str) -> None:
     """saves some plots in the specified dir
     """
-
     matplotlib.use('Agg')
-    use_species = ga_info["param_values"]["selection_strategy"] == "speciation"
 
+    # save run report
+    run_report(ga_info, savedir=savedir)
+
+    # get the full history df, and the species df (if it exists)
     full_history = ga_info["history"]
-    best_genome = ga_info["best_genome"]
-
-    plotting_history_df = get_plotting_history_df(full_history)
-    if save_df: # only works with minimal serialization lolz
-        # save history df and species df (if using speciation)
-        if use_species:
-            # extract species names if using speciation
-            fixup_history_df(plotting_history_df).to_feather(f"{savedir}/history.feather")
-            get_species_df(full_history, is_min_serialize).to_feather(f"{savedir}/species.feather")
-        else:
-            plotting_history_df.to_feather(f"{savedir}/history.feather")
-        # save population df
-        pop_df = get_population_df(full_history, is_min_serialize)
-        pop_df.to_feather(f"{savedir}/population.feather")
+    use_species = "species" in full_history[1]
     if use_species:
-        try: # TODO: this is bullshit
-            species_plot(full_history, savedir=savedir)
-        except:
-            pass
+        species_df = get_species_df(full_history)
+    pop_df = get_population_df(full_history)
+    gen_info_df = get_gen_info_df(full_history)
+    
+    # save the dataframes
+    species_df.to_feather(f"{savedir}/species.feather")
+    pop_df.to_feather(f"{savedir}/population.feather")
+    gen_info_df.to_feather(f"{savedir}/gen_info.feather")
+
+    # save the improvements
+    save_improvements(ga_info["improvements"], savedir=savedir)
+
+    # make the plots
+    if use_species:
+        species_plot(species_df, savedir)
+    time_stackplot(gen_info_df, savedir)
     history_plots(plotting_history_df, use_species, savedir=savedir)
     save_genome_gviz(best_genome, "pdf", savedir=savedir, name_prefix="best_genome")
-    save_improvements(ga_info["improvements"], savedir=savedir)
     pickle_best_genome(best_genome, savedir=savedir)
-    plot_metrics_timeseries(full_history, savedir=savedir)
+    plot_detailed_fitness(full_history, savedir=savedir)
     plot_mutation_effects(pop_df, savedir=savedir)
-    run_report(ga_info, savedir=savedir)
+    # close all plots and free memory
+    plt.close("all")
     gc.collect()
 
 
-def get_plotting_history_df(history: dict):
-    """expects the history from a run
+def time_stackplot(gen_info_df, savedir: str) -> None:
+    """Stackplot showing how long each step took
     """
-    dlist = []
-    excludes = ["population", "species", "best genome", "times"]
-    for gen, info_dict in history.items():
-        d = {k: info_dict[k] for k in info_dict if k not in excludes}
-        d["gen"] = int(gen)
-        times = info_dict["times"]
-        d |= {k: times[k] for k in times}
-        dlist.append(d)
-    df = pd.DataFrame(dlist)
-    df.reset_index(inplace=True)
-    return df
+    times_df = pd.DataFrame(gen_info_df["times"].tolist(), index=gen_info_df.index)
+    fig, ax = plt.subplots(figsize=(15, 5))
+    ax.stackplot(
+        times_df.index,
+        times_df["evaluate_curr_generation"],
+        times_df["pop_update"],
+        labels=[
+            "Evaluate Current Generation", "Population Update"
+        ])
+    ax.legend()
+    plt.title('Time Spent Over Generations')
+    plt.xlabel('Generation')
+    plt.ylabel('Time')
+    plt.savefig(f"{savedir}/time_plot.pdf")
 
 
 def history_plots(plotting_history_df, use_species: bool, savedir: str) -> None:
@@ -97,55 +90,16 @@ def history_plots(plotting_history_df, use_species: bool, savedir: str) -> None:
     gc.collect()
 
 
-def species_plot(full_history, savedir: str):
-    s_dict = {}
-    for gen, info in full_history.items():
-        for g in info["population"]:
-            if isinstance(g, dict):
-                s_id = g["species_id"]
-            else:
-                s_id = g.species_id
-            if not s_id in s_dict:
-                s_dict[s_id] = {gen: 1}
-            elif not gen in s_dict[s_id]:
-                s_dict[s_id][gen] = 1
-            else:
-                s_dict[s_id][gen] += 1
-    total_gens = len(full_history)
-    pop_sizes = []
-    for s, gens in s_dict.items():
-        s_sizes = []
-        if (first_appear := list(gens.keys())[0]) > 1:
-            s_sizes = [0] * (first_appear - 1)
-        s_sizes += gens.values()
-        if (last_appear := list(gens.keys())[-1]) < total_gens:
-            s_sizes += [0] * (total_gens - last_appear)
-        pop_sizes.append(s_sizes)
-    ##
-    fig, ax = plt.subplots()
-    ax.stackplot(list(full_history.keys()), *pop_sizes, labels=list(s_dict.keys()), edgecolor="black")
-    # Shrink current axis's height by 10% on the bottom
-    box = ax.get_position()
-    ax.set_position([box.x0, box.y0 + box.height * 0.1, box.width, box.height * 0.9])
-    legend = ax.legend(
-        loc="upper center",
-        ncol=ceil(len(s_dict)/8),
-        bbox_to_anchor=(0.5, -0.05),
-        fancybox=True, shadow=True
-    )
-    plt.rcParams["figure.figsize"] = (15,5)
-    try:
-        fig.savefig(
-            f"{savedir}/species_plot.pdf",
-            bbox_extra_artists=(legend,),
-            bbox_inches='tight',
-            dpi=300)
-    except:
-        print(f"could not save in the given path\n{savedir}")
-    fig.clf()
-    del fig
-    plt.close("all")
-    gc.collect()
+def species_plot(species_df, savedir: str):
+    # Group by gen and species_id, sum num_members, then do stackplot
+    grouped = species_df.groupby(['gen', 'name'])['num_members'].sum().unstack(fill_value=0)
+    fig, ax = plt.subplots(figsize=(15, 5))
+    ax.stackplot(grouped.index, grouped.T, labels=grouped.columns)
+    ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.15), ncol=3)
+    plt.title('Species Sizes Over Time')
+    plt.xlabel('Generation')
+    plt.ylabel('Number of Members')
+    plt.savefig(f"{savedir}/species_plot.pdf")
 
 
 def save_genome_gviz(genome, ftype: str, savedir: str, name_prefix="") -> None:
@@ -165,87 +119,94 @@ def pickle_best_genome(best_genome, savedir: str) -> None:
     except:
         print(f"couldn't save best_genome in\n{savedir}")
 
-import matplotlib.pyplot as plt
-from statistics import fmean
 
-
-def plot_metrics_timeseries(full_history, savedir: str) -> None:
-    seperate_plot = ["aggregated_replay_fitnesss"]
-    all_metrics = [m for m in full_history[1]["best genome"]["fitness_metrics"]]
-    best_metrics = {m: [] for m in all_metrics}
-    pop_metrics = copy(best_metrics)
+def plot_detailed_fitness(full_history, savedir: str) -> None:
+    plotvars = {
+        "fitness": {"best": [], "pop_avg": []},
+        "io": {"best": [], "pop_avg": []},
+        "mbm": {"best": [], "pop_avg": []},
+        "ftt": {"best": [], "pop_avg": []},
+        "tbt": {"best": [], "pop_avg": []},
+        "precision": {"best": [], "pop_avg": []},
+        "execution_score": {"best": [], "pop_avg": []}
+    }
+    # read data into plotvars
     for info_d in full_history.values():
         best, pop = info_d["best genome"], info_d["population"]
-        for metric in best["fitness_metrics"]:
-            best_metrics[metric].append(best["fitness_metrics"][metric])
-            pop_metrics[metric].append(fmean([g["fitness_metrics"][metric] for g in pop]))
+        for vname in plotvars:
+            try:  # object
+                plotvars[vname]["best"].append(getattr(best, vname))
+                plotvars[vname]["pop_avg"].append(fmean([getattr(g, vname) for g in pop]))
+            except:  # dict
+                plotvars[vname]["best"].append(best[vname])
+                plotvars[vname]["pop_avg"].append(fmean([g[vname] for g in pop]))
 
-    # # Separate plots for 'fitness' and 'execution_score'
-    # for special_var in ["fitness", "execution_score"]:
-    #     d = plotvars.pop(special_var)  # Remove and retrieve special_var data
+    # Separate plots for 'fitness' and 'execution_score'
+    for special_var in ["fitness", "execution_score"]:
+        d = plotvars.pop(special_var)  # Remove and retrieve special_var data
+        fig, ax = plt.subplots()
+        for metricname, values in d.items():
+            ax.plot(values, label=metricname)
+        ax.legend()
+        plt.title(special_var)
+        try:
+            fig.savefig(f"{savedir}/{special_var}.pdf", dpi=300)
+        except:
+            print(f"could not save in the given path\n{savedir}")
+        plt.close(fig)
 
-
-    # this sucks
-    for m in seperate_plot:
-        del best_metrics[m]
-        del pop_metrics[m]
 
     # Combined plots for the rest
-    save_timeseries_plot("Best Combined Metrics", best_metrics, savedir)
-    save_timeseries_plot("Population Combined Metrics", pop_metrics, savedir)
-
-def save_timeseries_plot(title: str, data: dict, savedir: str):
-    fig, ax = plt.subplots()
-    plt.title(title)
-    for metricname, values in data.items():
-        ax.plot(values, label=metricname)
-    ax.legend()
-    fig.savefig(f"{savedir}/{title}.pdf", dpi=300)
-    plt.close(fig)
-
+    fig, ax_best = plt.subplots()
+    fig, ax_pop_avg = plt.subplots()
+    for vname, d in plotvars.items():
+        ax_best.plot(d["best"], label=vname)
+        ax_pop_avg.plot(d["pop_avg"], label=vname)
+    ax_best.legend()
+    ax_best.set_title("Best of Each Variable")
+    ax_pop_avg.legend()
+    ax_pop_avg.set_title("Population Average of Each Variable")
+    try:
+        ax_best.figure.savefig(f"{savedir}/combined_best.pdf", dpi=300)
+        ax_pop_avg.figure.savefig(f"{savedir}/combined_pop_avg.pdf", dpi=300)
+    except:
+        print(f"could not save in the given path\n{savedir}")
+    plt.close("all")
 
 def run_report(ga_info, savedir: str) -> None:
-    try:
-        savedir = savedir.rstrip("/reports")
-        with open(f"{savedir}/report.txt", "w") as f:
-            f.write(f"Best fitness:\n{ga_info['best_genome'].fitness}\n")
-            f.write(f"Total innovs discovered:\n{ga_info['total innovs']}\n")
-            f.write(f"Duration of run:\n{ga_info['duration']}")
-    except:
-        print(f"couldn't save report in\n{savedir}")
-        print(traceback.format_exc())
-
-def fixup_history_df(df):
-    try: # in case we have object
-        df["best species"] = df["best species"].apply(lambda bs: bs.name)
-    except: # in case we have dict
-        df["best species"] = df["best species"].apply(lambda bs: bs["name"])
-    return df
+    savedir = savedir.rstrip("/reports")
+    with open(f"{savedir}/report.txt", "w") as f:
+        f.write(f"Best fitness:\n{ga_info['best_genome'].fitness}\n")
+        f.write(f"Total innovs discovered:\n{ga_info['total innovs']}\n")
+        f.write(f"Duration of run:\n{ga_info['time']}")
 
 
-def get_species_df(full_history, is_min_serialize: bool):
-    # only works with minimal serialization right now
+def get_species_df(full_history: dict):
     l = []
     for gen, info_d in full_history.items():
         for s in info_d["species"]:
-            if is_min_serialize:
-                del s["alive_member_ids"]
-                l.append(s | {"gen": gen})
-            else:
-                l.append({"gen": gen, "species_pickle": s})
+            l.append(s | {"gen": gen})
     return pd.DataFrame(l)
 
 
-def get_population_df(full_history, is_min_serialize: bool):
-    # only works with minimal serialization right now
+def get_population_df(full_history: dict):
     l = []
     for gen, info_d in full_history.items():
         for g in info_d["population"]:
-            if is_min_serialize:
-                l.append(g | {"gen": gen})
-            else:
-                l.append({"gen": gen, "genome_pickle": g})
+            l.append(g | {"gen": gen})
     return pd.DataFrame(l)
+
+
+def get_gen_info_df(full_history: dict):
+    l = []
+    excludes = ["species", "population"] # exclude the lists
+    for gen, info_d in full_history.items():
+        for key in excludes:
+            info_d.pop(key)
+        l.append(info_d | {"gen": gen})
+    df = pd.DataFrame(l)
+    df.set_index("gen")
+    return df
 
 
 def plot_mutation_effects(pop_df, savedir: str):
