@@ -4,10 +4,13 @@ import pandas as pd
 import numpy as np
 from statistics import fmean
 from math import ceil
+from neat.genome import GeneticNet
 
 import gc
 import pickle
 import os
+
+FSIZE = (10, 5)
 
 
 def save_report(ga_info: dict, savedir: str) -> None:
@@ -21,165 +24,45 @@ def save_report(ga_info: dict, savedir: str) -> None:
     # get the full history df, and the species df (if it exists)
     full_history = ga_info["history"]
     use_species = "species" in full_history[1]
-    if use_species:
-        species_df = get_species_df(full_history)
+    if use_species: species_df = get_species_df(full_history)
     pop_df = get_population_df(full_history)
     gen_info_df = get_gen_info_df(full_history)
     
     # save the dataframes
-    species_df.to_feather(f"{savedir}/species.feather")
-    pop_df.to_feather(f"{savedir}/population.feather")
-    gen_info_df.to_feather(f"{savedir}/gen_info.feather")
+    os.makedirs(f"{savedir}/feather")
+    species_df.to_feather(f"{savedir}/feather/species.feather")
+    pop_df.to_feather(f"{savedir}/feather/population.feather")
+    gen_info_df.to_feather(f"{savedir}/feather/gen_info.feather")
 
-    # save the improvements
-    save_improvements(ga_info["improvements"], savedir=savedir)
+    # save the improvements, species leaders & best genome, delete ga info after
+    save_improvements(ga_info["improvements"], savedir)
+    save_genome_gviz(ga_info["best_genome"], savedir, name_prefix="best_genome")
+    if use_species: save_species_leaders(ga_info["species_leaders"], savedir)
+    pickle_genome(ga_info["best_genome"], "best_genome", savedir)
 
     # make the plots
-    if use_species:
-        species_plot(species_df, savedir)
+    if use_species: species_plot(species_df, savedir)
     time_stackplot(gen_info_df, savedir)
-    history_plots(plotting_history_df, use_species, savedir=savedir)
-    save_genome_gviz(best_genome, "pdf", savedir=savedir, name_prefix="best_genome")
-    pickle_best_genome(best_genome, savedir=savedir)
-    plot_detailed_fitness(full_history, savedir=savedir)
-    plot_mutation_effects(pop_df, savedir=savedir)
+    fitness_plot(gen_info_df, savedir)
+    components_plot(gen_info_df, savedir)
+    mutation_effects_plot(pop_df, savedir)
+    metrics_plot(pop_df, savedir)
+
     # close all plots and free memory
     plt.close("all")
     gc.collect()
 
 
-def time_stackplot(gen_info_df, savedir: str) -> None:
-    """Stackplot showing how long each step took
-    """
-    times_df = pd.DataFrame(gen_info_df["times"].tolist(), index=gen_info_df.index)
-    fig, ax = plt.subplots(figsize=(15, 5))
-    ax.stackplot(
-        times_df.index,
-        times_df["evaluate_curr_generation"],
-        times_df["pop_update"],
-        labels=[
-            "Evaluate Current Generation", "Population Update"
-        ])
-    ax.legend()
-    plt.title('Time Spent Over Generations')
-    plt.xlabel('Generation')
-    plt.ylabel('Time')
-    plt.savefig(f"{savedir}/time_plot.pdf")
-
-
-def history_plots(plotting_history_df, use_species: bool, savedir: str) -> None:
-    plotvars = {
-        "fitness" : ["best genome fitness", "avg pop fitness"],
-        "times" : ["pop_update", "evaluate_curr_generation"],
-        "innovs" : ["num new innovations"],
-    }
-    if use_species:
-        plotvars["species num"] = ["num total species"]
-        plotvars["fitness"].append("best species avg fitness")
-    plt.rcParams["figure.figsize"] = (15,5)
-    for name, vars in plotvars.items():
-        plot = plotting_history_df[vars].plot(title=name)
-        fig = plot.get_figure()
-        try:
-            fig.savefig(f"{savedir}/{name}.pdf", dpi=300)
-        except:
-            print(f"could not save in the given path\n{savedir}")
-        fig.clf()
-        del fig
-    plt.close("all")
-    gc.collect()
-
-
-def species_plot(species_df, savedir: str):
-    # Group by gen and species_id, sum num_members, then do stackplot
-    grouped = species_df.groupby(['gen', 'name'])['num_members'].sum().unstack(fill_value=0)
-    fig, ax = plt.subplots(figsize=(15, 5))
-    ax.stackplot(grouped.index, grouped.T, labels=grouped.columns)
-    ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.15), ncol=3)
-    plt.title('Species Sizes Over Time')
-    plt.xlabel('Generation')
-    plt.ylabel('Number of Members')
-    plt.savefig(f"{savedir}/species_plot.pdf")
-
-
-def save_genome_gviz(genome, ftype: str, savedir: str, name_prefix="") -> None:
-    gviz = genome.get_gviz()
-    try:
-        gviz.format = ftype
-        with open(f"{savedir}/{name_prefix}_id-{genome.id}.{ftype}", "wb") as f:
-            f.write(gviz.pipe(format=ftype))
-    except:
-        print(f"couldn't save gviz in\n{savedir}")
-
-def pickle_best_genome(best_genome, savedir: str) -> None:
-    best_genome.clear_cache()
-    try:
-        with open(f"{savedir}/best_genome.pkl", "wb") as f:
-            pickle.dump(best_genome, f)
-    except:
-        print(f"couldn't save best_genome in\n{savedir}")
-
-
-def plot_detailed_fitness(full_history, savedir: str) -> None:
-    plotvars = {
-        "fitness": {"best": [], "pop_avg": []},
-        "io": {"best": [], "pop_avg": []},
-        "mbm": {"best": [], "pop_avg": []},
-        "ftt": {"best": [], "pop_avg": []},
-        "tbt": {"best": [], "pop_avg": []},
-        "precision": {"best": [], "pop_avg": []},
-        "execution_score": {"best": [], "pop_avg": []}
-    }
-    # read data into plotvars
-    for info_d in full_history.values():
-        best, pop = info_d["best genome"], info_d["population"]
-        for vname in plotvars:
-            try:  # object
-                plotvars[vname]["best"].append(getattr(best, vname))
-                plotvars[vname]["pop_avg"].append(fmean([getattr(g, vname) for g in pop]))
-            except:  # dict
-                plotvars[vname]["best"].append(best[vname])
-                plotvars[vname]["pop_avg"].append(fmean([g[vname] for g in pop]))
-
-    # Separate plots for 'fitness' and 'execution_score'
-    for special_var in ["fitness", "execution_score"]:
-        d = plotvars.pop(special_var)  # Remove and retrieve special_var data
-        fig, ax = plt.subplots()
-        for metricname, values in d.items():
-            ax.plot(values, label=metricname)
-        ax.legend()
-        plt.title(special_var)
-        try:
-            fig.savefig(f"{savedir}/{special_var}.pdf", dpi=300)
-        except:
-            print(f"could not save in the given path\n{savedir}")
-        plt.close(fig)
-
-
-    # Combined plots for the rest
-    fig, ax_best = plt.subplots()
-    fig, ax_pop_avg = plt.subplots()
-    for vname, d in plotvars.items():
-        ax_best.plot(d["best"], label=vname)
-        ax_pop_avg.plot(d["pop_avg"], label=vname)
-    ax_best.legend()
-    ax_best.set_title("Best of Each Variable")
-    ax_pop_avg.legend()
-    ax_pop_avg.set_title("Population Average of Each Variable")
-    try:
-        ax_best.figure.savefig(f"{savedir}/combined_best.pdf", dpi=300)
-        ax_pop_avg.figure.savefig(f"{savedir}/combined_pop_avg.pdf", dpi=300)
-    except:
-        print(f"could not save in the given path\n{savedir}")
-    plt.close("all")
-
 def run_report(ga_info, savedir: str) -> None:
+    """Short txt file with overview info about run
+    """
     savedir = savedir.rstrip("/reports")
     with open(f"{savedir}/report.txt", "w") as f:
         f.write(f"Best fitness:\n{ga_info['best_genome'].fitness}\n")
-        f.write(f"Total innovs discovered:\n{ga_info['total innovs']}\n")
+        f.write(f"Total components discovered:\n{ga_info['total_components']}\n")
         f.write(f"Duration of run:\n{ga_info['time']}")
 
+# ---------- CONVERT TO DATAFRAMES
 
 def get_species_df(full_history: dict):
     l = []
@@ -194,7 +77,10 @@ def get_population_df(full_history: dict):
     for gen, info_d in full_history.items():
         for g in info_d["population"]:
             l.append(g | {"gen": gen})
-    return pd.DataFrame(l)
+    df = pd.DataFrame(l)
+    # expand the fitness metrics to columns
+    metrics = pd.json_normalize(df['fitness_metrics']).add_prefix("metric_")
+    return pd.concat([df.drop(columns=['fitness_metrics']), metrics], axis=1)
 
 
 def get_gen_info_df(full_history: dict):
@@ -208,12 +94,119 @@ def get_gen_info_df(full_history: dict):
     df.set_index("gen")
     return df
 
+# ---------- SERIALIZING GENOMES
 
-def plot_mutation_effects(pop_df, savedir: str):
+def save_genome_gviz(genome: GeneticNet, savedir: str, name_prefix=""):
+    """Save gviz render of specified genome
+    """
+    with open(f"{savedir}/{name_prefix}_id-{genome.id}.pdf", "wb") as f:
+        f.write(genome.get_gviz().pipe(format="pdf"))
+
+
+def save_improvements(improvements: str, savedir: str):
+    """Save gviz render of every fitness improvement
+    """
+    os.makedirs(f"{savedir}/improvements")
+    for gen, g in improvements.items():
+        save_genome_gviz(g, f"{savedir}/improvements", name_prefix=f"improvement_gen-{gen}")
+
+
+def save_species_leaders(leaders: list[GeneticNet], savedir: str):
+    """Save gviz render of leader of every species
+    """
+    os.makedirs(f"{savedir}/leaders")
+    for g in leaders:
+        save_genome_gviz(g, f"{savedir}/leaders", name_prefix=f"species_{g.species_id}")
+
+
+def pickle_genome(genome: GeneticNet, name: str, savedir: str):
+    """Pickle the full GeneticNet to disk
+    """
+    genome.clear_cache()
+    with open(f"{savedir}/{name}.pkl", "wb") as f:
+        pickle.dump(genome, f)
+
+# ---------- PLOTTING FUNCTIONS
+
+def time_stackplot(gen_info_df: pd.DataFrame, savedir: str):
+    """Stackplot of evaluation and pop update times
+    """
+    times_df = pd.DataFrame(gen_info_df["times"].tolist(), index=gen_info_df.index)
+    plt.figure(figsize=FSIZE)
+    plt.stackplot(
+        times_df.index,
+        times_df["evaluate_curr_generation"],
+        times_df["pop_update"],
+        labels=["Evaluate Current Generation", "Population Update"]
+        )
+    plt.legend()
+    plt.title("Time Spent Over Generations")
+    plt.xlabel("Generation")
+    plt.ylabel("Time")
+    plt.savefig(f"{savedir}/time_plot.pdf")
+
+
+def species_plot(species_df: pd.DataFrame, savedir: str):
+    """Stackplot of species member counts
+    """
+    grouped = species_df.groupby(["gen", "name"])["num_members"].sum().unstack(fill_value=0)
+    plt.figure(figsize=FSIZE)
+    plt.stackplot(grouped.index, grouped.T, labels=grouped.columns)
+    plt.legend(loc="upper center", bbox_to_anchor=(0.5, -0.15), ncol=3)
+    plt.title("Species Sizes Over Time")
+    plt.xlabel("Generation")
+    plt.ylabel("Number of Members")
+    plt.savefig(f"{savedir}/species_plot.pdf")
+
+
+def fitness_plot(gen_info_df: pd.DataFrame, savedir: str):
+    """Plot the best, best species and avg fitness of population
+    """
+    plt.figure(figsize=FSIZE)
+    plt.plot(gen_info_df[["best_genome_fitness", "best_species_avg_fitness", "avg_pop_fitness"]])
+    plt.legend(["Best Genome Fitness", "Best Species Average Fitness", "Average Population Fitness"])
+    plt.title("Fitness")
+    plt.xlabel("Generation")
+    plt.ylabel("Fitness")
+    plt.savefig(f"{savedir}/fitness_plot.pdf")
+
+
+def components_plot(gen_info_df: pd.DataFrame, savedir: str):
+    """Plot the total number of components over time
+    """
+    plt.figure(figsize=FSIZE)
+    plt.plot(gen_info_df["num_total_components"])
+    plt.title("Total components")
+    plt.xlabel("Generation")
+    plt.ylabel("num components")
+    plt.savefig(f"{savedir}/components_plot.pdf")
+
+
+def metrics_plot(pop_df: pd.DataFrame, savedir: str):
+    """Combined plots of metrics for best genome and populaiton avg
+    """
+    def plot_metrics(df, title):
+        plt.figure(figsize=FSIZE)
+        for col in df.columns:
+            plt.plot(df.index, df[col], label=col)
+        plt.title(title)
+        plt.xlabel('Generation')
+        plt.ylabel('Metric Value')
+        plt.legend()
+        plt.savefig(f"{savedir}/{title.split()[0]}_metrics.pdf")
+    # find metrics columns, aggregate them over generations, plot best and avg
+    metrics = [col for col in pop_df.columns if col.startswith("metric_")]
+    aggregated_metrics = pop_df.groupby('gen')[metrics].agg(['max', 'mean'])
+    df_best = aggregated_metrics.xs('max', level=1, axis=1)
+    df_avg = aggregated_metrics.xs('mean', level=1, axis=1)
+    plot_metrics(df_best, 'Best Genome Metrics Over Generations')
+    plot_metrics(df_avg, 'Average Population Metrics Over Generations')
+
+
+def mutation_effects_plot(pop_df, savedir: str):
     df_with_parents = pop_df.dropna(subset=['parent_id']).copy()
     df_with_parents['parent_id'] = df_with_parents['parent_id']
     fitness_dict = pop_df.set_index('id')['fitness'].to_dict()
-
     df_with_parents.loc[:, 'fitness_difference'] = df_with_parents.apply(lambda row: row['fitness'] - fitness_dict[row['parent_id']], axis=1)
     mutation_effects = {}
     mutation_frequency = {}
@@ -270,17 +263,6 @@ def plot_mutation_effects(pop_df, savedir: str):
             summary['mean'], summary['count']
         ]
 
-    try:
-        fig.savefig(f"{savedir}/mutation_analysis.pdf", dpi=300)
-        summary_df.to_markdown(f"{savedir}/mutation_effects.txt")
-    except:
-        print(f"could not save in the given path\n{savedir}")
-    fig.clf()
-    del fig
-    plt.close("all")
-    gc.collect()
+    fig.savefig(f"{savedir}/mutation_analysis.pdf", dpi=300)
+    summary_df.to_markdown(f"{savedir}/mutation_effects.txt")
 
-def save_improvements(improvements: str, savedir: str):
-    os.makedirs(f"{savedir}/improvements")
-    for gen, genome in improvements.items():
-        save_genome_gviz(genome, "pdf", f"{savedir}/improvements", name_prefix=f"improvement_gen-{gen}")
