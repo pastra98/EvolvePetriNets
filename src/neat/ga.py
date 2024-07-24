@@ -60,7 +60,6 @@ class GeneticAlgorithm:
         """
         # evaluate old generation and save results in history
         self.evaluate_curr_generation()
-        self.is_curr_gen_evaluated = True
 
         # writes info into gen info dict
         self.log_gen_info()
@@ -90,6 +89,7 @@ class GeneticAlgorithm:
         self.pop_component_tracker.update_global_components(self.population, self.curr_gen)
         self.old_comp_num = self.new_comp_num
         self.new_comp_num = len(self.pop_component_tracker.component_history)
+        self.is_curr_gen_evaluated = True
         return
 
 
@@ -196,12 +196,15 @@ class GeneticAlgorithm:
     def get_ga_final_info(self) -> dict:
         """Returns dict of history along with dict of param_values and max_fitnesss
         """ 
-        return {
+        info = {
             "history": self.history,
             "best_genome": self.curr_best_genome,
             "improvements": self.improvements,
-            "total innovs": len(self.pop_component_tracker.component_history),
+            "total_components": len(self.pop_component_tracker.component_history),
         }
+        if params.selection_strategy == "speciation":
+            info["species_leaders"] = [s.leader for s in self.species]
+        return info
 
 # ------------------------------------------------------------------------------
 # POPULATION UPDATES -----------------------------------------------------------
@@ -349,7 +352,7 @@ class GeneticAlgorithm:
                 baby = mom.crossover(dad)
                 # if mom and dad are not able to reproduce, find a new dad lol
                 if not baby:
-                    for new_dad in dad_species.alive_members:
+                    for new_dad in dad_species.members:
                         baby = mom.crossover(new_dad)
                         if baby: break
                 if baby:
