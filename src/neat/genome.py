@@ -652,7 +652,7 @@ class GeneticNet:
     def get_curr_info(self) -> dict:
         """Used for serialization when not wanting to save the entire object
         """
-        discard = ["transitions", "places", "arcs", "pop_component_tracker"]
+        discard = ["transitions", "places", "arcs", "pop_component_tracker", "task_list"]
         return {var: val for var, val in vars(self).items() if var not in discard}
 
 
