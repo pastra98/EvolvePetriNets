@@ -17,7 +17,7 @@ def run_setup(run_nr, main_logger, setup, results_path) -> dict:
     run_start = datetime.datetime.now()
     run_name = f"{run_nr}_{nl.fs_compatible_time(run_start)}"
     run_dir = f"{setup_path}/{run_name}"
-    os.makedirs(f"{run_dir}/reports")
+    os.makedirs(run_dir)
 
     # save params
     shutil.copy(setup["parampath"], f"{run_dir}/{run_name}_params.json")
@@ -52,14 +52,14 @@ def run_setup(run_nr, main_logger, setup, results_path) -> dict:
 
     # if run successfull, save endreports
     if not "EXCEPTION" in run_result:
-        er.save_report(run_result, f"{run_dir}/reports")
-        main_logger.info(f"reports saved at:\n{run_dir}/reports")
+        er.save_report(run_result, f"{run_dir}")
+        main_logger.info(f"reports saved at:\n{run_dir}")
 
     gc.collect()
     return {
         "setupname": setup['setupname'],
         "run_nr": run_nr,
-        "max_fitness": run_result['max_fitness'] if not "EXCEPTION" in run_result else None,
+        "max_fitness": run_result["best_genome"].fitness if not "EXCEPTION" in run_result else None,
         "Exceptions": "EXCEPTION" in run_result
     }
 
