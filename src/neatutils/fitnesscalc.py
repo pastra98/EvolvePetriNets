@@ -291,19 +291,3 @@ def max_replay_fitness(variants: tuple):
     for tlen in variants:
         fit += 1 + MULT * ((tlen * (tlen-1)) / 2)
     return fit
-
-# @cache
-# def max_replay_fitness(variants: tuple):
-#     """Dumb function that takes in tuple with len of every trace.
-#     Does not factor cardinalities yet.
-#     """
-#     # TODO: factor in cardinalities of how many traces per variant
-#     fit = 0
-#     for tracelen in variants:
-#         trace_fitness = 0
-#         mult_count = 0
-#         for _ in range(tracelen):
-#             trace_fitness += MAX_PTS * max(1, MULT * mult_count)
-#             mult_count += 1
-#         fit += trace_fitness
-#     return fit
