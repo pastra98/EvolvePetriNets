@@ -83,7 +83,21 @@ class Petri:
         self.log = log
 
 
+    def replay_log(self) -> dict:
+        """Replay every trace of the log
+        """
+        # TODO: factor in cardinalities of how many traces per variant
+        log_replay: List[dict] = []
+        for trace in self.log["variants"]:
+            trace_replay = self._replay_trace(trace)
+            trace_fitness = self._get_trace_fitness(trace_replay)
+            log_replay.append(trace_replay | {"fitness": trace_fitness})
+        return log_replay
+
+
     def _replay_trace(self, trace: Tuple[str]):
+        """Replay a trace, return cpmr counts
+        """
         self.set_initial_marking()
         replay: List[Tuple[str, List[int]]] = []
         c, p, m, r = 0, 0, 0, 0 # consumed, produced, missing, remaining
@@ -133,23 +147,18 @@ class Petri:
 
 
     def set_initial_marking(self):
+        """Clear net of tokens, set 1 in token source
+        """
         for p in self.places.values():
             p.n_tokens = 0
         self.places["start"].n_tokens = 1
 
 
-    def replay_log(self) -> dict:
-        # TODO: factor in cardinalities of how many traces per variant
-        log_replay: List[dict] = []
-        for trace in self.log["variants"]:
-            trace_replay = self._replay_trace(trace)
-            trace_fitness = self._get_trace_fitness(trace_replay)
-            log_replay.append(trace_replay | {"fitness": trace_fitness})
-        return log_replay
-
-
     def _get_trace_fitness(self, trace_replay: dict):
-        agg_fit, n_flawless = 0, 0
+        """Use replay stats to calculate the fitness of trace, reward successive
+        good executions (none missing, trans has output places)
+        """
+        fitness, n_flawless = 0, 0
 
         # TODO: hacky shit to just iterate over empty trans
         # tasks = [tid for tid, t in self.transitions.items() if t.is_task]
@@ -170,13 +179,16 @@ class Petri:
                 n_flawless += 1
             else:
                 n_flawless = 0
-            agg_fit += pts * max(1, MULT * (n_flawless-1))
+            fitness += pts * max(1, MULT * (n_flawless-1))
         # penalize for remaining tokens
-        agg_fit -= REMAINING_PENAL * trace_replay["remaining"]
-        return agg_fit
+        fitness -= REMAINING_PENAL * trace_replay["remaining"]
+        return fitness
 
 
     def _aggregate_trace_fitness(self, log_replay: list):
+        """Aggregate fitness from all traces of replay, divides by max achievable
+        fitness. Does not yet consider variant cardinalities.
+        """
         agg_fitness = 0
         for trace in log_replay:
             agg_fitness += trace["fitness"]
@@ -185,7 +197,8 @@ class Petri:
 
 
     def _get_node_degrees(self):
-        # penalize uneven degree distribution
+        """Helper func to calculate degrees of nodes and places
+        """
         p_degrees = {p: [0, 0] for p in self.places}
         t_degrees = {t: [0, 0] for t in self.transitions}
         for t in self.transitions.values():
@@ -198,7 +211,8 @@ class Petri:
     
 
     def _mean_by_max_simplicity(self, node_degrees):
-        # idea is to penalize the max being further away from the mean
+        """Idea is to penalize the max degree being further away from the mean
+        """
         # TODO: could also use variance maybe?
         p_degrees = [sum(p) for p in list(node_degrees["places"].values())]
         t_degrees = [sum(t) for t in list(node_degrees["transitions"].values())]
@@ -207,15 +221,16 @@ class Petri:
     
 
     def _io_connectedness_simplicity(self, node_degrees):
-        # idea is to punish leaf places
-        # TODO: could do similar thing for transitions, but for now just disable
-        # empty
+        """Fraction of places that have both inputs and outputs
+        """
+        # could do similar thing for transitions, but for now just disable
         io_connected = [p for p in node_degrees["places"].values() if p[0]>0 and p[1]>0]
         return len(io_connected) / len(self.places)
 
 
     def _precision(self, replay):
-        # TODO: maybe this computation should happen during replay??
+        """Precision formula from ProDiGen miner
+        """
         all_enabled = 0
         for trace in replay:
             for q in trace["replay"]:
@@ -224,15 +239,19 @@ class Petri:
 
 
     def _transitions_by_tokens(self, replay):
+        """Penalize the model for producing lots of tokens
+        """
         all_produced = 0
         for trace in replay:
             for q in trace["replay"]:
                 all_produced += q[1][1]
-        return len(self.transitions) / max(all_produced, 1)
+        tbt = len(self.transitions) / max(all_produced, 1)
+        return min(tbt, 1)
 
 
     def _fraction_task_trans(self):
-        # get fraction of task trans from overall trans, i.e. penalize for every hidden trans
+        """get fraction of task trans from overall trans, i.e. penalize for every hidden trans
+        """
         my_task_trans = [t for t in self.transitions.values() if t.is_task]
         if my_task_trans:
             return len(my_task_trans) / len(self.transitions)
@@ -240,6 +259,8 @@ class Petri:
             return 0 # TODO: this is bullshit, but basically if a model has 0 task trans its fitness is 0
 
     def _over_enabled_transitions(self, replay):
+        """Whenever more trans are enabled than indicated in dfg, increase denominator
+        """
         s_dict = {t: [] for t in self.log["footprints"]["activities"]}
         for s in self.log["footprints"]["dfg"]:
             s_dict[s[0]].append(s[1])
@@ -252,11 +273,8 @@ class Petri:
                 if len(enables) > len(should_enable):
                     enabled_too_much += len(enables) - len(should_enable)
 
-        return len(self.transitions) / max(enabled_too_much, 1)
+        return 1 / max(enabled_too_much, 1) # if none were enabled too much, perfect score
 
-    def _fraction_used_trans(self, replay):
-        # this could be used to penalize specific dead transitions
-        return 1
 
     def evaluate(self):
         """Get all fitness metrics
