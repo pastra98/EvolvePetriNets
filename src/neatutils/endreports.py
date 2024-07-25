@@ -139,7 +139,7 @@ def time_stackplot(gen_info_df: pd.DataFrame, savedir: str):
         times_df["pop_update"],
         labels=["Evaluate Current Generation", "Population Update"]
         )
-    plt.legend()
+    plt.legend(frameon=False)
     plt.title("Time Spent Over Generations")
     plt.xlabel("Generation")
     plt.ylabel("Time")
@@ -147,16 +147,23 @@ def time_stackplot(gen_info_df: pd.DataFrame, savedir: str):
 
 
 def species_plot(species_df: pd.DataFrame, savedir: str):
-    """Stackplot of species member counts
+    """Stackplot of species member counts with a separate legend figure
     """
     grouped = species_df.groupby(["gen", "name"])["num_members"].sum().unstack(fill_value=0)
-    plt.figure(figsize=FSIZE)
-    plt.stackplot(grouped.index, grouped.T, labels=grouped.columns)
-    plt.legend(loc="upper center", bbox_to_anchor=(0.5, -0.15), ncol=3)
-    plt.title("Species Sizes Over Time")
-    plt.xlabel("Generation")
-    plt.ylabel("Number of Members")
-    plt.savefig(f"{savedir}/species_plot.pdf")
+    # Create main plot
+    fig, ax = plt.subplots(figsize=(10, 5))
+    stack = ax.stackplot(grouped.index, grouped.T)
+    ax.set_title("Species Sizes Over Time")
+    ax.set_xlabel("Generation")
+    ax.set_ylabel("Number of Members")
+    # Create separate legend figure
+    figlegend = plt.figure(figsize=(10, 2))
+    labels = [label.split("-")[0] for label in grouped.columns]
+    proxy_artists = [plt.Rectangle((0, 0), 1, 1, fc=poly.get_facecolor()[0]) for poly in stack]
+    figlegend.legend(proxy_artists, labels, loc='center', ncol=5, frameon=False)
+    # Save both figures
+    fig.savefig(f"{savedir}/species_plot.pdf", bbox_inches='tight')
+    figlegend.savefig(f"{savedir}/species_plot_legend.pdf", bbox_inches='tight')
 
 
 def fitness_plot(gen_info_df: pd.DataFrame, savedir: str):
@@ -164,7 +171,7 @@ def fitness_plot(gen_info_df: pd.DataFrame, savedir: str):
     """
     plt.figure(figsize=FSIZE)
     plt.plot(gen_info_df[["best_genome_fitness", "best_species_avg_fitness", "avg_pop_fitness"]])
-    plt.legend(["Best Genome Fitness", "Best Species Average Fitness", "Average Population Fitness"])
+    plt.legend(["Best Genome Fitness", "Best Species Average Fitness", "Average Population Fitness"], frameon=False)
     plt.title("Fitness")
     plt.xlabel("Generation")
     plt.ylabel("Fitness")
@@ -192,8 +199,10 @@ def metrics_plot(pop_df: pd.DataFrame, savedir: str):
         plt.title(title)
         plt.xlabel('Generation')
         plt.ylabel('Metric Value')
-        plt.legend()
-        plt.savefig(f"{savedir}/{title.split()[0]}_metrics.pdf")
+        plt.legend(loc='upper center', bbox_to_anchor=(0.5, -0.2), ncol=3, frameon=False)
+        plt.tight_layout()
+        plt.subplots_adjust(bottom=0.2)
+        plt.savefig(f"{savedir}/{title.split()[0]}_metrics.pdf", bbox_inches='tight')
     # find metrics columns, aggregate them over generations, plot best and avg
     metrics = [col for col in pop_df.columns if col.startswith("metric_")]
     aggregated_metrics = pop_df.groupby('gen')[metrics].agg(['max', 'mean'])
