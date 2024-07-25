@@ -1,7 +1,6 @@
 # %%
 from tool_scripts.useful_functions import \
-    load_genome, show_genome, get_aligned_traces, get_log_variants, log, reset_ga, \
-    eval_and_print_fitness
+    load_genome, show_genome, get_aligned_traces, get_log_variants, log, reset_ga
 
 from neat import params, genome, initial_population
 import neatutils.fitnesscalc as fc
@@ -10,17 +9,25 @@ from importlib import reload
 
 # %%
 path = "./tool_scripts/model_analysis/"
-# alpha_g = load_genome(path + "alpha_bootstrap.pkl")
+alpha_g = load_genome(path + "alpha_bootstrap.pkl")
 # inductive_g = load_genome(path + "inductive_bootstrap.pkl")
 # ilp_g = load_genome(path + "inductive_bootstrap.pkl")
 # spaghetti_g3 = load_genome(path + "spaghetti_g3.pkl")
 # imprecise = load_genome(path + "imprecise_model.pkl")
 only_exec = load_genome(path + "only_exec_score.pkl")
-show_genome(only_exec)
+# show_genome(only_exec)
+show_genome(alpha_g)
 
 
 # %%
-eval_and_print_fitness(alpha_g, log)
+reload(genome); reload(fc)
+# m = only_exec.evaluate_fitness(log)
+fc_net = only_exec.build_fc_petri(log)
+# replay = fc_net.replay_log()
+# fc.max_replay_fitness(log)
+# fc_net.evaluate()["metrics"]
+# fc_net.evaluate()["replay"][4]
+only_exec.evaluate_fitness(log)["metrics"]
 
 # %%
 def compare_replay_implementations(g: genome.GeneticNet, log):

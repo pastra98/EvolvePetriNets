@@ -45,21 +45,6 @@ def get_log_variants(log, debug=False):
     return [list(v) for v in variants.keys()]
 
 
-def eval_and_print_fitness(g: genome.GeneticNet, log):
-    g.clear_cache()
-    g.evaluate_fitness(log)
-    print("perc_fit_traces", g.perc_fit_traces)
-    print("average_trace_fitness", g.average_trace_fitness)
-    print("log_fitness", g.log_fitness)
-    print("is_sound", g.is_sound)
-    print("precision", g.precision)
-    print("generalization", g.generalization)
-    print("simplicity", g.simplicity)
-    print("fraction_used_trans", g.fraction_used_trans)
-    print("fraction_tasks", g.fraction_tasks)
-    print("execution_score", g.execution_score)
-    print("---> overall fitness", g.fitness, "\n")
-
 
 def reset_ga():
     neat_modules = [params, genome, initial_population]
