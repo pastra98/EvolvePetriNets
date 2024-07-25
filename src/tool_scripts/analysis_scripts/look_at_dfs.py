@@ -7,11 +7,11 @@ import numpy as np
 from statistics import fmean
 from math import ceil
 
-gen_info_df = pd.read_feather("C:/Users/pauls/Projekte/Programming/GithubRepos/EvolvePetriNets/results/data/test_working_07-24-2024_12-29-47/whatever/1_07-24-2024_12-29-53/feather/gen_info.feather")
-pop_df = pd.read_feather("C:/Users/pauls/Projekte/Programming/GithubRepos/EvolvePetriNets/results/data/test_working_07-24-2024_12-29-47/whatever/1_07-24-2024_12-29-53/feather/population.feather")
-species_df = pd.read_feather("C:/Users/pauls/Projekte/Programming/GithubRepos/EvolvePetriNets/results/data/test_working_07-24-2024_12-29-47/whatever/1_07-24-2024_12-29-53/feather/species.feather")
+gen_info_df = pd.read_feather("C:/Users/pauls/Projekte/Programming/GithubRepos/EvolvePetriNets/results/data/test_combined_fitness_metrics_07-25-2024_12-33-10/whatever/3_07-25-2024_12-33-17/feather/gen_info.feather")
+pop_df = pd.read_feather("C:/Users/pauls/Projekte/Programming/GithubRepos/EvolvePetriNets/results/data/test_combined_fitness_metrics_07-25-2024_12-33-10/whatever/3_07-25-2024_12-33-17/feather/population.feather")
+species_df = pd.read_feather("C:/Users/pauls/Projekte/Programming/GithubRepos/EvolvePetriNets/results/data/test_combined_fitness_metrics_07-25-2024_12-33-10/whatever/3_07-25-2024_12-33-17/feather/species.feather")
 
-savedir = "C:/Users/pauls/Projekte/Programming/GithubRepos/EvolvePetriNets/results/data/test_working_07-24-2024_12-29-47/whatever/1_07-24-2024_12-29-53"
+savedir = "C:/Users/pauls/Projekte/Programming/GithubRepos/EvolvePetriNets/results/data/test_combined_fitness_metrics_07-25-2024_12-33-10/whatever/3_07-25-2024_12-33-17"
 FSIZE = (10, 5)
 # %%
 # species plot
@@ -81,105 +81,6 @@ def components_plot(gen_info_df: pd.DataFrame, savedir: str):
 fitness_plot(gen_info_df, savedir)
 
 # %%
-def fitness_metrics_plot(full_history, savedir: str) -> None:
-    plotvars = {
-        "fitness": {"best": [], "pop_avg": []},
-        "io": {"best": [], "pop_avg": []},
-        "mbm": {"best": [], "pop_avg": []},
-        "ftt": {"best": [], "pop_avg": []},
-        "tbt": {"best": [], "pop_avg": []},
-        "precision": {"best": [], "pop_avg": []},
-        "execution_score": {"best": [], "pop_avg": []}
-    }
-    # read data into plotvars
-    for info_d in full_history.values():
-        best, pop = info_d["best genome"], info_d["population"]
-        for vname in plotvars:
-            try:  # object
-                plotvars[vname]["best"].append(getattr(best, vname))
-                plotvars[vname]["pop_avg"].append(fmean([getattr(g, vname) for g in pop]))
-            except:  # dict
-                plotvars[vname]["best"].append(best[vname])
-                plotvars[vname]["pop_avg"].append(fmean([g[vname] for g in pop]))
-
-    # Separate plots for 'fitness' and 'execution_score'
-    for special_var in ["fitness", "execution_score"]:
-        d = plotvars.pop(special_var)  # Remove and retrieve special_var data
-        fig, ax = plt.subplots()
-        for metricname, values in d.items():
-            ax.plot(values, label=metricname)
-        ax.legend()
-        plt.title(special_var)
-        try:
-            fig.savefig(f"{savedir}/{special_var}.pdf", dpi=300)
-        except:
-            print(f"could not save in the given path\n{savedir}")
-        plt.close(fig)
-
-
-    # Combined plots for the rest
-    fig, ax_best = plt.subplots()
-    fig, ax_pop_avg = plt.subplots()
-    for vname, d in plotvars.items():
-        ax_best.plot(d["best"], label=vname)
-        ax_pop_avg.plot(d["pop_avg"], label=vname)
-    ax_best.legend()
-    ax_best.set_title("Best of Each Variable")
-    ax_pop_avg.legend()
-    ax_pop_avg.set_title("Population Average of Each Variable")
-    try:
-        ax_best.figure.savefig(f"{savedir}/combined_best.pdf", dpi=300)
-        ax_pop_avg.figure.savefig(f"{savedir}/combined_pop_avg.pdf", dpi=300)
-    except:
-        print(f"could not save in the given path\n{savedir}")
-    plt.close("all")
-
-
-
-# def history_plots(plotting_history_df, use_species: bool, savedir: str) -> None:
-#     plotvars = {
-#         "fitness" : ["best_genome_fitness", "avg_pop_fitness"],
-#         "times" : ["pop_update", "evaluate_curr_generation"],
-#         "innovs" : ["num new innovations"],
-#     }
-#     if use_species:
-#         plotvars["species num"] = ["num total species"]
-#         plotvars["fitness"].append("best species avg fitness")
-#     plt.rcParams["figure.figsize"] = (15,5)
-#     for name, vars in plotvars.items():
-#         plot = plotting_history_df[vars].plot(title=name)
-#         fig = plot.get_figure()
-#         try:
-#             fig.savefig(f"{savedir}/{name}.pdf", dpi=300)
-#         except:
-#             print(f"could not save in the given path\n{savedir}")
-#         fig.clf()
-#         del fig
-#     plt.close("all")
-#     gc.collect()
-
-# %%
-pop_df.iloc[0]["fitness_metrics"]
-
-# %%
-# metrics = pd.json_normalize(pop_df['fitness_metrics']).add_prefix("metric_")
-# pop_df = pd.concat([pop_df.drop(columns=['fitness_metrics']), metrics], axis=1)
-
-def metrics_plot(pop_df: pd.DataFrame, savedir: str):
-    """Combined plots of metrics for best genome and populaiton avg
-    """
-    metrics = [col for col in pop_df.columns if col.startswith("metric_")]
-    plt.figure(figsize=FSIZE)
-    plt.plot(gen_info_df[["best_genome_fitness", "best_species_avg_fitness", "avg_pop_fitness"]])
-    plt.legend(["Best Genome Fitness", "Best Species Average Fitness", "Average Population Fitness"])
-    plt.title("Fitness")
-    plt.xlabel("Generation")
-    plt.ylabel("Fitness")
-    # plt.savefig(f"{savedir}/best_metrics.pdf")
-    # plt.savefig(f"{savedir}/avg_metrics.pdf")
-
-metrics_plot(pop_df, savedir)
-# %%
 import matplotlib.pyplot as plt
 
 def metrics_plot(pop_df: pd.DataFrame, savedir: str):
@@ -192,8 +93,10 @@ def metrics_plot(pop_df: pd.DataFrame, savedir: str):
         plt.title(title)
         plt.xlabel('Generation')
         plt.ylabel('Metric Value')
-        plt.legend()
-        plt.savefig(f"{savedir}/{title.split()[0]}_metrics.pdf")
+        plt.legend(loc='upper center', bbox_to_anchor=(0.5, -0.2), ncol=3, frameon=False)
+        plt.tight_layout()
+        plt.subplots_adjust(bottom=0.2)
+        plt.savefig(f"{savedir}/{title.split()[0]}_metrics.pdf", bbox_inches='tight')
     # find metrics columns, aggregate them over generations, plot best and avg
     metrics = [col for col in pop_df.columns if col.startswith("metric_")]
     aggregated_metrics = pop_df.groupby('gen')[metrics].agg(['max', 'mean'])
@@ -204,3 +107,27 @@ def metrics_plot(pop_df: pd.DataFrame, savedir: str):
 
 
 metrics_plot(pop_df, savedir)
+
+# %%
+
+def species_plot(species_df: pd.DataFrame, savedir: str):
+    """Stackplot of species member counts with a separate legend figure
+    """
+    grouped = species_df.groupby(["gen", "name"])["num_members"].sum().unstack(fill_value=0)
+    # Create main plot
+    fig, ax = plt.subplots(figsize=(10, 5))
+    stack = ax.stackplot(grouped.index, grouped.T)
+    ax.set_title("Species Sizes Over Time")
+    ax.set_xlabel("Generation")
+    ax.set_ylabel("Number of Members")
+    # Create separate legend figure
+    figlegend = plt.figure(figsize=(10, 2))
+    labels = [label.split("-")[0] for label in grouped.columns]
+    # Create proxy artists for the legend
+    proxy_artists = [plt.Rectangle((0, 0), 1, 1, fc=poly.get_facecolor()[0]) for poly in stack]
+    figlegend.legend(proxy_artists, labels, loc='center', ncol=5, frameon=False)
+    # Save both figures
+    fig.savefig(f"{savedir}/species_plot.pdf", bbox_inches='tight')
+    figlegend.savefig(f"{savedir}/species_plot_legend.pdf", bbox_inches='tight')
+
+species_plot(species_df, savedir)
