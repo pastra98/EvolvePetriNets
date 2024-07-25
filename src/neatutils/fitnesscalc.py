@@ -1,5 +1,6 @@
 from neat import params
 
+from functools import cache
 from typing import Tuple, Dict, List
 from statistics import mean
 import random as rd
@@ -59,6 +60,13 @@ class Transition:
                 produced += 1
         return produced
 
+# constants for replay
+MULT = 1.5
+MAX_PTS = 1
+NO_INPUTS_PENAL = 0.5
+NO_OUTPUTS_PENAL = 0.5
+MISSING_PENAL = 0.25
+REMAINING_PENAL = 0.25
 
 class Petri:
     def __init__(
@@ -132,22 +140,15 @@ class Petri:
 
     def replay_log(self) -> dict:
         # TODO: factor in cardinalities of how many traces per variant
-        variants = [list(v) for v in self.log["variants"].keys()]
         log_replay: List[dict] = []
-        for trace in self.log["variants"].keys():
+        for trace in self.log["variants"]:
             trace_replay = self._replay_trace(trace)
-            trace_fitness = self._get_trace_fitness(trace_replay, True)
+            trace_fitness = self._get_trace_fitness(trace_replay)
             log_replay.append(trace_replay | {"fitness": trace_fitness})
         return log_replay
 
 
-    def _get_trace_fitness(self, trace_replay: dict, use_mult: bool):
-        MULT = 1.5
-        MAX_PTS = 1
-        NO_INPUTS_PENAL = 0.5
-        NO_OUTPUTS_PENAL = 0.5
-        MISSING_PENAL = 0.25
-        REMAINING_PENAL = 0.25
+    def _get_trace_fitness(self, trace_replay: dict):
         agg_fit, n_flawless = 0, 0
 
         # TODO: hacky shit to just iterate over empty trans
@@ -172,14 +173,15 @@ class Petri:
             agg_fit += pts * max(1, MULT * (n_flawless-1))
         # penalize for remaining tokens
         agg_fit -= REMAINING_PENAL * trace_replay["remaining"]
-        return agg_fit / len(execution_qualities)
+        return agg_fit
 
 
     def _aggregate_trace_fitness(self, log_replay: list):
         agg_fitness = 0
         for trace in log_replay:
             agg_fitness += trace["fitness"]
-        return agg_fitness
+        max_fit = max_replay_fitness(tuple([len(t) for t in self.log["variants"]]))
+        return agg_fitness / max_fit
 
 
     def _get_node_degrees(self):
@@ -276,3 +278,32 @@ class Petri:
             "replay": replay,
             "metrics": metrics
         }
+
+@cache
+def max_replay_fitness(variants: tuple):
+    """Uses closed form for sum of multipliers, distributes multiplier across them
+    works under the assumption that MAX_PTS == 1, does not factor in cardinalities of variants
+    """
+    # TODO: factor in cardinalities of how many traces per variant
+    if MAX_PTS != 1:
+        raise Exception("this function was built under the assumptio MAX_PTS == 1")
+    fit = 0
+    for tlen in variants:
+        fit += 1 + MULT * ((tlen * (tlen-1)) / 2)
+    return fit
+
+# @cache
+# def max_replay_fitness(variants: tuple):
+#     """Dumb function that takes in tuple with len of every trace.
+#     Does not factor cardinalities yet.
+#     """
+#     # TODO: factor in cardinalities of how many traces per variant
+#     fit = 0
+#     for tracelen in variants:
+#         trace_fitness = 0
+#         mult_count = 0
+#         for _ in range(tracelen):
+#             trace_fitness += MAX_PTS * max(1, MULT * mult_count)
+#             mult_count += 1
+#         fit += trace_fitness
+#     return fit
