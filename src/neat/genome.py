@@ -104,6 +104,7 @@ class GeneticNet:
         self.get_component_list.cache_clear()
         self.get_unique_component_set.cache_clear()
 
+
     def multi_mutation(self, mutation_rate):
         """multiple mutations can occur
         """
@@ -430,77 +431,52 @@ class GeneticNet:
         chromosomes list, chooses a pair from the chromosome list and inserts the
         component from the mate in its place. Retains old connections.
         """
-        def get_input_output_t(c: tuple):
-            inputs, outputs = set(), set()
-            for a in c:
-                if a[0][0] in self.task_list:
-                    inputs.add(a[0][0])
-                elif a[0][1] in self.task_list:
-                    outputs.add(a[0][1])
-            return {"in": inputs, "out": outputs}
+        my_components = self.get_component_list()
+        other_components = mate.get_component_list()
 
-        # gets the inputs and outputs of all components
-        my_c = self.get_unique_component_set()
-        my_c_dict = [(c, get_input_output_t(c)) for c in list(my_c)]
-        mate_c = mate.get_unique_component_set()
-        mate_c_dict = [(c, get_input_output_t(c)) for c in list(mate_c)]
         # assigns matching component pairs to chromosomes
         chromosomes = []
-        for my_c, my_in_out in my_c_dict:
-            for mate_c, mate_in_out in mate_c_dict:
-                in_overlap = my_in_out["in"].intersection(mate_in_out["in"])
-                out_overlap = my_in_out["out"].intersection(mate_in_out["out"])
-                different_outputs = my_in_out["out"] != mate_in_out["out"]
-                different_inputs = my_in_out["in"] != mate_in_out["in"]
-                # if shared task-t in input and outputs are different or
-                # shared task-t in output and inputs are different add to chromosomes
-                if (in_overlap and different_outputs) or (out_overlap and different_inputs):
-                    chromosomes.append((my_c, mate_c))
+        for my_c in my_components:
+            for other_c in other_components:
+                in_overlap = my_c["inputs"].intersection(other_c["inputs"])
+                out_overlap = my_c["outputs"].intersection(other_c["outputs"])
+                different_inputs = my_c["inputs"] != other_c["inputs"]
+                different_outputs = my_c["outputs"] != other_c["outputs"]
+                my_p, other_p = my_c["place"], other_c["place"]
+                # if both are start or end and have diffferent outputs/inputs
+                if bool({my_p, other_p} & {"start", "end"}):
+                    if my_p == other_p and (different_inputs or different_outputs):
+                        chromosomes.append((my_c, other_c))
+                # if shared inputs or outputs but different outputs/inputs
+                elif (out_overlap and different_inputs) or (in_overlap and different_outputs):
+                    chromosomes.append((my_c, other_c))
         # if there are no matching chromosomes, return None
         if not chromosomes:
             return
-        # TODO: could add probabilites here for selecting bad c and replace with good c
+        # select random chromosome for swapping
         swap = rd.choice(chromosomes)
-        my_comp, new_comp = swap[0], swap[1]
-        # get the child genome and modify it
+        old_comp, new_comp = swap[0], swap[1]
+
+        # spawn new child for modifications
         baby = self.clone()
-        # find the component to be replaced
-        for c_dict in baby.get_component_list():
-            if my_comp == c_dict["comp"]:
-                comp_to_del = c_dict
-                break
-        # check if we are deleting start or end place
-        p_id = comp_to_del["place"]
-        del baby.places[p_id]
-        p_id = p_id if p_id in ["start", "end"] else None
-        # delete all empty transitions
-        arcs_to_del = []
-        for t_id in comp_to_del["transitions"]:
-            # delete all arcs that pointed to dead transitions
-            if not baby.transitions[t_id].is_task:
-                del baby.transitions[t_id]
-                for a in baby.arcs.values():
-                    if t_id in [a.source_id, a.target_id]:
-                        arcs_to_del.append(a.id)
-        # delete all arcs within the old component + empty_trans conn
-        for a_id in comp_to_del["arcs"] + arcs_to_del:
-            baby.arcs.pop(a_id, None)
-        # add the new component
-        new_p_id = baby.add_new_place(p_id) if p_id else baby.add_new_place()
-        for a in new_comp:
-            source, target = a[0][0], a[0][1]
-            if source == "p":
-                if target == "t":
-                    for _ in range(a[1]): # if there are multiple empty output trans
-                        baby.extend_new_trans(new_p_id, is_output=True)
-                else:
-                    baby.add_new_arc(new_p_id, target)
+        # delete all arcs and non task transitions connected to place in baby
+        baby.remove_arcs(old_comp["arcs"])
+        for t_id in old_comp["inputs"].union(old_comp["outputs"]):
+            if not self.transitions[t_id].is_task:
+                baby.transitions.pop(t_id, None)
+
+        # add the new component, by connecting to the now isolated place in the old component
+        p_id = old_comp["place"]
+        for t_id in new_comp["inputs"]:
+            if t_id in self.task_list:
+                baby.trans_place_arc(t_id, p_id)
             else:
-                if source == "t":
-                    for _ in range(a[1]): # if there are multiple empty input trans
-                        baby.extend_new_trans(new_p_id, is_output=False)
-                else:
-                    baby.add_new_arc(source, new_p_id)
+                baby.extend_new_trans(p_id, is_output=False)
+        for t_id in new_comp["outputs"]:
+            if t_id in self.task_list:
+                baby.place_trans_arc(p_id, t_id)
+            else:
+                baby.extend_new_trans(p_id, is_output=True)
 
         baby.my_mutations = ["crossover"] # replace all mutations with just crossover
         baby.clear_cache()
@@ -519,16 +495,17 @@ class GeneticNet:
             p_components[p.id] = {
                 'comp': Counter(),
                 'place': p.id,
-                'transitions': [],
+                'inputs': set(),
+                'outputs': set(),
                 'arcs': []
                 }
         for a in self.arcs.values():
             if a.source_id in p_components:   # p->t
-                p_components[a.source_id]['transitions'].append(a.target_id)
+                p_components[a.source_id]['outputs'].add(a.target_id)
                 p_components[a.source_id]['arcs'].append(a.id)
                 p_components[a.source_id]['comp'].update([("p", format_tname(a.target_id))])
             elif a.target_id in p_components: # t->p
-                p_components[a.target_id]['transitions'].append(a.source_id)
+                p_components[a.target_id]['inputs'].add(a.source_id)
                 p_components[a.target_id]['arcs'].append(a.id)
                 p_components[a.target_id]['comp'].update([(format_tname(a.source_id), "p")])
         
@@ -619,12 +596,20 @@ class GeneticNet:
         model_eval = self.build_fc_petri(log).evaluate()
 
         self.fitness_metrics = model_eval["metrics"]
-        self.fitness = model_eval["metrics"]["aggregated_replay_fitnesss"]
-        # if curr_gen >= 100:
-        #     self.fitness *= self.oe
-        self.fitness = max(self.fitness, 0) # TODO: investigate wtf hapenned here
-        # if self.fitness < 0:
-        #     raise Exception("Fitness below 0 should not be possible!!!")
+
+        agg_rep = self.fitness_metrics["aggregated_replay_fitnesss"]
+        oet = self.fitness_metrics["over_enabled_trans"]
+
+        # if agg_rep >= oet:
+        #     self.fitness = agg_rep + oet
+        # else:
+        #     self.fitness = agg_rep
+
+        if agg_rep >= 0.95:
+            self.fitness = agg_rep + oet
+        else:
+            self.fitness = agg_rep
+
         return model_eval
 
 # ------------------------------------------------------------------------------
