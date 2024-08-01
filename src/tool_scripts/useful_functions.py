@@ -45,6 +45,10 @@ def get_log_variants(log, debug=False):
     return [list(v) for v in variants.keys()]
 
 
+def eval_and_print_metrics(g: genome.GeneticNet, log):
+    g.clear_cache()
+    g.evaluate_fitness(log)
+    pprint(g.fitness_metrics)
 
 def reset_ga():
     neat_modules = [params, genome, initial_population]
