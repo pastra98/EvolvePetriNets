@@ -28,7 +28,7 @@
     ],
     "pop_perc_crossover": 0.3,
     "species_perc_crossover": 1.0,
-    "start_crossover": 50,
+    "start_crossover": 25,
     "species_boundary": 0.8,
     "compat_to_multiple": true,
     "species_component_pool_size": 3,
