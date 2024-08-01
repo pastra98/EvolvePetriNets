@@ -1,11 +1,13 @@
 # %%
 from tool_scripts.useful_functions import \
-    load_genome, show_genome, get_aligned_traces, get_log_variants, log, reset_ga
+    load_genome, show_genome, get_aligned_traces, get_log_variants, log, reset_ga, \
+    eval_and_print_metrics
 
 from neat import params, genome, initial_population
 import neatutils.fitnesscalc as fc
 from pprint import pprint
 from importlib import reload
+from pm4py.objects.petri_net.exporter.variants.pnml import export_net
 
 # %%
 path = "./tool_scripts/model_analysis/"
@@ -15,19 +17,20 @@ alpha_g = load_genome(path + "alpha_bootstrap.pkl")
 # spaghetti_g3 = load_genome(path + "spaghetti_g3.pkl")
 # imprecise = load_genome(path + "imprecise_model.pkl")
 only_exec = load_genome(path + "only_exec_score.pkl")
+hierarchical = load_genome(path + "hierarchical.pkl")
 # show_genome(only_exec)
-show_genome(alpha_g)
 
+show_genome(alpha_g)
+eval_and_print_metrics(alpha_g, log)
+show_genome(hierarchical)
+eval_and_print_metrics(hierarchical, log)
 
 # %%
-reload(genome); reload(fc)
-# m = only_exec.evaluate_fitness(log)
-fc_net = only_exec.build_fc_petri(log)
-# replay = fc_net.replay_log()
-# fc.max_replay_fitness(log)
-# fc_net.evaluate()["metrics"]
-# fc_net.evaluate()["replay"][4]
-only_exec.evaluate_fitness(log)["metrics"]
+hierarchical.clear_cache()
+pn, im, fm = hierarchical.build_petri()
+# export_net(pn, im, "hierarchical.pnml", fm, export_prom5=True)
+export_net(pn, im, "hierarchical.pnml", fm)
+# print(list(pn.places)[4].name)
 
 # %%
 def compare_replay_implementations(g: genome.GeneticNet, log):
