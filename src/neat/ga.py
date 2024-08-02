@@ -405,21 +405,34 @@ class GeneticAlgorithm:
         fit_sum = sum(fitnesses)
         probabilities = [fit / fit_sum for fit in fitnesses]
 
-        n_elites = 100
-        new_genomes = []
-        for _ in range(params.popsize - n_elites): # elitism: keep a slot for best g
-            new_g = roulette_select(self.population, probabilities)
-            new_g.mutate(1)
-            new_genomes.append(new_g)
+        # TODO use params here, like when start crossover etc.
+        n_elites, n_crossover = 10, 90
+        n_asex = params.popsize - n_elites- n_crossover
 
+        # elite spawns - without mutation
+        elite_spawns = []
         for i, g in enumerate(self.population):
             new_elite = g.clone() # append unmutated top g
-            if i > 0: # mutate all other tops
-                new_elite.mutate(1)
-            new_genomes.append(new_elite)
-            if i == n_elites - 1:
-                break
-        self.population = new_genomes
+            elite_spawns.append(new_elite)
+            if i == n_elites - 1: break
+
+        # crossover spawns - without mutation
+        crossover_spawns = []
+        while len(crossover_spawns) < n_crossover:
+            # those should be from the previous gen - which they are??
+            p1 = roulette_select(self.population, probabilities)
+            p2 = roulette_select(self.population, probabilities)
+            new_g = p1.crossover(p2)
+            if new_g:
+                crossover_spawns.append(new_g)
+        # asex spawns - with mutation
+        asex_spawns = []
+        for _ in range(n_asex):
+            new_g = roulette_select(self.population, probabilities)
+            new_g.mutate(1)
+            asex_spawns.append(new_g)
+
+        self.population = elite_spawns + crossover_spawns + asex_spawns
 
 # TRUNCATION -------------------------------------------------------------------
 

@@ -1,5 +1,5 @@
 {
-    "name": "test_new_df_3",
+    "name": "testing_new_roulette",
     "setups": [
         {
             "setupname": "whatever",
@@ -11,9 +11,9 @@
             },
             "stop_cond": {
                 "var": "gen",
-                "val": 300
+                "val": 500
             },
-            "n_runs": 1,
+            "n_runs": 10,
             "send_gen_info_to_console": true,
             "is_profiled": false
         }

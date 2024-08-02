@@ -1,7 +1,7 @@
 {
     "start_config": "random",
     "popsize": 500,
-    "selection_strategy": "speciation",
+    "selection_strategy": "roulette",
     "initial_tp_gauss_dist": [
         2.0,
         1.0
@@ -51,10 +51,6 @@
     "simplicity_weight": 0,
     "fraction_used_trans_weight": 0,
     "fraction_tasks_weight": 0,
-    "t_exec_scoring_weight": [
-        0.1,
-        1
-    ],
     "mutation_type": "atomic",
     "use_t_vals": false,
     "prob_remove_arc": [
