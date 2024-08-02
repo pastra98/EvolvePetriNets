@@ -65,8 +65,8 @@ MULT = 1.5
 MAX_PTS = 1
 NO_INPUTS_PENAL = 0.5
 NO_OUTPUTS_PENAL = 0.5
-MISSING_PENAL = 0.25
-REMAINING_PENAL = 0.25
+MISSING_PENAL = 0.4
+REMAINING_PENAL = 1
 
 class Petri:
     def __init__(
@@ -82,6 +82,7 @@ class Petri:
             }
         self.log = log
 
+# -------------------- REPLAY -------------------- 
 
     def replay_log(self) -> dict:
         """Replay every trace of the log
@@ -184,6 +185,7 @@ class Petri:
         fitness -= REMAINING_PENAL * trace_replay["remaining"]
         return fitness
 
+# -------------------- METRICS -------------------- 
 
     def _aggregate_trace_fitness(self, log_replay: list):
         """Aggregate fitness from all traces of replay, divides by max achievable
@@ -258,6 +260,19 @@ class Petri:
         else:
             return 0 # TODO: this is bullshit, but basically if a model has 0 task trans its fitness is 0
 
+
+    def _num_arcs(self):
+        """just 1 divided by number of arcs
+        """
+        return 1 / sum([len(t.inputs) + len(t.outputs) for t in self.transitions.values()])
+
+
+    def _trans_place_ratio(self):
+        """ratio of transitions to places, capped to [0-1]
+        """
+        return min(len(self.transitions) / len(self.places), 1)
+
+
     def _over_enabled_transitions(self, replay):
         """Whenever more trans are enabled than indicated in dfg, increase denominator
         """
@@ -290,7 +305,9 @@ class Petri:
             "trans_by_tasks": self._fraction_task_trans(),
             "precision": self._precision(replay),
             "trans_by_tokens": self._transitions_by_tokens(replay),
-            "over_enabled_trans": self._over_enabled_transitions(replay)
+            "over_enabled_trans": self._over_enabled_transitions(replay),
+            "num_arcs": self._num_arcs(),
+            "trans_by_places": self._trans_place_ratio()
         }
         return {
             "replay": replay,
