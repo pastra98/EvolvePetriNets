@@ -10,28 +10,35 @@ from importlib import reload
 from pm4py.objects.petri_net.exporter.variants.pnml import export_net
 
 # %%
+reload(genome)
 path = "./tool_scripts/model_analysis/"
 alpha_g = load_genome(path + "alpha_bootstrap.pkl")
 # inductive_g = load_genome(path + "inductive_bootstrap.pkl")
 # ilp_g = load_genome(path + "inductive_bootstrap.pkl")
 # spaghetti_g3 = load_genome(path + "spaghetti_g3.pkl")
 # imprecise = load_genome(path + "imprecise_model.pkl")
-only_exec = load_genome(path + "only_exec_score.pkl")
-hierarchical = load_genome(path + "hierarchical.pkl")
+# only_exec = load_genome(path + "only_exec_score.pkl")
+bg = load_genome(path + "best_genome.pkl")
+# hierarchical = load_genome(path + "hierarchical.pkl")
 # show_genome(only_exec)
 
 show_genome(alpha_g)
 eval_and_print_metrics(alpha_g, log)
-show_genome(hierarchical)
-eval_and_print_metrics(hierarchical, log)
+show_genome(bg)
+eval_and_print_metrics(bg, log)
 
 # %%
-hierarchical.clear_cache()
-pn, im, fm = hierarchical.build_petri()
-# export_net(pn, im, "hierarchical.pnml", fm, export_prom5=True)
-export_net(pn, im, "hierarchical.pnml", fm)
-# print(list(pn.places)[4].name)
+def export_pnml(g: genome.GeneticNet, fp):
+    g.clear_cache()
+    pn, im, fm = g.build_petri()
+    export_net(pn, im, fp, fm)
 
+def print_replay(g: genome.GeneticNet, log):
+    g.clear_cache()
+    replay = g.build_fc_petri(log).replay_log()
+    pprint(replay)
+
+print_replay(bg, log)
 # %%
 def compare_replay_implementations(g: genome.GeneticNet, log):
     # compare the implementations
@@ -116,4 +123,3 @@ log = get_log_from_xes("../pm_data/running_example.xes")
 
 rp = only_exec.build_fc_petri(log).evaluate()
 pprint(rp)
-# %%

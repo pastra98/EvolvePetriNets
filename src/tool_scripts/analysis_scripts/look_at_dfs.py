@@ -7,11 +7,11 @@ import numpy as np
 from statistics import fmean
 from math import ceil
 
-gen_info_df = pd.read_feather("C:/Users/pauls/Projekte/Programming/GithubRepos/EvolvePetriNets/results/data/test_combined_fitness_metrics_07-25-2024_12-33-10/whatever/3_07-25-2024_12-33-17/feather/gen_info.feather")
-pop_df = pd.read_feather("C:/Users/pauls/Projekte/Programming/GithubRepos/EvolvePetriNets/results/data/test_combined_fitness_metrics_07-25-2024_12-33-10/whatever/3_07-25-2024_12-33-17/feather/population.feather")
-species_df = pd.read_feather("C:/Users/pauls/Projekte/Programming/GithubRepos/EvolvePetriNets/results/data/test_combined_fitness_metrics_07-25-2024_12-33-10/whatever/3_07-25-2024_12-33-17/feather/species.feather")
+gen_info_df = pd.read_feather("E:/migrate_o/github_repos/EvolvePetriNets/results/data/1000g_10runs_still_not_working_improvement_at_end_run_3/whatever/9_08-01-2024_18-42-16/feather/gen_info.feather")
+pop_df = pd.read_feather("E:/migrate_o/github_repos/EvolvePetriNets/results/data/1000g_10runs_still_not_working_improvement_at_end_run_3/whatever/9_08-01-2024_18-42-16/feather/population.feather")
+species_df = pd.read_feather("E:/migrate_o/github_repos/EvolvePetriNets/results/data/1000g_10runs_still_not_working_improvement_at_end_run_3/whatever/9_08-01-2024_18-42-16/feather/species.feather")
 
-savedir = "C:/Users/pauls/Projekte/Programming/GithubRepos/EvolvePetriNets/results/data/test_combined_fitness_metrics_07-25-2024_12-33-10/whatever/3_07-25-2024_12-33-17"
+savedir = "E:/migrate_o/github_repos/EvolvePetriNets/results/data/1000g_10runs_still_not_working_improvement_at_end_run_3/whatever/9_08-01-2024_18-42-16/feather"
 FSIZE = (10, 5)
 # %%
 # species plot
@@ -131,3 +131,29 @@ def species_plot(species_df: pd.DataFrame, savedir: str):
     figlegend.savefig(f"{savedir}/species_plot_legend.pdf", bbox_inches='tight')
 
 species_plot(species_df, savedir)
+
+# %%
+gen_info_df = pd.read_feather("E:/migrate_o/github_repos/EvolvePetriNets/results/data/testing_new_roulette_08-02-2024_11-56-43/whatever/1_08-02-2024_11-57-03/feather/gen_info.feather")
+pop_df = pd.read_feather("E:/migrate_o/github_repos/EvolvePetriNets/results/data/testing_new_roulette_08-02-2024_11-56-43/whatever/1_08-02-2024_11-57-03/feather/population.feather")
+
+savedir = "E:/migrate_o/github_repos/EvolvePetriNets/results/data/testing_new_roulette_08-02-2024_11-56-43/whatever/1_08-02-2024_11-57-03"
+# %%
+pop_df[pop_df["parent_id"]=="1e7ad65a-e429-4483-ae1b-73706ceb998d"]
+pop_df[pop_df["id"]=="1e7ad65a-e429-4483-ae1b-73706ceb998d"]
+
+# %%
+from neatutils import endreports as er
+reload(er)
+
+er.mutation_effects_plot(pop_df, savedir)
+
+# df_with_parents = pop_df.dropna(subset=['parent_id']).copy()
+# fitness_dict = pop_df.set_index('id')['fitness'].to_dict()
+# df_with_parents
+
+# %%
+from neatutils import endreports as er
+from importlib import reload
+reload(er)
+
+er.mutation_effects_plot(pop_df, savedir)
