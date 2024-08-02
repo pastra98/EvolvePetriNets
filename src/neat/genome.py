@@ -600,15 +600,10 @@ class GeneticNet:
         agg_rep = self.fitness_metrics["aggregated_replay_fitnesss"]
         oet = self.fitness_metrics["over_enabled_trans"]
 
-        # if agg_rep >= oet:
-        #     self.fitness = agg_rep + oet
-        # else:
-        #     self.fitness = agg_rep
-
-        if agg_rep >= 0.95:
-            self.fitness = agg_rep + oet
-        else:
-            self.fitness = agg_rep
+        self.fitness = max(agg_rep, 0)
+        if agg_rep >= 0.7:
+            # almost like a a one way pareto thing
+            self.fitness += min(oet, agg_rep)# cap oet to agg_rep
 
         return model_eval
 
