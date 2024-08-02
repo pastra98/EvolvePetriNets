@@ -5,6 +5,7 @@ import numpy as np
 from statistics import fmean
 from math import ceil
 from neat.genome import GeneticNet
+import json
 
 import gc
 import pickle
@@ -59,7 +60,9 @@ def run_report(ga_info, savedir: str) -> None:
     savedir = savedir.rstrip("/reports")
     with open(f"{savedir}/report.txt", "w") as f:
         f.write(f"Best fitness:\n{ga_info['best_genome'].fitness}\n")
-        f.write(f"Total components discovered:\n{ga_info['total_components']}\n")
+        f.write(f"Best metrics:\n")
+        json.dump(ga_info['best_genome'].fitness_metrics, f, indent=4)
+        f.write(f"\nTotal components discovered:\n{ga_info['total_components']}\n")
         f.write(f"Duration of run:\n{ga_info['time']}")
 
 # ---------- CONVERT TO DATAFRAMES
