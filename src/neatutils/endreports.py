@@ -22,31 +22,34 @@ def save_report(ga_info: dict, savedir: str) -> None:
     # save run report
     run_report(ga_info, savedir=savedir)
 
-    # get the full history df, and the species df (if it exists)
+    # get the full history df, create the dataframes and save them
     full_history = ga_info["history"]
-    use_species = "species" in full_history[1]
-    if use_species: species_df = get_species_df(full_history)
-    pop_df = get_population_df(full_history)
-    gen_info_df = get_gen_info_df(full_history)
-    
-    # save the dataframes
     os.makedirs(f"{savedir}/feather")
-    species_df.to_feather(f"{savedir}/feather/species.feather")
+
+    use_species = "species" in full_history[1]
+    if use_species:
+        species_df = get_species_df(full_history)
+        species_df.to_feather(f"{savedir}/feather/species.feather")
+        save_species_leaders(ga_info["species_leaders"], savedir)
+        species_plot(species_df, savedir)
+
+    pop_df = get_population_df(full_history)
     pop_df.to_feather(f"{savedir}/feather/population.feather")
+    gen_info_df = get_gen_info_df(full_history)
     gen_info_df.to_feather(f"{savedir}/feather/gen_info.feather")
+    
 
     # save the improvements, species leaders & best genome, delete ga info after
     save_improvements(ga_info["improvements"], savedir)
     save_genome_gviz(ga_info["best_genome"], savedir, name_prefix="best_genome")
-    if use_species: save_species_leaders(ga_info["species_leaders"], savedir)
     pickle_genome(ga_info["best_genome"], "best_genome", savedir)
 
     # make the plots
-    if use_species: species_plot(species_df, savedir)
+    
     time_stackplot(gen_info_df, savedir)
-    fitness_plot(gen_info_df, savedir)
+    fitness_plot(gen_info_df, use_species, savedir)
     components_plot(gen_info_df, savedir)
-    mutation_effects_plot(pop_df, savedir)
+    # mutation_effects_plot(pop_df, savedir)
     metrics_plot(pop_df, savedir)
 
     # close all plots and free memory
@@ -91,7 +94,7 @@ def get_gen_info_df(full_history: dict):
     excludes = ["species", "population"] # exclude the lists
     for gen, info_d in full_history.items():
         for key in excludes:
-            info_d.pop(key)
+            info_d.pop(key, None)
         l.append(info_d | {"gen": gen})
     df = pd.DataFrame(l)
     df.set_index("gen")
@@ -169,12 +172,16 @@ def species_plot(species_df: pd.DataFrame, savedir: str):
     figlegend.savefig(f"{savedir}/species_plot_legend.pdf", bbox_inches='tight')
 
 
-def fitness_plot(gen_info_df: pd.DataFrame, savedir: str):
+def fitness_plot(gen_info_df: pd.DataFrame, use_species: bool, savedir: str):
     """Plot the best, best species and avg fitness of population
     """
     plt.figure(figsize=FSIZE)
-    plt.plot(gen_info_df[["best_genome_fitness", "best_species_avg_fitness", "avg_pop_fitness"]])
-    plt.legend(["Best Genome Fitness", "Best Species Average Fitness", "Average Population Fitness"], frameon=False)
+    if use_species:
+        plt.plot(gen_info_df[["best_genome_fitness", "best_species_avg_fitness", "avg_pop_fitness"]])
+        plt.legend(["Best Genome Fitness", "Best Species Average Fitness", "Average Population Fitness"], frameon=False)
+    else:
+        plt.plot(gen_info_df[["best_genome_fitness", "avg_pop_fitness"]])
+        plt.legend(["Best Genome Fitness", "Average Population Fitness"], frameon=False)
     plt.title("Fitness")
     plt.xlabel("Generation")
     plt.ylabel("Fitness")
@@ -216,8 +223,7 @@ def metrics_plot(pop_df: pd.DataFrame, savedir: str):
 
 
 def mutation_effects_plot(pop_df, savedir: str):
-    df_with_parents = pop_df.dropna(subset=['parent_id']).copy()
-    df_with_parents['parent_id'] = df_with_parents['parent_id']
+    df_with_parents = pop_df[pop_df["gen"] > 1]
     fitness_dict = pop_df.set_index('id')['fitness'].to_dict()
     df_with_parents.loc[:, 'fitness_difference'] = df_with_parents.apply(lambda row: row['fitness'] - fitness_dict[row['parent_id']], axis=1)
     mutation_effects = {}
