@@ -158,8 +158,6 @@ class GeneticNet:
         ]
         mutation = rd.choices(mutations, weights=probabilities, k=1)[0]
         mutation()
-        # TODO: check if no mutation occured (e.g. no extensions to prune, no places to connect)
-        # and call itself again
 
 
     def pick_target_node(self, source) -> str:
