@@ -398,8 +398,7 @@ class GeneticAlgorithm:
         """perform roulette wheel selection
         """ 
         def roulette_select(pop, probs) -> GeneticNet:
-            chosen_genome = np.random.choice(pop, p=probs)
-            return chosen_genome.clone()
+            return np.random.choice(pop, p=probs)
 
         fitnesses = [g.fitness for g in self.population]
         fit_sum = sum(fitnesses)
@@ -428,8 +427,9 @@ class GeneticAlgorithm:
         # asex spawns - with mutation
         asex_spawns = []
         for _ in range(n_asex):
-            new_g = roulette_select(self.population, probabilities)
-            new_g.mutate(1)
+            p = roulette_select(self.population, probabilities)
+            new_g = p.clone()
+            new_g.mutate(0)
             asex_spawns.append(new_g)
 
         self.population = elite_spawns + crossover_spawns + asex_spawns
@@ -439,19 +439,42 @@ class GeneticAlgorithm:
     def truncation_pop_update(self) -> None:
         """
         """ 
-        new_genomes = []
-        pool = self.population[:int(params.popsize*params.spawn_cutoff)]
+        # TODO use params here, like when start crossover etc.
+        n_elites, n_crossover = 10, 90
+        n_asex = params.popsize - n_elites- n_crossover
+        poolsize = 200
 
-        for i in range(params.popsize - 1): # elitism: keep a slot for best g
-            if i < len(pool):
-                new_g = pool[i].clone()
-            else:
-                new_g = pool[i % len(pool)].clone()
-            new_g.mutate(1)
-            new_genomes.append(new_g)
+        # pool = self.population[:int(params.popsize*params.spawn_cutoff)]
+        # pool = self.population[:poolsize]
 
-        new_genomes.append(self.curr_best_genome.clone()) # add best g w.o. mutation
-        self.population = new_genomes
+        # elite spawns - without mutation
+        elite_spawns = []
+        for i, g in enumerate(self.population):
+            new_elite = g.clone() # append unmutated top g
+            elite_spawns.append(new_elite)
+            if i == n_elites - 1: break
+
+        # crossover spawns - without mutation
+        crossover_spawns = []
+        while len(crossover_spawns) < n_crossover:
+            # those should be from the previous gen - which they are??
+            # TODO: temporary hack to get two parents in truncation
+            p1 = np.random.choice(self.population)
+            p2 = np.random.choice(self.population)
+            new_g = p1.crossover(p2)
+            if new_g:
+                crossover_spawns.append(new_g)
+
+        # asex spawns - with mutation
+        asex_spawns = []
+        for i in range(n_asex):
+            i = i % poolsize if i else i
+            new_g = self.population[i].clone()
+            new_g.mutate(0)
+            asex_spawns.append(new_g)
+
+        self.population = elite_spawns + crossover_spawns + asex_spawns
+
 
 # ------------------------------------------------------------------------------
 # ComponentTracker class -------------------------------------------------------
