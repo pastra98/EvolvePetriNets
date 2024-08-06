@@ -87,7 +87,6 @@ class Petri:
     def replay_log(self) -> dict:
         """Replay every trace of the log
         """
-        # TODO: factor in cardinalities of how many traces per variant
         log_replay: List[dict] = []
         for trace in self.log["variants"]:
             trace_replay = self._replay_trace(trace)
@@ -188,13 +187,14 @@ class Petri:
 # -------------------- METRICS -------------------- 
 
     def _aggregate_trace_fitness(self, log_replay: list):
-        """Aggregate fitness from all traces of replay, divides by max achievable
-        fitness. Does not yet consider variant cardinalities.
+        """Aggregate fitness from all traces of replay, divides by max achievable fitness.
         """
         agg_fitness = 0
-        for trace in log_replay:
-            agg_fitness += trace["fitness"]
-        max_fit = max_replay_fitness(tuple([len(t) for t in self.log["variants"]]))
+        for replay, cardinality in zip(log_replay, self.log["variants"].values()):
+            agg_fitness += replay["fitness"] * cardinality
+        max_fit = max_replay_fitness( # tuples len of trace with cardinality
+            tuple([(len(t), cardinality) for t, cardinality in self.log["variants"].items()])
+            )
         return agg_fitness / max_fit
 
 
@@ -315,14 +315,14 @@ class Petri:
         }
 
 @cache
-def max_replay_fitness(variants: tuple):
+def max_replay_fitness(len_and_card: tuple):
     """Uses closed form for sum of multipliers, distributes multiplier across them
-    works under the assumption that MAX_PTS == 1, does not factor in cardinalities of variants
+    works under the assumption that MAX_PTS == 1
     """
-    # TODO: factor in cardinalities of how many traces per variant
     if MAX_PTS != 1:
         raise Exception("this function was built under the assumptio MAX_PTS == 1")
     fit = 0
-    for tlen in variants:
-        fit += 1 + MULT * ((tlen * (tlen-1)) / 2)
+    for tlen, cardinality in len_and_card:
+        trace_fit = 1 + MULT * ((tlen * (tlen-1)) / 2)
+        fit += trace_fit * cardinality
     return fit
