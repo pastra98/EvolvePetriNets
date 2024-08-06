@@ -13,21 +13,22 @@ from pm4py.objects.petri_net.exporter.variants.pnml import export_net
 reload(genome)
 path = "./tool_scripts/model_analysis/"
 alpha_g = load_genome(path + "alpha_bootstrap.pkl")
-# inductive_g = load_genome(path + "inductive_bootstrap.pkl")
+inductive_g = load_genome(path + "inductive_bootstrap.pkl")
 # ilp_g = load_genome(path + "inductive_bootstrap.pkl")
 # spaghetti_g3 = load_genome(path + "spaghetti_g3.pkl")
 # imprecise = load_genome(path + "imprecise_model.pkl")
 # only_exec = load_genome(path + "only_exec_score.pkl")
-bg = load_genome(path + "best_genome.pkl")
 # hierarchical = load_genome(path + "hierarchical.pkl")
 # show_genome(only_exec)
 
-show_genome(alpha_g)
-eval_and_print_metrics(alpha_g, log)
-show_genome(bg)
-eval_and_print_metrics(bg, log)
+# show_genome(alpha_g)
+# eval_and_print_metrics(alpha_g, log)
+show_genome(inductive_g)
+eval_and_print_metrics(inductive_g, log)
 
 # %%
+reload(fc); reload(genome)
+
 def export_pnml(g: genome.GeneticNet, fp):
     g.clear_cache()
     pn, im, fm = g.build_petri()
@@ -35,10 +36,14 @@ def export_pnml(g: genome.GeneticNet, fp):
 
 def print_replay(g: genome.GeneticNet, log):
     g.clear_cache()
-    replay = g.build_fc_petri(log).replay_log()
-    pprint(replay)
+    fc_net = g.build_fc_petri(log)
+    evaluation = fc_net.evaluate()
+    pprint(evaluation)
+    # pprint(evaluation["metrics"])
 
-print_replay(bg, log)
+print_replay(inductive_g, log)
+# print_replay(alpha_g, log)
+# print(log["variants"])
 # %%
 def compare_replay_implementations(g: genome.GeneticNet, log):
     # compare the implementations
