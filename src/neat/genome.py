@@ -459,8 +459,9 @@ class GeneticNet:
         baby = self.clone()
         # delete all arcs and non task transitions connected to place in baby
         baby.remove_arcs(old_comp["arcs"])
+        connected = baby.get_connected()
         for t_id in old_comp["inputs"].union(old_comp["outputs"]):
-            if not self.transitions[t_id].is_task:
+            if not (self.transitions[t_id].is_task or t_id in connected):
                 baby.transitions.pop(t_id, None)
 
         # add the new component, by connecting to the now isolated place in the old component
