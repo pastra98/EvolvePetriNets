@@ -49,7 +49,7 @@ def save_report(ga_info: dict, savedir: str) -> None:
     time_stackplot(gen_info_df, savedir)
     fitness_plot(gen_info_df, use_species, savedir)
     components_plot(gen_info_df, savedir)
-    # mutation_effects_plot(pop_df, savedir)
+    mutation_effects_plot(pop_df, savedir)
     metrics_plot(pop_df, savedir)
 
     # close all plots and free memory
