@@ -1,5 +1,5 @@
 {
-    "name": "testing_new_roulette",
+    "name": "truncation_new_formula_with_hiddens",
     "setups": [
         {
             "setupname": "whatever",
@@ -11,9 +11,9 @@
             },
             "stop_cond": {
                 "var": "gen",
-                "val": 500
+                "val": 200
             },
-            "n_runs": 10,
+            "n_runs": 8,
             "send_gen_info_to_console": true,
             "is_profiled": false
         }
