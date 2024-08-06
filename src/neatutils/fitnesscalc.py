@@ -25,6 +25,10 @@ class Transition:
         self.inputs: Dict[str, Place] = dict()
         self.outputs: Dict[str, Place] = dict()
     
+    def __str__(self):
+        inputs_str = ', '.join(self.inputs.keys())
+        outputs_str = ', '.join(self.outputs.keys())
+        return f"Transition(is_task={self.is_task}, inputs=[{inputs_str}], outputs=[{outputs_str}])"
 
     def add_place(self, place_id: str, place: Place, is_input: bool):
         if is_input:
@@ -48,6 +52,9 @@ class Transition:
     
 
     def is_enabled(self):
+        """Checks if all places have tokens, trans are also enabled if they have no inputs,
+        but a missing penalty will be added
+        """
         return all([p.has_tokens() for p in self.inputs.values()])
 
 
@@ -162,14 +169,14 @@ class Petri:
         """
         fitness, n_flawless = 0, 0
 
-        # TODO: hacky shit to just iterate over empty trans
-        # tasks = [tid for tid, t in self.transitions.items() if t.is_task]
-        # execution_qualities = [e[1] for e in trace_replay["replay"] if e[0] in tasks] 
-
-        execution_qualities = [e[1] for e in trace_replay["replay"]] 
-        for q in execution_qualities:
+        for firing_info in trace_replay["replay"]:
+            trans, quality = firing_info[0], firing_info[1]
+            # do not add pts for firing hidden trans
+            if trans in self.transitions and not self.transitions[firing_info[0]].is_task:
+                continue
+            # if a task trans was fired, evaluate how many pts it generated
             pts = MAX_PTS
-            consumed, produced, missing = q[0], q[1], q[2]
+            consumed, produced, missing = quality[0], quality[1], quality[2]
             # subtract input/output penalties
             if not consumed: pts -= NO_INPUTS_PENAL
             if not produced: pts -= NO_OUTPUTS_PENAL
