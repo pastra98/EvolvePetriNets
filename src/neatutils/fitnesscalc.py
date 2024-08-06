@@ -103,18 +103,20 @@ class Petri:
         c, p, m, r = 0, 0, 0, 0 # consumed, produced, missing, remaining
         for task in trace:
             if task not in self.transitions:
-                replay.append((task, (0, 0, 0), [])) # TODO: this is not the final datastructure
+                replay.append((task, (0, 0, 0), []))
                 continue
-            # if trans exists, fire it (enable if necessary), save quality
             trans = self.transitions[task]
+            # if trans exists, check first if it needs to be enabled through hiddens
             if not trans.is_enabled():
-                fired_hiddens, ht_c, ht_p = self._try_enable_trans_through_hidden(trans)
+                fired_hiddens = self._try_enable_trans_through_hidden(trans)
                 if fired_hiddens:
-                    replay += fired_hiddens
-                    c += ht_c; p += ht_p
+                    for fh in fired_hiddens:
+                        quality = fh[1]
+                        c += quality[0]; p += quality[1] # no missings, ht is only fired if is enabled
+                        replay.append(fh)
+            # fire trans (if it cannot be enabled, add missing tokens
             quality = trans.fire_and_get_quality()
             c += quality[0]; p += quality[1]; m += quality[2]
-            # TODO: this is hacky, just add number of enabled trans for testing
             enabled_t = [t_id for t_id, t in self.transitions.items() if t.is_enabled()]
             replay.append((task, quality, enabled_t))
         # at the end of the replay, count the missing
@@ -130,20 +132,20 @@ class Petri:
         May return an empty list if enabling through hidden not possible.
         """
         fired_hiddens = []
-        c, p = 0, 0 # consumed, produced (no missing bc. ht only fires if enabled)
         # find the places that miss tokens, then find potential hidden trans
         places_missing_token = {id for id, p in trans.inputs.items() if not p.has_tokens()}
-        hidden_trans = list(self.hidden_transitions.items()); rd.shuffle(hidden_trans)
-        for t_id, ht in hidden_trans: # shuffled to not give pref to any ht
+        hidden_trans = list(self.hidden_transitions.items())
+        rd.shuffle(hidden_trans) # shuffled to not give pref to any ht
+        for t_id, ht in hidden_trans:
             overlap = set(ht.outputs.keys()).intersection(places_missing_token)
             if overlap and ht.is_enabled(): # overlap contains the place(s) that connect to ht
                 quality = ht.fire_and_get_quality()
-                c += quality[0]; p += quality[1]
-                fired_hiddens.append((t_id, quality))
+                enabled_t = [t_id for t_id, t in self.transitions.items() if t.is_enabled()]
+                fired_hiddens.append((t_id, quality, enabled_t))
                 places_missing_token -= overlap
                 if not places_missing_token:
                     break # stop if there are no more places missing a token
-        return fired_hiddens, c, p
+        return fired_hiddens
 
 
     def set_initial_marking(self):
@@ -273,7 +275,7 @@ class Petri:
         return min(len(self.transitions) / len(self.places), 1)
 
 
-    def _over_enabled_transitions(self, replay):
+    def _over_enabled_transitions(self, log_replay):
         """Whenever more trans are enabled than indicated in dfg, increase denominator
         """
         s_dict = {t: [] for t in self.log["footprints"]["activities"]}
@@ -281,12 +283,23 @@ class Petri:
             s_dict[s[0]].append(s[1])
 
         enabled_too_much = 0
-        for t in replay:
-            for q in t["replay"]:
-                should_enable = s_dict[q[0]]
-                enables = q[2]
-                if len(enables) > len(should_enable):
-                    enabled_too_much += len(enables) - len(should_enable)
+        for trace_replay in log_replay:
+            # if a fired trans is hidden, count its enabled trans towards next task
+            enabled_by_hiddens = []
+            for firing_info in trace_replay["replay"]:
+                trans = firing_info[0]
+                enables = firing_info[2]
+                # hidden trans
+                if trans not in s_dict:
+                    enabled_by_hiddens += enables
+                # task trans
+                else:
+                    should_enable = s_dict[trans]
+                    enabled_by_task = enables + enabled_by_hiddens
+                    if len(enabled_by_task) > len(should_enable):
+                        enabled_too_much += len(enabled_by_task) - len(should_enable)
+                        # print(f"{trans} enabled too much:\n{enabled_by_task}\n")
+                    enabled_by_hiddens.clear() # reset enabled_by_hiddens
 
         return 1 / max(enabled_too_much, 1) # if none were enabled too much, perfect score
 
