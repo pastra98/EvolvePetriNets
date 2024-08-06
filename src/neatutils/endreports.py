@@ -45,7 +45,6 @@ def save_report(ga_info: dict, savedir: str) -> None:
     pickle_genome(ga_info["best_genome"], "best_genome", savedir)
 
     # make the plots
-    
     time_stackplot(gen_info_df, savedir)
     fitness_plot(gen_info_df, use_species, savedir)
     components_plot(gen_info_df, savedir)
