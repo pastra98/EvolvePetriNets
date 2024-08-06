@@ -538,16 +538,16 @@ class GeneticNet:
 # FITNESS RELATED STUFF --------------------------------------------------------
 # ------------------------------------------------------------------------------
     def build_fc_petri(self, log) -> fc.Petri:
-        # TODO: make final decision on whether to include replay functionality into GeneticNet
-        # TODO: eventually deprecate pm4py build_petri()
-        # add places
+        connected = self.get_connected()
+        # add connected places
         p_dict: Dict[str, fc.Place] = {}
         for p in self.places.values():
             p_dict[p.id] = fc.Place()
-        # add trans
+        # add connected hidden trans and all task trans
         t_dict: Dict[str, fc.Transition] = {}
         for t in self.transitions.values():
-            t_dict[t.id] = fc.Transition(t.is_task)
+            if t.is_task or t.id in connected:
+                t_dict[t.id] = fc.Transition(t.is_task)
         # connect them
         for a in self.arcs.values():
             if a.source_id in self.transitions: # t -> p
