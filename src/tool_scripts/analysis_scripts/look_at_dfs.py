@@ -6,12 +6,19 @@ import pandas as pd
 import numpy as np
 from statistics import fmean
 from math import ceil
+import pickle, gzip
 
-gen_info_df = pd.read_feather("E:/migrate_o/github_repos/EvolvePetriNets/results/data/1000g_10runs_still_not_working_improvement_at_end_run_3/whatever/9_08-01-2024_18-42-16/feather/gen_info.feather")
-pop_df = pd.read_feather("E:/migrate_o/github_repos/EvolvePetriNets/results/data/1000g_10runs_still_not_working_improvement_at_end_run_3/whatever/9_08-01-2024_18-42-16/feather/population.feather")
-species_df = pd.read_feather("E:/migrate_o/github_repos/EvolvePetriNets/results/data/1000g_10runs_still_not_working_improvement_at_end_run_3/whatever/9_08-01-2024_18-42-16/feather/species.feather")
+def load_component_dict(filename):
+    with gzip.open(filename, 'rb') as f:
+        return pickle.load(f)
 
-savedir = "E:/migrate_o/github_repos/EvolvePetriNets/results/data/1000g_10runs_still_not_working_improvement_at_end_run_3/whatever/9_08-01-2024_18-42-16/feather"
+gen_info_df = pd.read_feather("E:/migrate_o/github_repos/EvolvePetriNets/results/data/test_component_tracker_08-07-2024_14-12-01/whatever/1_08-07-2024_14-12-10/data/gen_info.feather")
+pop_df = pd.read_feather("E:/migrate_o/github_repos/EvolvePetriNets/results/data/test_component_tracker_08-07-2024_14-12-01/whatever/1_08-07-2024_14-12-10/data/population.feather")
+species_df = pd.read_feather("E:/migrate_o/github_repos/EvolvePetriNets/results/data/test_component_tracker_08-07-2024_14-12-01/whatever/1_08-07-2024_14-12-10/data/species.feather")
+component_dict = load_component_dict("E:/migrate_o/github_repos/EvolvePetriNets/results/data/test_component_tracker_08-07-2024_14-12-01/whatever/1_08-07-2024_14-12-10/data/component_dict.pkl.gz")
+
+savedir = "E:/migrate_o/github_repos/EvolvePetriNets/results/data/test_component_tracker_08-07-2024_14-12-01/whatever/1_08-07-2024_14-12-10/data"
+
 FSIZE = (10, 5)
 # %%
 # species plot
@@ -143,6 +150,7 @@ pop_df[pop_df["id"]=="1e7ad65a-e429-4483-ae1b-73706ceb998d"]
 
 # %%
 from neatutils import endreports as er
+from neatutils import endreports as er
 reload(er)
 
 er.mutation_effects_plot(pop_df, savedir)
@@ -152,8 +160,64 @@ er.mutation_effects_plot(pop_df, savedir)
 # df_with_parents
 
 # %%
-from neatutils import endreports as er
-from importlib import reload
-reload(er)
+import seaborn as sns
+import matplotlib.pyplot as plt
+from collections import Counter
+import pandas as pd
 
-er.mutation_effects_plot(pop_df, savedir)
+# Assuming filtered is already defined
+filtered = pop_df[pop_df["gen"] == 300]
+
+components = filtered["my_components"]
+species_ids = filtered["species_id"]
+
+# Flatten the list of lists into a single list and keep track of species
+all_components = []
+all_species = []
+for sublist, species in zip(components, species_ids):
+    all_components.extend(sublist)
+    all_species.extend([species] * len(sublist))
+
+# Count the occurrences of each component
+component_counts = Counter(all_components)
+
+# Get the 10 most common components
+most_common_components = [component for component, count in component_counts.most_common(10)]
+
+# Filter out the 10 most common components
+filtered_components = [component for component in all_components if component not in most_common_components]
+filtered_species = [species for component, species in zip(all_components, all_species) if component not in most_common_components]
+
+# Create a DataFrame for plotting
+plot_df = pd.DataFrame({
+    'Component': filtered_components,
+    'Species': filtered_species
+})
+
+# Plot the overlayed histogram using seaborn
+plt.figure(figsize=(10, 6))
+# sns.histplot(data=plot_df, x='Component', hue='Species', multiple='layer', bins=100, palette='tab10')
+sns.histplot(data=plot_df, x='Component', hue='Species', multiple='stack', bins=100, palette='tab10')
+plt.xlabel('')
+plt.xticks([])
+plt.title("Components by Species histogram")
+plt.show()
+
+# %%
+# Group by generation and count unique components
+unique_components_per_gen = pop_df.groupby('gen')['my_components'].apply(lambda x: len(set(component for sublist in x for component in sublist)))
+
+# Create a DataFrame for plotting
+plot_df = pd.DataFrame({
+    'Generation': unique_components_per_gen.index,
+    'UniqueComponents': unique_components_per_gen.values
+})
+
+# Plot the line plot using seaborn
+plt.figure(figsize=(10, 6))
+sns.lineplot(data=plot_df, x='Generation', y='UniqueComponents')
+plt.xlabel('Generation')
+plt.ylabel('Number of Unique Components')
+plt.title('Number of Unique Components per Generation')
+plt.show()
+# %%
