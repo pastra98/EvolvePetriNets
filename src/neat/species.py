@@ -1,16 +1,17 @@
 import random as rd
 from neat import params
 from neat.genome import GeneticNet
+from typing import List
 
 class Species:
-    def __init__(self, name, founder: GeneticNet) -> None:
+    def __init__(self, name: str, founder: GeneticNet) -> None:
         self.name = name
-        self.members = []
+        self.members: List[GeneticNet] = []
         self.age = 0
-        self.representative = founder
-        self.leader = founder
+        self.representative: GeneticNet = founder
+        self.leader: GeneticNet = founder
         self.num_members: int = 0
-        self.pool = []
+        self.pool: List[GeneticNet] = []
         self.expected_offspring = 0
         self.spawn_count = 0 # number of spawns the species got during the last generation it was active
         self.avg_fitness = 0 # average fitness of all new members
