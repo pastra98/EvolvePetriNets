@@ -1,7 +1,7 @@
 {
     "start_config": "random",
     "popsize": 500,
-    "selection_strategy": "truncation",
+    "selection_strategy": "speciation",
     "initial_tp_gauss_dist": [
         2.0,
         1.0
@@ -75,11 +75,11 @@
         0
     ],
     "prob_new_empty_t": [
-        0.05,
+        0.0,
         0
     ],
     "prob_split_arc": [
-        0.05,
+        0.0,
         0
     ],
     "prob_prune_leafs": [
