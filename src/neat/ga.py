@@ -1,6 +1,8 @@
 import numpy as np
 from copy import copy
 from datetime import datetime
+from uuid import uuid4
+from typing import List
 
 from neatutils import timer
 
@@ -42,10 +44,10 @@ class GeneticAlgorithm:
         
         # measurements specific to speciation
         self.num_new_species = 0 # these are set by calling get_initial_pop (only used if strat speciation)
-        self.species = [] 
-        self.surviving_species = []
-        self.population = []
-        self.best_species = None
+        self.species: List[Species] = []
+        self.surviving_species: List[Species] = []
+        self.population: List[GeneticNet]= []
+        self.best_species: Species = None
 
         params.load(params_name)
         if params.mutation_type == "atomic":
@@ -88,7 +90,10 @@ class GeneticAlgorithm:
         # component_tracker updates the component fitnesses
         self.pop_component_tracker.update_global_components(self.population, self.curr_gen)
         self.old_comp_num = self.new_comp_num
-        self.new_comp_num = len(self.pop_component_tracker.component_history)
+        self.new_comp_num = len(self.pop_component_tracker.component_dict)
+        # lastly save the components ids to the genomes
+        for g in self.population:
+            g.save_component_ids()
         self.is_curr_gen_evaluated = True
         return
 
@@ -200,7 +205,8 @@ class GeneticAlgorithm:
             "history": self.history,
             "best_genome": self.curr_best_genome,
             "improvements": self.improvements,
-            "total_components": len(self.pop_component_tracker.component_history),
+            "total_components": len(self.pop_component_tracker.component_dict),
+            "component_dict": self.pop_component_tracker.get_inverted_comp_dict(),
         }
         if params.selection_strategy == "speciation":
             info["species_leaders"] = [s.leader for s in self.species]
@@ -219,6 +225,8 @@ class GeneticAlgorithm:
             self.roulette_pop_update()
         elif params.selection_strategy == "truncation": # https://www.researchgate.net/publication/259461147_Selection_Methods_for_Genetic_Algorithms
             self.truncation_pop_update()
+        else:
+            raise NotImplementedError()
 
         self.timer.stop("pop_update", self.curr_gen)
 
@@ -485,60 +493,62 @@ class PopulationComponentTracker:
     """
     def __init__(self)-> None:
         self.component_dict = dict()
-        self.component_history = dict()
 
 
-    def update_global_components(self, population: list, generation: int):
+    def update_global_components(self, population: list[GeneticNet], gen: int):
         """Registers the unique components in the history, also pairs up components
         of all genomes with their fitness, if use_t_vals this will be used to calculate
         mean difference significance for all components in the population.
         """
-        # pair the components of the new population with their fitness values
-        fitness_components = []
+        # all_components = set(c["comp"] for c in self.component_dict.values())
+        pop_fit_vals = []
         for g in population:
+            pop_fit_vals.append(g.fitness)
             c_set = g.get_unique_component_set()
             for c in list(c_set):
-                if c not in self.component_history:
-                    self.component_history[c] = generation
-            fitness_components.append((g.fitness, c_set))
+                if c not in self.component_dict:
+                    self.component_dict[c] = {
+                        "id": str(uuid4()),
+                        "fitnesses": {gen: [g.fitness]},
+                        "t_val": {gen: None}
+                        }
+                else:
+                    self.component_dict[c]["fitnesses"].setdefault(gen, []).append(g.fitness)
+
 
         # TODO: can do other stuff that influences the probability map here
         # like check the best improvements
-        # TODO: maybe use info from more generations later
+        # TODO: maybe use multiple gens later
         if params.use_t_vals:
-            self.component_dict = self.calculate_t_vals(fitness_components)
+            self.update_t_vals(gen, pop_fit_vals)
 
             
+    def get_comp_info(self, comp: tuple) -> dict:
+        return self.component_dict[comp]
 
     # @njit(parallel=True)
-    def calculate_t_vals(self, fitness_components: list) -> dict:
-        comp_fitness_dict = {}
-
+    def update_t_vals(self, gen, pop_fit_vals) -> dict:
         # TODO: this logic could also be handled in caller, especially if other
         # keys are added to the dict for other prob_map influences
-        pop_fit, comp_fitness_dict  = [], {}
-        for fc in fitness_components: 
-            pop_fit.append(fc[0])
-            for component in fc[1]: # assort fitness val with every component
-                    comp_fitness_dict.setdefault(component,
-                                            {"all_fitnesses": [],
-                                            "t_val": None}
-                                        ).get("all_fitnesses").append(fc[0])
-        pop_fit = np.array(pop_fit)
-        pop_sum, pop_len = pop_fit.sum(), len(pop_fit)
+        pop_fit_vals = np.array(pop_fit_vals)
+        pop_sum, pop_len = pop_fit_vals.sum(), len(pop_fit_vals)
         pop_df = pop_len - 2
 
-        for component in comp_fitness_dict:
-            included = np.array(comp_fitness_dict[component]["all_fitnesses"])
-            comp_fitness_dict[component]["t_val"] = self.compute_t(included, pop_fit, pop_len, pop_sum, pop_df)
+        for data in self.component_dict.values():
+            # skip components that are not existent in this gen
+            if gen not in data["fitnesses"]:
+                continue
+            included = np.array(data["fitnesses"][gen])
             # this should only happen in the first gen, when the start and end connections
             # yield components, shared by everyone, making t value comparison impossible
-            if len(included) == params.popsize:
-                comp_fitness_dict[component]["t_val"] = 1 # TODO: revisit this number maybe later
-        return comp_fitness_dict
+            if gen == 1:
+                data["t_val"][gen] = 1 # TODO: revisit this number maybe later
+            else:
+                data["t_val"][gen] = self.compute_t(included, pop_fit_vals, pop_len, pop_sum, pop_df)
 
     # @njit(parallel=True)
-    def compute_t(inc, pop, pop_len, pop_sum, pop_df):
+    @staticmethod
+    def compute_t(inc, pop_fit_vals, pop_len, pop_sum, pop_df):
         inc_sum, inc_len = inc.sum(), len(inc)
         inc_avg_fit = inc_sum / inc_len
         exc_len = pop_len - inc_len
@@ -550,9 +560,22 @@ class PopulationComponentTracker:
         inc_ss = ((inc - inc_avg_fit)**2).sum()
         inc_var = inc_ss / inc_len
         
-        exc_ss = ((pop - exc_avg_fit)**2).sum() - inc_ss - inc_len*mean_diff**2
+        exc_ss = ((pop_fit_vals - exc_avg_fit)**2).sum() - inc_ss - inc_len*mean_diff**2
         exc_var = exc_ss / exc_len
 
         pool_var = (inc_var*inc_df + exc_var*exc_df) / pop_df
         se = (pool_var/inc_len + pool_var/exc_len)**0.5
         return float(mean_diff/se)
+
+
+    def get_inverted_comp_dict(self):
+        inverted_comp_dict = dict()
+        for c, data in self.component_dict.items():
+            inverted_comp_dict[data["id"]] = {
+                "component": str(c),
+                "fitnesses": {gen: sum(all_fit) for gen, all_fit in data["fitnesses"].items()},
+                "t_val": data["t_val"]
+            }
+        return inverted_comp_dict
+
+    

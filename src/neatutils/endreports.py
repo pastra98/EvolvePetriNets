@@ -9,6 +9,7 @@ import json
 
 import gc
 import pickle
+import gzip
 import os
 
 FSIZE = (10, 5)
@@ -24,19 +25,19 @@ def save_report(ga_info: dict, savedir: str) -> None:
 
     # get the full history df, create the dataframes and save them
     full_history = ga_info["history"]
-    os.makedirs(f"{savedir}/feather")
+    os.makedirs(f"{savedir}/data")
 
     use_species = "species" in full_history[1]
     if use_species:
         species_df = get_species_df(full_history)
-        species_df.to_feather(f"{savedir}/feather/species.feather")
+        species_df.to_feather(f"{savedir}/data/species.feather")
         save_species_leaders(ga_info["species_leaders"], savedir)
         species_plot(species_df, savedir)
 
     pop_df = get_population_df(full_history)
-    pop_df.to_feather(f"{savedir}/feather/population.feather")
+    pop_df.to_feather(f"{savedir}/data/population.feather")
     gen_info_df = get_gen_info_df(full_history)
-    gen_info_df.to_feather(f"{savedir}/feather/gen_info.feather")
+    gen_info_df.to_feather(f"{savedir}/data/gen_info.feather")
     
 
     # save the improvements, species leaders & best genome, delete ga info after
@@ -50,6 +51,9 @@ def save_report(ga_info: dict, savedir: str) -> None:
     components_plot(gen_info_df, savedir)
     mutation_effects_plot(pop_df, savedir)
     metrics_plot(pop_df, savedir)
+
+    # pickle component tracker
+    save_component_dict(ga_info["component_dict"], f"{savedir}/data/component_dict.pkl.gz")
 
     # close all plots and free memory
     plt.close("all")
@@ -283,3 +287,7 @@ def mutation_effects_plot(pop_df, savedir: str):
     fig.savefig(f"{savedir}/mutation_analysis.pdf", dpi=300)
     summary_df.to_markdown(f"{savedir}/mutation_effects.txt")
 
+
+def save_component_dict(component_dict: dict, fpath: str):
+    with gzip.open(fpath, 'wb') as f:
+        pickle.dump(component_dict, f, protocol=pickle.HIGHEST_PROTOCOL)

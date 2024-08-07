@@ -77,6 +77,7 @@ class GeneticNet:
         self.arcs = arcs
         # track mutations of that genome
         self.my_mutations = []
+        self.my_components = []
         # reference to the global component tracker
         self.pop_component_tracker = pop_component_tracker
 
@@ -230,9 +231,11 @@ class GeneticNet:
         arc_values = {}
         all_c = self.get_component_list()
         for c_dict in all_c:
-            pop_fit_val = self.pop_component_tracker.component_dict[c_dict['comp']]['t_val']
+            c_info = self.pop_component_tracker.component_dict[c_dict['comp']]
+            # TODO: hack to just get the biggest t_val
+            t_val = max(c_info["t_val"].values())
             for arc_id in c_dict['arcs']:
-                arc_values[arc_id] = pop_fit_val
+                arc_values[arc_id] = t_val
         return arc_values
 
 
@@ -514,6 +517,7 @@ class GeneticNet:
 
         return list(p_components.values())
     
+
     @cache
     def get_unique_component_set(self) -> set:
         """get a set of the components that will be used for distance calc
@@ -534,6 +538,11 @@ class GeneticNet:
             return 1 # they are assumed to be equal, but this should normally not happen
         compat = 1 - sqrt(intersect / union)
         return compat
+
+
+    def save_component_ids(self) -> None:
+        for c in self.get_unique_component_set():
+            self.my_components.append(self.pop_component_tracker.get_comp_info(c)["id"])
 
 # ------------------------------------------------------------------------------
 # FITNESS RELATED STUFF --------------------------------------------------------
