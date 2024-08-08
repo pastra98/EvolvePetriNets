@@ -158,7 +158,8 @@ def time_stackplot(gen_info_df: pd.DataFrame, savedir: str):
 def species_plot(species_df: pd.DataFrame, savedir: str):
     """Stackplot of species member counts with a separate legend figure
     """
-    grouped = species_df.groupby(["gen", "name"])["num_members"].sum().unstack(fill_value=0)
+    filtered = species_df[species_df["obliterate"] == False]
+    grouped = filtered.groupby(["gen", "name"])["num_members"].sum().unstack(fill_value=0)
     # Create main plot
     fig, ax = plt.subplots(figsize=(10, 5))
     stack = ax.stackplot(grouped.index, grouped.T)
