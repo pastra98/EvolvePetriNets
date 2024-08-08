@@ -100,7 +100,10 @@ class Species:
         """
         # prevent species added in the current gen from producing offspring
         if self.age > 0:
-            self.num_to_spawn = round((self.avg_fitness_adjusted / total_avg_species_fitness) * params.popsize)
+            available_spawns = (1-params.pop_perc_crossover) * params.popsize
+            self.num_to_spawn = round(
+                (self.avg_fitness_adjusted / total_avg_species_fitness) * available_spawns
+                )
     
     
     def elite_spawn(self) -> GeneticNet:
