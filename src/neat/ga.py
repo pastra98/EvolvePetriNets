@@ -1,5 +1,5 @@
 import numpy as np
-from copy import copy
+import random as rd
 from datetime import datetime
 from uuid import uuid4
 from typing import List
@@ -341,31 +341,21 @@ class GeneticAlgorithm:
 
 
     def get_crossover_spawns(self, num_to_spawn: int) -> list:
-        # select species that will cross over already sorted by fitness due to eval
-        cs = self.species[:int(len(self.species)*params.species_perc_crossover)]
-        # crossover spawns depend on relative fitness of each species
-        cs_fitnesses = [s.avg_fitness for s in cs]
-        cs_total_fit = sum(cs_fitnesses)
-        cs_spawn_counts = [int((f/cs_total_fit)*num_to_spawn) for f in cs_fitnesses]
-        # ensure that exactly num_to_spawn genomes get spawned
-        cs_spawn_counts[0] += num_to_spawn - sum(cs_spawn_counts)
+        # tournament selection approach
         new_genomes = []
+        tournament_size = 10 # TODO: make this a param
 
-        for i, species in enumerate(cs): 
-            mom_species = cs[i]
-            for j in range(cs_spawn_counts[i]):
-                dad_species = cs[(i + j + 1) % len(cs)]
-                dad = dad_species.leader
-                mom = mom_species.leader
-                baby = mom.crossover(dad)
-                # if mom and dad are not able to reproduce, find a new dad lol
-                if not baby:
-                    for new_dad in dad_species.members:
-                        baby = mom.crossover(new_dad)
-                        if baby: break
-                if baby:
+        while len(new_genomes) < num_to_spawn:
+            tournament = rd.sample(self.population, tournament_size)
+            tournament.sort(key=lambda g: g.fitness)
+            mom, dad = tournament[0], tournament[1]
+            baby = mom.crossover(dad)
+            if baby:
+                new_genomes.append(baby)
+                if params.selection_strategy == "speciation":
+                    mom_species = [s for s in self.species if s.name == mom.species_id][0]
                     mom_species.add_member(baby)
-                    new_genomes.append(baby)
+
         return new_genomes
 
 
