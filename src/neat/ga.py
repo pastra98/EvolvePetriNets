@@ -190,9 +190,19 @@ class GeneticAlgorithm:
             raise NotImplementedError()
         # if using speciation, generate initial set of spec, place genomes there
         if params.selection_strategy == "speciation":
-            for g in initial_pop:
-                found_species = self.find_and_add_to_species(g)
+            # initialize species and add a first one based on first genome
+            initial_species: List[Species] = []
+            initial_species.append(self.get_fresh_species(initial_pop[0]))
+            for g in initial_pop[1:]: # skip the first genome
+                found_species = self.find_species(g, initial_species)
+                if found_species:
+                    found_species.add_member(g)
+                else: # new genome matches no current species -> make a fresh one
+                    fresh_species = self.get_fresh_species(g)
+                    fresh_species.add_member(g)
+                    initial_species.append(fresh_species)
                 self.best_species = found_species # just to initialize best species to a species for allowing comparison
+            self.species = initial_species
         # set initial pop
         self.population = initial_pop
         return
@@ -235,55 +245,58 @@ class GeneticAlgorithm:
     def speciation_pop_update(self) -> None:
         """Get spawns from species, and add them to the population.
         """ 
-        # remove all species that won't go into next gen after logging
+        # remove all species that won't go into next gen after evaluation
         self.species = self.surviving_species
-        # first get the crossover spawns
+
+        # get the crossover spawns
+        crossover_g = []
         if self.curr_gen >= params.start_crossover:
             n_crossover = int(params.popsize * params.pop_perc_crossover)
-            new_genomes = self.get_crossover_spawns(n_crossover)
-        else:
-            new_genomes = []
-        self.num_crossover = len(new_genomes)
-        # then get the remaining asex spawns
-        self.num_asex = params.popsize - self.num_crossover
-        self.num_new_species = 0
-        num_spawned = 0
+            crossover_g = self.get_crossover_spawns(n_crossover)
+        self.num_crossover = len(crossover_g)
+
+        # get elite spawns
+        elite_g = []
+        if params.elitism:
+            for s in self.species:
+                l = s.leader.clone()
+                s.add_member(l)
+                elite_g.append(l)
+        self.num_elite = len(elite_g)
+        
+        # get the remaining asex spawns
+        self.num_asex = params.popsize - self.num_crossover - self.num_elite
+        new_species: List[Species] = []
+        asex_g: List[GeneticNet] = []
         for s in self.species: # species already sorted by fitness due to eval
-            # reduce num_to_spawn if it would exceed population size
-            if num_spawned == self.num_asex:
-                break
-            elif num_spawned + s.num_to_spawn > self.num_asex:
-                s.num_to_spawn = self.num_asex - num_spawned
-            spawned_elite = False
+            # calc remaining spawns, break if no spawns left
+            remaining_spawns = self.num_asex - len(asex_g)
+            if not remaining_spawns: break
+            # calc and reduce num_to_spawn if it would exceed remaining spawns
+            num_to_spawn = int(s.fitness_share * self.num_asex) + 1 # add one to mitigate rounding down errors
+            num_to_spawn = min(num_to_spawn, remaining_spawns)
             # spawn all the new members of a species
-            for _ in range(s.num_to_spawn):
-                baby: GeneticNet = None
-                # if elitism, spawn clone of the species leader
-                if not spawned_elite and params.elitism:
-                    baby = s.elite_spawn()
-                    spawned_elite = True
-                # spawn asex baby
-                else:
-                    baby = s.asex_spawn()
-                # check if baby should speciate away from it's current species
-                if params.compat_to_multiple: # get species component set
-                    cset = s.component_set
-                else:
-                    cset = s.representative.get_unique_component_set()
-                if baby.get_genetic_distance(cset) > params.species_boundary:
-                    # if the baby is too different, find an existing species to change
-                    # into. If no compatible species is found, a new one is made and returned
-                    found_species = self.find_and_add_to_species(baby)
-                else:
-                    # If the baby is still within the species of it's parents, add it as member
+            for _ in range(num_to_spawn):
+                baby = s.asex_spawn()
+                # check if baby still simillar enough to current species
+                cset = s.component_set if params.compat_to_multiple else s.representative.get_unique_component_set()
+                if baby.get_genetic_distance(cset) < params.species_boundary:
                     s.add_member(baby)
-                num_spawned += 1
-                new_genomes.append(baby)
-        # if all the current species didn't provide enough offspring, get some more
-        self.num_asex = num_spawned # update num_asex to correct value
-        self.num_elite = params.popsize - len(new_genomes)
-        new_genomes += self.get_more_mutated_leaders(self.num_elite)
-        self.population = new_genomes
+                else: # try to adopt
+                    found_species = self.find_species(baby, self.species + new_species)
+                    if found_species:
+                        found_species.add_member(baby)
+                    else: # new genome matches no current species -> make a fresh one
+                        fresh_species = self.get_fresh_species(baby)
+                        fresh_species.add_member(baby)
+                        new_species.append(fresh_species)
+                asex_g.append(baby)
+        # add new species
+        self.species += new_species
+        self.num_new_species = len(new_species)
+
+        # set new population
+        self.population = crossover_g + elite_g + asex_g
         return
 
 
@@ -313,30 +326,22 @@ class GeneticAlgorithm:
             raise Exception("mass extinction")
         # calculate offspring amt based on fitness relative to the total_adjusted_species_avg_fitness
         for s in self.surviving_species:
-            s.calculate_offspring_amount(total_adjusted_species_avg_fitness)
+            s.calculate_fitness_share(total_adjusted_species_avg_fitness)
         return
 
 
-    def find_and_add_to_species(self, new_genome: GeneticNet) -> Species:
+    def find_species(self, new_genome: GeneticNet, species_to_search: List[GeneticNet]):
         """Tries to find a species to which the given genome is similar enough to be
-        added as a member. If no compatible species is found, a new one is made. Returns
-        the species (but the genome still needs to be added as a member).
+        added as a member. If no compatible species is found, None is returned
         """
         found_species: Species = None
         # try to find an existing species to which the genome is close enough to be a member
         distance = params.species_boundary
-        for s in self.species:
-            if params.compat_to_multiple:
-                cset = s.component_set
-            else:
-                cset = s.representative.get_unique_component_set()
+        for s in species_to_search:
+            cset = s.component_set if params.compat_to_multiple else s.representative.get_unique_component_set()
             if new_genome.get_genetic_distance(cset) < distance:
                 distance = new_genome.get_genetic_distance(cset)
                 found_species = s
-        # new genome matches no current species -> make a new one
-        if not found_species:
-            found_species = self.make_new_species(new_genome)
-        found_species.add_member(new_genome)
         return found_species
 
 
@@ -353,7 +358,7 @@ class GeneticAlgorithm:
             if baby:
                 new_genomes.append(baby)
                 if params.selection_strategy == "speciation":
-                    mom_species = [s for s in self.species if s.name == mom.species_id][0]
+                    mom_species = next(s for s in self.species if s.name == mom.species_id)
                     mom_species.add_member(baby)
 
         return new_genomes
@@ -380,15 +385,11 @@ class GeneticAlgorithm:
         return new_genomes
 
 
-    def make_new_species(self, founding_member: GeneticNet) -> Species:
+    def get_fresh_species(self, founding_member: GeneticNet) -> Species:
         """Generates a new species with a unique id, assigns the founding member as
-        representative, and adds the new species to curr_species and returns it.
+        representative, and returns it.
         """
-        new_species_id = f"{self.curr_gen}_{founding_member.id}"
-        new_species = Species(new_species_id, founding_member)
-        self.species.append(new_species)
-        self.num_new_species += 1
-        return new_species
+        return Species(f"{self.curr_gen}_{founding_member.id}", founding_member)
 
 # ROULETTE ---------------------------------------------------------------------
 

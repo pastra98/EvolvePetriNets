@@ -16,9 +16,9 @@ class Species:
         self.spawn_count = 0 # number of spawns the species got during the last generation it was active
         self.avg_fitness = 0 # average fitness of all new members
         self.avg_fitness_adjusted = 0 # average fitness adjusted by the age modifier
+        self.fitness_share = 0 # proportion of own (adjusted) fitness relative to total
         self.best_ever_fitness = 0 # best ever fitness witnessed in this species
         self.obliterate = False
-        self.num_to_spawn = 0 # The amount of offspring to be spawned in the next generation
         self.num_gens_no_improvement = 0
         self.curr_mutation_rate = 0 # 0 -> normal or 1 -> high
         self.component_set = founder.get_unique_component_set() # for first gen just use founder
@@ -83,7 +83,7 @@ class Species:
             
 
     def update_components(self) -> set:
-        """Adds #species_component_pool_size component sets to a shared set of components
+        """Adds species_component_pool_size component sets to a shared set of components
         """
         n_representatives = min(params.species_component_pool_size, len(self.members))
         representatives = rd.choices(self.members, k=n_representatives)
@@ -92,23 +92,18 @@ class Species:
             components.update(rep.get_unique_component_set())
         return components
     
-    def calculate_offspring_amount(self, total_avg_species_fitness) -> None:
-        """This func does not care about the fitness of individual members. It
-        calculates the total spawn tickets allotted to this species by comparing
-        how fit this species is relative to all other species, and multiplying this
-        result with the total population size.
+
+    def calculate_fitness_share(self, total_avg_species_fitness) -> None:
+        """Assigns the fitness share to the species
+        TODO: could test alternatives to mean here, maybe mode?
         """
-        # prevent species added in the current gen from producing offspring
-        if self.age > 0:
-            available_spawns = (1-params.pop_perc_crossover) * params.popsize
-            self.num_to_spawn = round(
-                (self.avg_fitness_adjusted / total_avg_species_fitness) * available_spawns
-                )
-    
-    
+        self.fitness_share = self.avg_fitness_adjusted / total_avg_species_fitness
+
+
     def elite_spawn(self) -> GeneticNet:
-        """Returns a copy of the species leader WITHOUT INCREASING SPAWN COUNT
+        """Returns a copy of the species leader
         """
+        self.spawn_count += 1
         return self.leader.clone()
 
 
