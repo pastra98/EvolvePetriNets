@@ -479,7 +479,9 @@ class GeneticNet:
                 baby.place_trans_arc(p_id, t_id)
             else:
                 baby.extend_new_trans(p_id, is_output=True)
-
+        # lastly, check if the offspring has no arcs (edgecase when self is single(start/end) component genome)
+        if not baby.arcs:
+            return 
         baby.my_mutations = ["crossover"] # replace all mutations with just crossover
         baby.clear_cache()
         return baby
@@ -601,7 +603,13 @@ class GeneticNet:
         # TODO: eventually deprecate pm4py log
         # TODO: curr_gen argument? keep it?
         # fitness eval
-        model_eval = self.build_fc_petri(log).evaluate()
+        try:
+            model_eval = self.build_fc_petri(log).evaluate()
+        except:
+            from neatutils.endreports import pickle_genome
+            fp = f"D:/Bibliotheken/Downloads/problem_genomes"
+            pickle_genome(self, self.id, fp)
+            raise Exception("it fucking happened again")
 
         self.fitness_metrics = model_eval["metrics"]
 
