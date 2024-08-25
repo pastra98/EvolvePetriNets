@@ -125,7 +125,7 @@ class GeneticNet:
             if rd.random() < params.prob_split_arc[mutation_rate]:
                 self.split_arc()
             if rd.random() < params.prob_prune_leafs[mutation_rate]:
-                self.prune_leaves()
+                self.prune_leaf()
             if rd.random() < params.prob_prune_leafs[mutation_rate]:
                 self.flip_arc()
         except:
@@ -143,7 +143,7 @@ class GeneticNet:
             self.extend_new_place,
             self.extend_new_trans,
             self.split_arc,
-            self.prune_leaves,
+            self.prune_leaf,
             self.flip_arc
         ]
         probabilities = [
@@ -354,23 +354,26 @@ class GeneticNet:
         return
 
 
-    def prune_leaves(self) -> None: # TODO: name this prune leafs later
+    def prune_leaf(self) -> None: # TODO: name this prune leafs later
         all_nodes = self.places | self.transitions
         del all_nodes["start"], all_nodes["end"] # exclude start and end
 
-        for a in self.arcs.values(): # remove all nodes that have outgoing conns
-           all_nodes.pop(a.source_id, None)
-        
-        if not all_nodes:
-            return # no suitable leaf nodes
+        # filter all leaves
+        leaves = all_nodes.copy()
+        for a in self.arcs.values():
+           leaves.pop(a.source_id, None)
 
-        leaf_id = rd.choice(list(all_nodes.keys()))
-        # delete all arcs pointing to the leaf
+        # prevent this mutation from deleting the last nodes
+        if len(leaves) == len(all_nodes) or not leaves:
+            return
+
+        # choose leaf, delete all arcs pointing to the leaf
+        leaf_id = rd.choice(list(leaves.keys()))
         arcs_to_del = [a.id for a in self.arcs.values() if a.target_id == leaf_id]
         for a_id in arcs_to_del:
             del self.arcs[a_id]
 
-        if type(all_nodes[leaf_id]) == GPlace:
+        if type(leaves[leaf_id]) == GPlace:
             del self.places[leaf_id]
         else:
             del self.transitions[leaf_id]
