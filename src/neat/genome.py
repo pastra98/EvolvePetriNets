@@ -603,17 +603,9 @@ class GeneticNet:
 
 
     def evaluate_fitness(self, log, curr_gen=0):
-        # TODO: eventually deprecate pm4py log
         # TODO: curr_gen argument? keep it?
         # fitness eval
-        try:
-            model_eval = self.build_fc_petri(log).evaluate()
-        except:
-            from neatutils.endreports import pickle_genome
-            fp = f"D:/Bibliotheken/Downloads/problem_genomes"
-            pickle_genome(self, self.id, fp)
-            raise Exception("it fucking happened again")
-
+        model_eval = self.build_fc_petri(log).evaluate()
         self.fitness_metrics = model_eval["metrics"]
 
         agg_rep = self.fitness_metrics["aggregated_replay_fitnesss"]
