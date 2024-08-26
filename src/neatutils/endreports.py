@@ -52,6 +52,11 @@ def save_report(ga_info: dict, savedir: str) -> None:
     mutation_effects_plot(pop_df, savedir)
     metrics_plot(pop_df, savedir)
 
+    # analysis of best genome mutation lineage
+    best_genomes = filter_best_genomes(gen_info_df, pop_df)
+    best_genome_lineage(best_genomes, savedir)
+    best_genome_mutation_analysis(best_genomes, savedir)
+
     # pickle component tracker
     save_component_dict(ga_info["component_dict"], f"{savedir}/data/component_dict.pkl.gz")
 
@@ -103,7 +108,7 @@ def get_gen_info_df(full_history: dict):
     df.set_index("gen")
     return df
 
-# ---------- SERIALIZING GENOMES
+# ---------- SERIALIZATION
 
 def save_genome_gviz(genome: GeneticNet, savedir: str, name_prefix=""):
     """Save gviz render of specified genome
@@ -134,6 +139,32 @@ def pickle_genome(genome: GeneticNet, name: str, savedir: str):
     genome.clear_cache()
     with open(f"{savedir}/{name}.pkl", "wb") as f:
         pickle.dump(genome, f)
+
+
+def save_component_dict(component_dict: dict, fpath: str):
+    """Pickle the component dictionary with max compression
+    """
+    with gzip.open(fpath, 'wb') as f:
+        pickle.dump(component_dict, f, protocol=pickle.HIGHEST_PROTOCOL)
+
+# ---------- DF FILTERING HELPER FUNC
+
+def filter_best_genomes(gen_info_df, pop_df):
+    """Filters out the best genomes that resulted in fitness improvement from pop_df
+    """
+    def extract_best_genomes(gen_info_df, pop_df):
+        merged_df = pd.merge(gen_info_df[['gen', 'best_genome']], pop_df, left_on=['gen', 'best_genome'], right_on=['gen', 'id'], how='inner')
+        return merged_df
+
+    def filter_improved_generations(gen_info_df):
+        gen_info_df = gen_info_df.sort_values(by='gen').reset_index(drop=True)
+        gen_info_df['previous_best_fitness'] = gen_info_df['best_genome_fitness'].shift(1)
+        improved_gen_info_df = gen_info_df[gen_info_df['best_genome_fitness'] > gen_info_df['previous_best_fitness']]
+        return improved_gen_info_df
+
+    best_genomes_df = extract_best_genomes(gen_info_df, pop_df)
+    improved_gen_info_df = filter_improved_generations(gen_info_df)
+    return best_genomes_df[best_genomes_df['gen'].isin(improved_gen_info_df['gen'])]
 
 # ---------- PLOTTING FUNCTIONS
 
@@ -289,6 +320,74 @@ def mutation_effects_plot(pop_df, savedir: str):
     summary_df.to_markdown(f"{savedir}/mutation_effects.txt")
 
 
-def save_component_dict(component_dict: dict, fpath: str):
-    with gzip.open(fpath, 'wb') as f:
-        pickle.dump(component_dict, f, protocol=pickle.HIGHEST_PROTOCOL)
+def best_genome_lineage(best_genomes_df: pd.DataFrame, savedir=str):
+    """Scatterplot of the mutation history of the best genome
+    """
+    gens = best_genomes_df['gen']
+    fitnesses = best_genomes_df['fitness']
+    mutations = best_genomes_df['my_mutations'].apply(lambda x: x[0])
+
+    # Generate a color and marker for each mutation type
+    unique_mutations = mutations.unique()
+    colors = plt.colormaps['tab10'](range(len(unique_mutations)))
+    markers = ['o', 's', 'D', '^', 'v', 'p', '*', 'X', 'P', 'h']  # Select a few markers
+    mutation_style_map = {mutation: (colors[i], markers[i % len(markers)]) for i, mutation in enumerate(unique_mutations)}
+    
+    plt.figure(figsize=FSIZE)
+    
+    # Plot points for each generation based on mutation type
+    for mutation in unique_mutations:
+        mutation_mask = (mutations == mutation)
+        plt.scatter(
+            gens[mutation_mask],
+            fitnesses[mutation_mask],
+            color=mutation_style_map[mutation][0],
+            marker=mutation_style_map[mutation][1],
+            s=30,  # Size of the marker
+            label=f'Mutation: {mutation}'
+        )
+    
+    plt.legend(loc='upper left', fontsize='medium')
+    plt.xlabel('Generation', fontsize=12)
+    plt.ylabel('Fitness', fontsize=12)
+    plt.title('Best Genome: Fitness Progression with Mutation Types', fontsize=14)
+    plt.grid(True)
+    plt.tight_layout()
+    plt.savefig(f"{savedir}/best_mutation_lineage.pdf")
+
+
+def best_genome_mutation_analysis(best_genomes_df: pd.DataFrame, savedir: str):
+    """Similar to mutation impacts, but this time only the mutations that actually
+    improved the fitness of the best genome
+    """
+    # filter out mutation frequencies and mean fitness
+    mutations = best_genomes_df['my_mutations'].apply(lambda x: x[0])
+    mutation_counts = mutations.value_counts().sort_index()
+    mean_fitness_impact = best_genomes_df.groupby(mutations)['fitness'].mean().sort_index()
+    mutation_types = mutation_counts.index
+
+    fig, ax1 = plt.subplots(figsize=FSIZE)
+    # X-axis positions for the bars
+    x = np.arange(len(mutation_types))
+    width = 0.4 # Bar width
+
+    # Plot frequency of mutations on the left y-axis
+    ax1.bar(x - width/2, mutation_counts, width, color='b', label='Mutation Count')
+    ax1.set_ylabel('Frequency')
+    ax1.set_xlabel('Mutation Type')
+    # set ticks
+    ax1.set_xticks(x)
+    ax1.set_xticklabels(mutation_types, rotation=45, ha='right', fontsize=10)
+    ax1.tick_params(axis='y')
+
+    # Create second y-axis for fitness impact
+    ax2 = ax1.twinx()
+    ax2.bar(x + width/2, mean_fitness_impact, width, color='r', label='Mean Fitness Impact')
+    ax2.set_ylabel('Mean Fitness Impact')
+    ax2.tick_params(axis='y', labelcolor='r')
+    
+    plt.title('Best Genome: Mutation Count and Mean Fitness Impact by Mutation Type', fontsize=14)
+    ax1.legend(loc='upper left')
+    ax2.legend(loc='upper right')
+    plt.tight_layout()
+    plt.savefig(f"{savedir}/best_mutation_impacts.pdf")
