@@ -1,3 +1,9 @@
+"""
+Purpose of this script is to have a space where I can work with run data, and 
+test implementing new plots before they are integrated into the endreports module
+Nothing that is in here should not be implemented in endreports at some point,
+except for the tests at the bottom of the file
+"""
 # %%
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -7,19 +13,28 @@ import numpy as np
 from statistics import fmean
 from math import ceil
 import pickle, gzip
+from importlib import reload
+import neatutils.endreports as er
 
 def load_component_dict(filename):
     with gzip.open(filename, 'rb') as f:
         return pickle.load(f)
 
-gen_info_df = pd.read_feather("E:/migrate_o/github_repos/EvolvePetriNets/results/data/test_component_tracker_08-07-2024_14-12-01/whatever/1_08-07-2024_14-12-10/data/gen_info.feather")
-pop_df = pd.read_feather("E:/migrate_o/github_repos/EvolvePetriNets/results/data/test_component_tracker_08-07-2024_14-12-01/whatever/1_08-07-2024_14-12-10/data/population.feather")
-species_df = pd.read_feather("E:/migrate_o/github_repos/EvolvePetriNets/results/data/test_component_tracker_08-07-2024_14-12-01/whatever/1_08-07-2024_14-12-10/data/species.feather")
-component_dict = load_component_dict("E:/migrate_o/github_repos/EvolvePetriNets/results/data/test_component_tracker_08-07-2024_14-12-01/whatever/1_08-07-2024_14-12-10/data/component_dict.pkl.gz")
+gen_info_df = pd.read_feather("E:/migrate_o/github_repos/EvolvePetriNets/results/data/issue_still_there_question_08-08-2024_15-48-51/whatever/2_08-08-2024_15-48-57/data/gen_info.feather")
+pop_df = pd.read_feather("E:/migrate_o/github_repos/EvolvePetriNets/results/data/issue_still_there_question_08-08-2024_15-48-51/whatever/2_08-08-2024_15-48-57/data/population.feather")
+species_df = pd.read_feather("E:/migrate_o/github_repos/EvolvePetriNets/results/data/issue_still_there_question_08-08-2024_15-48-51/whatever/2_08-08-2024_15-48-57/data/species.feather")
 
-savedir = "E:/migrate_o/github_repos/EvolvePetriNets/results/data/test_component_tracker_08-07-2024_14-12-01/whatever/1_08-07-2024_14-12-10/data"
+component_dict = load_component_dict("E:/migrate_o/github_repos/EvolvePetriNets/results/data/issue_still_there_question_08-08-2024_15-48-51/whatever/2_08-08-2024_15-48-57/data/component_dict.pkl.gz")
+
+savedir = "E:/migrate_o/github_repos/EvolvePetriNets/results/data/issue_still_there_question_08-08-2024_15-48-51/whatever/2_08-08-2024_15-48-57/data"
 
 FSIZE = (10, 5)
+"""
+################################################################################
+Working with results data to test implementing endreports
+################################################################################
+"""
+
 # %%
 # species plot
 import matplotlib.pyplot as plt
@@ -140,6 +155,12 @@ def species_plot(species_df: pd.DataFrame, savedir: str):
 species_plot(species_df, savedir)
 
 # %%
+"""
+################################################################################
+Scattered analysis things for trying to figure why best genome fitness went down
+################################################################################
+"""
+
 gen_info_df = pd.read_feather("E:/migrate_o/github_repos/EvolvePetriNets/results/data/testing_new_roulette_08-02-2024_11-56-43/whatever/1_08-02-2024_11-57-03/feather/gen_info.feather")
 pop_df = pd.read_feather("E:/migrate_o/github_repos/EvolvePetriNets/results/data/testing_new_roulette_08-02-2024_11-56-43/whatever/1_08-02-2024_11-57-03/feather/population.feather")
 
@@ -149,7 +170,6 @@ pop_df[pop_df["parent_id"]=="1e7ad65a-e429-4483-ae1b-73706ceb998d"]
 pop_df[pop_df["id"]=="1e7ad65a-e429-4483-ae1b-73706ceb998d"]
 
 # %%
-from neatutils import endreports as er
 from neatutils import endreports as er
 reload(er)
 
@@ -220,4 +240,57 @@ plt.xlabel('Generation')
 plt.ylabel('Number of Unique Components')
 plt.title('Number of Unique Components per Generation')
 plt.show()
+
+gen_info_df.columns
+
+# Calculate the difference between the best fitness of the current and previous generation
+fitness_diff = gen_info_df["best_genome_fitness"].diff()
+
+# Find the generations where the best fitness is lower than that of the previous generation
+gens_with_lower_fitness = gen_info_df.index[fitness_diff < 0]
+
+print(gens_with_lower_fitness)
 # %%
+gen_info_df.columns
+changed = [(i, i+1) for i in gens_with_lower_fitness]
+
+for change, after in changed:
+    print()
+    print(change, after)
+    print("changed", gen_info_df[gen_info_df["gen"]==change]["best_species"].iloc[0])
+    print("after", gen_info_df[gen_info_df["gen"]==after]["best_species"].iloc[0])
+    print("prev best")
+    print(gen_info_df[gen_info_df["gen"]==change]["best_genome_fitness"].iloc[0])
+    print(pop_df[pop_df["gen"]==change]["fitness"].max())
+    print("new best")
+    print(gen_info_df[gen_info_df["gen"]==after]["best_genome_fitness"].iloc[0])
+    print(pop_df[pop_df["gen"]==after]["fitness"].max())
+
+    best_id1 = gen_info_df[gen_info_df["gen"]==change]["best_genome"].iloc[0]
+    best_id2 = gen_info_df[gen_info_df["gen"]==after]["best_genome"].iloc[0]
+    print("prev leader species")
+    print(pop_df[pop_df["id"]==best_id1]["species_id"].iloc[0])
+    print("curr leader species")
+    print(pop_df[pop_df["id"]==best_id2]["species_id"].iloc[0])
+    prev_best = species_df[(species_df["gen"] == change) & (species_df["name"] == pop_df[pop_df["id"]==best_id1]["species_id"].iloc[0])]
+    old_best = species_df[(species_df["gen"] == after) & (species_df["name"] == pop_df[pop_df["id"]==best_id1]["species_id"].iloc[0])]
+    print(pop_df[pop_df["id"]==old_best["leader_id"].iloc[0]]["fitness"].iloc[0])
+    print("old best ever fit")
+    print(old_best["best_ever_fitness"].iloc[0])
+    print("old best num members")
+    print(old_best["num_members"].iloc[0])
+    # print(old_best["curr_mutation_rate"].iloc[0])
+    # print(old_best["num_gens_no_improvement"].iloc[0])
+    all_of_old_spec = pop_df[(pop_df["gen"]==after) & (pop_df["species_id"]==old_best["name"].iloc[0])]
+    print(all_of_old_spec["my_mutations"].value_counts())
+    print(prev_best["num_to_spawn"].iloc[0])
+
+    print(80*"/")
+# %%
+# species_df.columns
+species_df["num_to_spawn"].value_counts()
+
+# %%
+i = 0
+if not i:
+    print("x")
