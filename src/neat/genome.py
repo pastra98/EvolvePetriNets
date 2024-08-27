@@ -558,10 +558,10 @@ class GeneticNet:
         p_dict: Dict[str, fc.Place] = {}
         for p in self.places.values():
             p_dict[p.id] = fc.Place()
-        # add connected hidden trans and all task trans
+        # add connected trans
         t_dict: Dict[str, fc.Transition] = {}
         for t in self.transitions.values():
-            if t.is_task or t.id in connected:
+            if t.id in connected:
                 t_dict[t.id] = fc.Transition(t.is_task)
         # connect them
         for a in self.arcs.values():
