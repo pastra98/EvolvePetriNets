@@ -88,7 +88,7 @@ def plot_lineage(best_genomes_df, savedir=str):
             label=f'Mutation: {mutation}'
         )
     
-    plt.legend(loc='upper left', fontsize='medium')
+    plt.legend(loc='bottom right', fontsize='medium')
     plt.xlabel('Generation', fontsize=12)
     plt.ylabel('Fitness', fontsize=12)
     plt.title('Best Genome: Fitness Progression with Mutation Types', fontsize=14)
@@ -394,3 +394,104 @@ for change, after in changed:
 # %%
 # species_df.columns
 species_df["num_to_spawn"].value_counts()
+
+# %%
+pop_df = pd.read_feather("E:/migrate_o/github_repos/EvolvePetriNets/results/results_used_in_analysis/why_fit_decline/data/population.feather")
+gen_info_df = pd.read_feather("E:/migrate_o/github_repos/EvolvePetriNets/results/results_used_in_analysis/why_fit_decline/data/gen_info.feather")
+
+bg = er.filter_best_genomes(gen_info_df, pop_df)
+bg1 = bg[bg["gen"] == 69]
+
+bg_id2 = gen_info_df[gen_info_df["gen"] == 70]["best_genome"].iloc[0]
+bg2 = pop_df[pop_df["id"] == bg_id2]
+
+bg1
+# bg2
+# %%
+pop_df[pop_df["parent_id"] == bg1["id"].iloc[0]]
+bg1_clone = pop_df[pop_df["id"] == "1438793c-4de0-4f04-951e-45bd473cf607"]
+
+bg1_clone["my_components"].iloc[0] == bg1["my_components"].iloc[0]
+bg1_clone
+
+# %%
+bg1_parent = pop_df[pop_df["id"] == "02a44ab7-f1b7-4680-948c-d542e8fc452f"]
+bg1_parent
+# %%
+# reconstructing the genome
+conns =  [
+    ["start", "register request"], ["start", "reject request"], ["register request", "4"],
+    ["register request", "1"], ["register request", "3"], ["register request", "5"],
+    ["1", "reject request"], ["1", "examine thoroughly"], ["1", "examine casually"],
+    ["examine casually", "2"], ["examine casually", "3"], ["2", "reinitiate request"],
+    ["3", "check ticket"], ["examine thoroughly", "4"], ["reinitiate request", "4"],
+    ["reinitiate request", "5"], ["4", "check ticket"], ["5", "decide"],
+    ["check ticket", "6"], ["check ticket", "7"], ["check ticket", "8"],
+    ["6", "reject request"], ["6", "decide"], ["7", "decide"], ["8", "decide"],
+    ["decide", "1"], ["reject request", "end"],
+]
+from neat import genome
+reload(genome)
+from neat.initial_population import get_log_footprints
+from tool_scripts.useful_functions import \
+    load_genome, show_genome, get_aligned_traces, get_log_variants, log, reset_ga, \
+    eval_and_print_metrics
+
+tl = list(log["footprints"]["activities"])
+
+pids = ["1", "2", "3", "4", "5", "6", "7", "8"]
+places = {i: genome.GPlace(i) for i in pids}
+
+
+rg = genome.GeneticNet({}, places, {}, "", tl)
+for conn in conns:
+    if conn[0] in pids:
+        rg.place_trans_arc(conn[0], conn[1])
+    else:
+        rg.trans_place_arc(conn[0], conn[1])
+
+rg.evaluate_fitness(log)
+
+# %%
+####### WORKING DIRECTLY WITH PICKLED BEST GENOMES ##########
+from pprint import pprint
+reload(genome)
+
+pop_df = pd.read_feather("E:/migrate_o/github_repos/EvolvePetriNets/results/results_used_in_analysis/why_fit_decline_allpickled/data/population.feather")
+gen_info_df = pd.read_feather("E:/migrate_o/github_repos/EvolvePetriNets/results/results_used_in_analysis/why_fit_decline_allpickled/data/gen_info.feather")
+
+bg = load_genome("E:/migrate_o/github_repos/EvolvePetriNets/results/results_used_in_analysis/why_fit_decline_allpickled/improvements/improvement_gen-204.pkl")
+bg.get_gviz()
+
+bg_kid = pop_df[pop_df["parent_id"] == bg.id]
+pop_df[pop_df["id"] == bg.id]
+
+# bg.evaluate_fitness(log)["metrics"]
+bg.evaluate_fitness(log)
+
+bg_clone = bg.clone()
+bg_clone.evaluate_fitness(log)
+
+print("bg")
+print(bg.fitness)
+pprint(bg.fitness_metrics)
+pprint(bg.transitions)
+
+print("clone")
+print(bg_clone.fitness)
+pprint(bg_clone.fitness_metrics)
+pprint(bg_clone.transitions)
+
+# bg.transitions == bg_clone.transitions
+# %%
+
+# for a in bg_clone.arcs.values():
+#     if "pay compensation" in [a.target_id, a.source_id]:
+#         print(a)
+    
+bg.get_connected() == bg_clone.get_connected()
+
+bg.build_fc_petri(log).transitions
+print()
+bg_clone.build_fc_petri(log).transitions
+bg_clone.get_connected()
