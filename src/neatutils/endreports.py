@@ -347,7 +347,7 @@ def best_genome_lineage(best_genomes_df: pd.DataFrame, savedir=str):
             label=f'Mutation: {mutation}'
         )
     
-    plt.legend(loc='upper left', fontsize='medium')
+    plt.legend(loc='lower right', fontsize='medium')
     plt.xlabel('Generation', fontsize=12)
     plt.ylabel('Fitness', fontsize=12)
     plt.title('Best Genome: Fitness Progression with Mutation Types', fontsize=14)
