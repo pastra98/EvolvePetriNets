@@ -12,11 +12,14 @@ def load_component_dict(filename):
     with gzip.open(filename, 'rb') as f:
         return pickle.load(f)
 
-data_fp = "E:/migrate_o/github_repos/EvolvePetriNets/results/data/test_data_speciation_09-30-2024_19-45-31/whatever/1_09-30-2024_19-45-39/data/"
-gen_info_df = pd.read_feather(data_fp + "gen_info.feather")
-pop_df = pd.read_feather(data_fp + "population.feather")
-species_df = pd.read_feather(data_fp + "species.feather")
-component_dict = load_component_dict(data_fp + "component_dict.pkl.gz")
+# data_fp = "E:/migrate_o/github_repos/EvolvePetriNets/results/data/test_data_speciation_09-30-2024_19-45-31/whatever/2_09-30-2024_19-45-39/data"
+# data_fp = "E:/migrate_o/github_repos/EvolvePetriNets/results/data/test_data_speciation_09-30-2024_19-45-31/whatever/1_09-30-2024_19-45-39/data"
+data_fp = "E:/migrate_o/github_repos/EvolvePetriNets/results/data/test_data_speciation_09-30-2024_19-45-31/whatever/4_09-30-2024_19-45-39/data"
+
+gen_info_df = pd.read_feather(data_fp + "/gen_info.feather")
+pop_df = pd.read_feather(data_fp + "/population.feather")
+species_df = pd.read_feather(data_fp + "/species.feather")
+component_dict = load_component_dict(data_fp + "/component_dict.pkl.gz")
 
 savedir = data_fp
 
@@ -214,18 +217,22 @@ species_df
 from collections import defaultdict
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.collections import LineCollection
 
-def create_species_tree(species_df, pop_df):
+def create_species_tree(species_df, pop_df, gen_info_df):
     species_tree = defaultdict(lambda: {"history": [], "forks": set(), "forked_from": None})
     
     for gen in species_df["gen"].unique():
         gen_species = species_df[species_df["gen"] == gen]
+        # find the species of the best genome
+        best_g_id = gen_info_df[gen_info_df["gen"] == gen]["best_genome"].iloc[0]
+        best_g_species = pop_df[pop_df["id"] == best_g_id]["species_id"].iloc[0]
         
         for _, species in gen_species.iterrows():
             species_id = species["name"]
             num_members = species["num_members"]
-            
-            species_tree[species_id]["history"].append((gen, num_members, False))
+            # history contains generation, num_members and bool if it contains best_g
+            species_tree[species_id]["history"].append((gen, num_members, species_id==best_g_species))
             
             if species["age"] == 1 and gen > 1:
                 representative = pop_df[(pop_df["id"] == species["representative_id"]) & (pop_df["gen"] == gen)].iloc[0]
@@ -235,9 +242,6 @@ def create_species_tree(species_df, pop_df):
     
     return dict(species_tree)
 
-species_tree = create_species_tree(species_df, pop_df)
-
-# %% 
 
 def calculate_total_forks(species_id, species_tree):
     total = len(species_tree[species_id]['forks'])
@@ -253,7 +257,6 @@ def plot_species_evolution(
         ):
     fig, ax = plt.subplots(figsize=figsize)
     
-    # TODO mark the best genomes
     # Calculate the total number of species and maximum generation
     total_species = len(species_tree)
     
@@ -287,45 +290,55 @@ def plot_species_evolution(
     # Plot species lines
     legend_elements = []
     for species_id, data in species_tree.items():
-        # TODO: add branching, scale the offsets, color, stars
         segments = []
+        widths = []
         y = offsets[species_id]
         for i in range(len(data['history']) - 1):
-            x1, _, _ = data['history'][i]
+            x1, num_members, is_best = data['history'][i]
             x2, _, _ = data['history'][i + 1]
             segments.append([(x1, y), (x2, y)])
+            widths.append(num_members)
+            if is_best:
+                ax.scatter(x1, y, color='gold', marker='d', s=100, edgecolor='black', linewidth=1, zorder=2)
         
-        # Calculate widths
-        widths = [num_members / popsize * maxwidth for _, num_members, _ in data['history']]
 
         # add first branching segment
         if data['forked_from']:
             first_p = segments[0][0]
             first_seg = [(first_p[0]-1, offsets[data['forked_from']]), first_p]
             segments.insert(0, first_seg)
-            widths.insert(0, maxwidth/total_species)
+            widths.insert(0, maxwidth/(total_species*2))
         
+        # Calculate widths
+        widths = np.array(widths) / popsize * maxwidth
+
         # Create LineCollection
-        lc = LineCollection(segments, linewidths=widths[:-1], colors=color_map[species_id])
+        lc = LineCollection(segments, linewidths=widths, colors=color_map[species_id], zorder=1)
         ax.add_collection(lc)
-        # Add to legend
         legend_elements.append(plt.Line2D([0], [0], color=color_map[species_id], lw=2, label=f'Species {species_id[:8]}...'))
 
+    # add vertical lines
+    for x in range(0, int(ax.get_xlim()[1]), 50):
+        ax.axvline(x=x, color='grey', linestyle='--', linewidth=1, zorder=0)
 
-    
-    # Set plot limits and labels
+    # Set up plot along with labels
     ax.autoscale()
-    ax.set_xlabel('Generation')
-    ax.set_ylabel('Species')
-    ax.set_title('Species Evolution Chart')
-
-    # Remove y-axis ticks
+    ax.set_xlabel('Generation', fontsize=24)
+    ax.set_ylabel('Species', fontsize=24)
+    ax.set_title('Evolutionary Tree', fontsize=36)
     ax.set_yticks([])
-    # Add legend
-    ax.legend(handles=legend_elements, loc='center left', bbox_to_anchor=(1, 0.5), ncol=1)
-    
+    # ax.legend(handles=legend_elements, loc='center left', bbox_to_anchor=(1, 0.5), ncol=1)
     plt.tight_layout()
     plt.show()
 
-# Assuming species_tree is already created and updated with 'forks' information
+    # Separate plot for the legend
+    fig_legend, ax_legend = plt.subplots(figsize=(10, 1))
+    ax_legend.axis('off')
+    legend = ax_legend.legend(handles=legend_elements, loc='center', ncol=len(legend_elements)/2, fontsize=12)
+    fig_legend.tight_layout()
+    plt.show()
+    
+
+# This should also be wrapped in one function
+species_tree = create_species_tree(species_df, pop_df, gen_info_df)
 plot_species_evolution(species_tree)
