@@ -22,7 +22,8 @@ def load_component_dict(filename):
 
 # data_fp = "E:/migrate_o/github_repos/EvolvePetriNets/results/data/test_data_speciation_09-30-2024_19-45-31/whatever/2_09-30-2024_19-45-39/data"
 # data_fp = "E:/migrate_o/github_repos/EvolvePetriNets/results/data/test_data_speciation_09-30-2024_19-45-31/whatever/1_09-30-2024_19-45-39/data"
-data_fp = "E:/migrate_o/github_repos/EvolvePetriNets/results/data/test_data_speciation_09-30-2024_19-45-31/whatever/4_09-30-2024_19-45-39/data"
+# data_fp = "E:/migrate_o/github_repos/EvolvePetriNets/results/data/test_data_speciation_09-30-2024_19-45-31/whatever/4_09-30-2024_19-45-39/data"
+data_fp = "E:/migrate_o/github_repos/EvolvePetriNets/results/data/merge_worked_10-02-2024_13-28-17/whatever/4_10-02-2024_13-28-26/data"
 
 gen_info_df = pd.read_feather(data_fp + "/gen_info.feather")
 pop_df = pd.read_feather(data_fp + "/population.feather")
@@ -398,6 +399,8 @@ def plot_species_evolution(
     # Plot species lines
     legend_elements = []
     for species_id, data in species_tree.items():
+        # in the case of species spawned in the last round, skip them to avoid bugs
+        if len(data['history']) <= 1: continue
         segments = []
         widths = []
         y = offsets[species_id]
@@ -442,3 +445,7 @@ def plot_species_evolution(
     
 
 plot_species_evolution(species_df, pop_df, gen_info_df, savedir=savedir)
+
+# %%
+reload(er)
+er.plot_species_evolution(species_df, pop_df, gen_info_df, savedir=savedir)

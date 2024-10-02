@@ -384,6 +384,8 @@ def plot_species_evolution(
     # Plot species lines
     legend_elements = []
     for species_id, data in species_tree.items():
+        # in the case of species spawned in the last round, skip them to avoid bugs
+        if len(data['history']) <= 1: continue
         segments = []
         widths = []
         y = offsets[species_id]
