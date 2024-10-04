@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import matplotlib
 from matplotlib.collections import LineCollection
+from scipy.stats import gaussian_kde
 
 import json
 import gc
@@ -43,6 +44,7 @@ def save_report(ga_info: dict, savedir: str) -> None:
         species_cmap = get_species_color_map(species_df)
         species_stackplot(species_df, species_cmap, savedir)
         plot_species_evolution(species_df, pop_df, gen_info_df, species_cmap, savedir)
+        ridgeline_plot(pop_df, savedir, cmap=species_cmap)
     
     # save the improvements, species leaders & best genome, delete ga info after
     save_improvements(ga_info["improvements"], savedir)
@@ -202,6 +204,7 @@ def components_plot(gen_info_df: pd.DataFrame, savedir: str):
     plt.ylabel("num components")
     plt.savefig(f"{savedir}/num_components.pdf")
 
+
 def unique_components(pop_df: pd.DataFrame, savedir: str):
     """Plot the number of unique components in every generation to visualize
     convergence
@@ -221,6 +224,53 @@ def unique_components(pop_df: pd.DataFrame, savedir: str):
     plt.xlabel('Generation')
     plt.ylabel('Number of Unique Components')
     plt.savefig(f"{savedir}/unique_components.pdf")
+
+
+def ridgeline_plot(
+        pop_df: pd.DataFrame,
+        savedir: str,
+        n_points=200,
+        overlap=0.5,
+        alpha=0.6,
+        top_n=20,
+        cmap=None
+        ):
+    """Ridgeline plot to show distribution of components among different species
+    """
+    # get component counts by species and total
+    exploded_df = pop_df.explode('my_components')
+    species_counts = exploded_df.groupby(['species_id', 'my_components']).size().unstack(fill_value=0)
+    overall_counts = species_counts.sum().sort_values(ascending=False)
+    # Select top components, get plotting data
+    top_components = overall_counts.nlargest(top_n).index
+    species_data = []
+    species_labels = []
+    for species_id in species_counts.index:
+        species_data.append(species_counts.loc[species_id, top_components])
+        species_labels.append(f"Species {species_id[:8]}")  # Using first 8 characters of UUID
+    # Create plot
+    fig, ax = plt.subplots(figsize=(12, 8))
+    n = len(species_data)
+    max_value = max([max(d) for d in species_data])
+    x = np.linspace(0, max_value, n_points)
+    for i, (y, label) in enumerate(zip(species_data, species_labels)):
+        y = np.array(y)
+        kde = gaussian_kde(y)
+        y_kde = kde(x)
+        y_kde = y_kde / y_kde.max() * overlap
+        ax.plot(x, y_kde + i, color='black', lw=0.5)
+        if cmap and species_counts.index[i] in cmap:
+            color = cmap[species_counts.index[i]]
+        else:
+            color = plt.cm.viridis(i / n)
+        ax.fill_between(x, i, y_kde + i, alpha=alpha, color=color)
+    # set up plot
+    ax.set_yticks(range(n))
+    ax.set_xticks([])
+    ax.set_yticklabels(species_labels)
+    ax.set_title('Distribution of Components Among Species')
+    plt.tight_layout()
+    plt.savefig(f"{savedir}/component_dist_plot.pdf", bbox_inches='tight')
 
 # ----- METRICS/FITNESS PLOTS
 
