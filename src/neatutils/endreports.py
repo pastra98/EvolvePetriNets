@@ -38,10 +38,11 @@ def save_report(ga_info: dict, savedir: str) -> None:
     if use_species:
         species_df = get_species_df(full_history)
         species_df.to_feather(f"{savedir}/data/species.feather")
-        # plot the species
         save_species_leaders(ga_info["species_leaders"], savedir)
-        species_plot(species_df, savedir)
-        plot_species_evolution(species_df, pop_df, gen_info_df, savedir)
+        # plot the species
+        species_cmap = get_species_color_map(species_df)
+        species_stackplot(species_df, species_cmap, savedir)
+        plot_species_evolution(species_df, pop_df, gen_info_df, species_cmap, savedir)
     
     # save the improvements, species leaders & best genome, delete ga info after
     save_improvements(ga_info["improvements"], savedir)
@@ -382,21 +383,31 @@ def best_genome_mutation_analysis(best_genomes_df: pd.DataFrame, savedir: str):
 
 # ----- SPECIES PLOTS
 
-def species_plot(species_df: pd.DataFrame, savedir: str):
+def get_species_color_map(species_df: pd.DataFrame):
+    """Generates a colormap to be used by stackplot and species tree visualization
+    """
+    all_species = species_df["name"].unique()
+    colors = plt.cm.tab20(np.linspace(0, 1, len(all_species)))
+    return {species: colors[i] for i, species in enumerate(all_species)}
+
+
+def species_stackplot(species_df: pd.DataFrame, cmap: dict, savedir: str):
     """Stackplot of species member counts with a separate legend figure
     """
     filtered = species_df[species_df["obliterate"] == False]
     grouped = filtered.groupby(["gen", "name"])["num_members"].sum().unstack(fill_value=0)
     # Create main plot
     fig, ax = plt.subplots(figsize=(10, 5))
-    stack = ax.stackplot(grouped.index, grouped.T)
+    # Use the provided color map in stackplot
+    stack = ax.stackplot(grouped.index, grouped.T, colors=[cmap[species] for species in grouped.columns])
     ax.set_title("Species Sizes Over Time")
     ax.set_xlabel("Generation")
     ax.set_ylabel("Number of Members")
     # Create separate legend figure
     figlegend = plt.figure(figsize=(10, 2))
     labels = [label.split("-")[0] for label in grouped.columns]
-    proxy_artists = [plt.Rectangle((0, 0), 1, 1, fc=poly.get_facecolor()[0]) for poly in stack]
+    # Use the provided color map for legend
+    proxy_artists = [plt.Rectangle((0, 0), 1, 1, fc=cmap[species]) for species in grouped.columns]
     figlegend.legend(proxy_artists, labels, loc='center', ncol=5, frameon=False)
     # Save both figures
     fig.savefig(f"{savedir}/species_plot.pdf", bbox_inches='tight')
@@ -407,6 +418,7 @@ def plot_species_evolution(
         species_df: pd.DataFrame,
         pop_df: pd.DataFrame,
         gen_info_df: pd.DataFrame,
+        cmap: dict,
         savedir: str,
         maxwidth=200,
         figsize=(20, 12)
@@ -455,10 +467,6 @@ def plot_species_evolution(
     root = next(node for node, data in species_tree.items() if not data['forked_from'])
     dfs(root)
 
-    # Generate a unique color for each species
-    colors = plt.cm.rainbow(np.linspace(0, 1, total_species))
-    color_map = {species: colors[i] for i, species in enumerate(offsets.keys())}
-
     # Plot species lines
     legend_elements = []
     for species_id, data in species_tree.items():
@@ -482,9 +490,9 @@ def plot_species_evolution(
             widths.insert(0, maxwidth/(total_species*2))
         # Calculate widths, create LineCollection
         widths = np.array(widths) / popsize * maxwidth
-        lc = LineCollection(segments, linewidths=widths, colors=color_map[species_id], zorder=1)
+        lc = LineCollection(segments, linewidths=widths, colors=cmap[species_id], zorder=1)
         ax.add_collection(lc)
-        legend_elements.append(plt.Line2D([0], [0], color=color_map[species_id], lw=2, label=f'Species {species_id[:8]}...'))
+        legend_elements.append(plt.Line2D([0], [0], color=cmap[species_id], lw=2, label=f'Species {species_id[:8]}...'))
 
     # add vertical lines for easier readability
     for x in range(0, int(ax.get_xlim()[1]), 50):
