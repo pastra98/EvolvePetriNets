@@ -169,6 +169,7 @@ def filter_best_genomes(gen_info_df, pop_df):
     return best_genomes_df[best_genomes_df['gen'].isin(improved_gen_info_df['gen'])]
 
 # ---------- PLOTTING FUNCTIONS
+# ----- PERFORMANCE PLOTS
 
 def time_stackplot(gen_info_df: pd.DataFrame, savedir: str):
     """Stackplot of evaluation and pop update times
@@ -187,27 +188,19 @@ def time_stackplot(gen_info_df: pd.DataFrame, savedir: str):
     plt.ylabel("Time")
     plt.savefig(f"{savedir}/time_plot.pdf")
 
+# ----- COMPONENT PLOTS
 
-def species_plot(species_df: pd.DataFrame, savedir: str):
-    """Stackplot of species member counts with a separate legend figure
+def components_plot(gen_info_df: pd.DataFrame, savedir: str):
+    """Plot the total number of components over time
     """
-    filtered = species_df[species_df["obliterate"] == False]
-    grouped = filtered.groupby(["gen", "name"])["num_members"].sum().unstack(fill_value=0)
-    # Create main plot
-    fig, ax = plt.subplots(figsize=(10, 5))
-    stack = ax.stackplot(grouped.index, grouped.T)
-    ax.set_title("Species Sizes Over Time")
-    ax.set_xlabel("Generation")
-    ax.set_ylabel("Number of Members")
-    # Create separate legend figure
-    figlegend = plt.figure(figsize=(10, 2))
-    labels = [label.split("-")[0] for label in grouped.columns]
-    proxy_artists = [plt.Rectangle((0, 0), 1, 1, fc=poly.get_facecolor()[0]) for poly in stack]
-    figlegend.legend(proxy_artists, labels, loc='center', ncol=5, frameon=False)
-    # Save both figures
-    fig.savefig(f"{savedir}/species_plot.pdf", bbox_inches='tight')
-    figlegend.savefig(f"{savedir}/species_plot_legend.pdf", bbox_inches='tight')
+    plt.figure(figsize=FSIZE)
+    plt.plot(gen_info_df["num_total_components"])
+    plt.title("Total components")
+    plt.xlabel("Generation")
+    plt.ylabel("num components")
+    plt.savefig(f"{savedir}/components_plot.pdf")
 
+# ----- METRICS/FITNESS PLOTS
 
 def fitness_plot(gen_info_df: pd.DataFrame, use_species: bool, savedir: str):
     """Plot the best, best species and avg fitness of population
@@ -223,17 +216,6 @@ def fitness_plot(gen_info_df: pd.DataFrame, use_species: bool, savedir: str):
     plt.xlabel("Generation")
     plt.ylabel("Fitness")
     plt.savefig(f"{savedir}/fitness_plot.pdf")
-
-
-def components_plot(gen_info_df: pd.DataFrame, savedir: str):
-    """Plot the total number of components over time
-    """
-    plt.figure(figsize=FSIZE)
-    plt.plot(gen_info_df["num_total_components"])
-    plt.title("Total components")
-    plt.xlabel("Generation")
-    plt.ylabel("num components")
-    plt.savefig(f"{savedir}/components_plot.pdf")
 
 
 def metrics_plot(pop_df: pd.DataFrame, savedir: str):
@@ -258,6 +240,7 @@ def metrics_plot(pop_df: pd.DataFrame, savedir: str):
     plot_metrics(df_best, 'Best Genome Metrics Over Generations')
     plot_metrics(df_avg, 'Average Population Metrics Over Generations')
 
+# ----- MUTATION PLOTS
 
 def mutation_effects_plot(pop_df, savedir: str):
     """Boxplots of the fitness impacts of mutations over the whole run
@@ -323,6 +306,101 @@ def mutation_effects_plot(pop_df, savedir: str):
 
     fig.savefig(f"{savedir}/mutation_analysis.pdf", dpi=300)
     summary_df.to_markdown(f"{savedir}/mutation_effects.txt")
+
+
+def best_genome_lineage(best_genomes_df: pd.DataFrame, savedir=str):
+    """Scatterplot of the mutation history of the best genome
+    """
+    gens = best_genomes_df['gen']
+    fitnesses = best_genomes_df['fitness']
+    mutations = best_genomes_df['my_mutations'].apply(lambda x: x[0])
+
+    # Generate a color and marker for each mutation type
+    unique_mutations = mutations.unique()
+    colors = plt.colormaps['tab10'](range(len(unique_mutations)))
+    markers = ['o', 's', 'D', '^', 'v', 'p', '*', 'X', 'P', 'h']  # Select a few markers
+    mutation_style_map = {mutation: (colors[i], markers[i % len(markers)]) for i, mutation in enumerate(unique_mutations)}
+    
+    plt.figure(figsize=FSIZE)
+    
+    # Plot points for each generation based on mutation type
+    for mutation in unique_mutations:
+        mutation_mask = (mutations == mutation)
+        plt.scatter(
+            gens[mutation_mask],
+            fitnesses[mutation_mask],
+            color=mutation_style_map[mutation][0],
+            marker=mutation_style_map[mutation][1],
+            s=30,  # Size of the marker
+            label=f'Mutation: {mutation}'
+        )
+    
+    plt.legend(loc='lower right', fontsize='medium')
+    plt.xlabel('Generation', fontsize=12)
+    plt.ylabel('Fitness', fontsize=12)
+    plt.title('Best Genome: Fitness Progression with Mutation Types', fontsize=14)
+    plt.grid(True)
+    plt.tight_layout()
+    plt.savefig(f"{savedir}/best_mutation_lineage.pdf")
+
+
+def best_genome_mutation_analysis(best_genomes_df: pd.DataFrame, savedir: str):
+    """Similar to mutation impacts, but this time only the mutations that actually
+    improved the fitness of the best genome
+    """
+    # filter out mutation frequencies and mean fitness
+    mutations = best_genomes_df['my_mutations'].apply(lambda x: x[0])
+    mutation_counts = mutations.value_counts().sort_index()
+    mean_fitness_impact = best_genomes_df.groupby(mutations)['fitness'].mean().sort_index()
+    mutation_types = mutation_counts.index
+
+    fig, ax1 = plt.subplots(figsize=FSIZE)
+    # X-axis positions for the bars
+    x = np.arange(len(mutation_types))
+    width = 0.4 # Bar width
+
+    # Plot frequency of mutations on the left y-axis
+    ax1.bar(x - width/2, mutation_counts, width, color='b', label='Mutation Count')
+    ax1.set_ylabel('Frequency')
+    ax1.set_xlabel('Mutation Type')
+    # set ticks
+    ax1.set_xticks(x)
+    ax1.set_xticklabels(mutation_types, rotation=45, ha='right', fontsize=10)
+    ax1.tick_params(axis='y')
+
+    # Create second y-axis for fitness impact
+    ax2 = ax1.twinx()
+    ax2.bar(x + width/2, mean_fitness_impact, width, color='r', label='Mean Fitness Impact')
+    ax2.set_ylabel('Mean Fitness Impact')
+    ax2.tick_params(axis='y', labelcolor='r')
+    
+    plt.title('Best Genome: Mutation Count and Mean Fitness Impact by Mutation Type', fontsize=14)
+    ax1.legend(loc='upper left')
+    ax2.legend(loc='upper right')
+    plt.tight_layout()
+    plt.savefig(f"{savedir}/best_mutation_impacts.pdf")
+
+# ----- SPECIES PLOTS
+
+def species_plot(species_df: pd.DataFrame, savedir: str):
+    """Stackplot of species member counts with a separate legend figure
+    """
+    filtered = species_df[species_df["obliterate"] == False]
+    grouped = filtered.groupby(["gen", "name"])["num_members"].sum().unstack(fill_value=0)
+    # Create main plot
+    fig, ax = plt.subplots(figsize=(10, 5))
+    stack = ax.stackplot(grouped.index, grouped.T)
+    ax.set_title("Species Sizes Over Time")
+    ax.set_xlabel("Generation")
+    ax.set_ylabel("Number of Members")
+    # Create separate legend figure
+    figlegend = plt.figure(figsize=(10, 2))
+    labels = [label.split("-")[0] for label in grouped.columns]
+    proxy_artists = [plt.Rectangle((0, 0), 1, 1, fc=poly.get_facecolor()[0]) for poly in stack]
+    figlegend.legend(proxy_artists, labels, loc='center', ncol=5, frameon=False)
+    # Save both figures
+    fig.savefig(f"{savedir}/species_plot.pdf", bbox_inches='tight')
+    figlegend.savefig(f"{savedir}/species_plot_legend.pdf", bbox_inches='tight')
 
 
 def plot_species_evolution(
@@ -428,75 +506,3 @@ def plot_species_evolution(
     figlegend.tight_layout()
     figlegend.savefig(f"{savedir}/species_tree_legend.pdf", bbox_inches='tight')
     
-
-def best_genome_lineage(best_genomes_df: pd.DataFrame, savedir=str):
-    """Scatterplot of the mutation history of the best genome
-    """
-    gens = best_genomes_df['gen']
-    fitnesses = best_genomes_df['fitness']
-    mutations = best_genomes_df['my_mutations'].apply(lambda x: x[0])
-
-    # Generate a color and marker for each mutation type
-    unique_mutations = mutations.unique()
-    colors = plt.colormaps['tab10'](range(len(unique_mutations)))
-    markers = ['o', 's', 'D', '^', 'v', 'p', '*', 'X', 'P', 'h']  # Select a few markers
-    mutation_style_map = {mutation: (colors[i], markers[i % len(markers)]) for i, mutation in enumerate(unique_mutations)}
-    
-    plt.figure(figsize=FSIZE)
-    
-    # Plot points for each generation based on mutation type
-    for mutation in unique_mutations:
-        mutation_mask = (mutations == mutation)
-        plt.scatter(
-            gens[mutation_mask],
-            fitnesses[mutation_mask],
-            color=mutation_style_map[mutation][0],
-            marker=mutation_style_map[mutation][1],
-            s=30,  # Size of the marker
-            label=f'Mutation: {mutation}'
-        )
-    
-    plt.legend(loc='lower right', fontsize='medium')
-    plt.xlabel('Generation', fontsize=12)
-    plt.ylabel('Fitness', fontsize=12)
-    plt.title('Best Genome: Fitness Progression with Mutation Types', fontsize=14)
-    plt.grid(True)
-    plt.tight_layout()
-    plt.savefig(f"{savedir}/best_mutation_lineage.pdf")
-
-
-def best_genome_mutation_analysis(best_genomes_df: pd.DataFrame, savedir: str):
-    """Similar to mutation impacts, but this time only the mutations that actually
-    improved the fitness of the best genome
-    """
-    # filter out mutation frequencies and mean fitness
-    mutations = best_genomes_df['my_mutations'].apply(lambda x: x[0])
-    mutation_counts = mutations.value_counts().sort_index()
-    mean_fitness_impact = best_genomes_df.groupby(mutations)['fitness'].mean().sort_index()
-    mutation_types = mutation_counts.index
-
-    fig, ax1 = plt.subplots(figsize=FSIZE)
-    # X-axis positions for the bars
-    x = np.arange(len(mutation_types))
-    width = 0.4 # Bar width
-
-    # Plot frequency of mutations on the left y-axis
-    ax1.bar(x - width/2, mutation_counts, width, color='b', label='Mutation Count')
-    ax1.set_ylabel('Frequency')
-    ax1.set_xlabel('Mutation Type')
-    # set ticks
-    ax1.set_xticks(x)
-    ax1.set_xticklabels(mutation_types, rotation=45, ha='right', fontsize=10)
-    ax1.tick_params(axis='y')
-
-    # Create second y-axis for fitness impact
-    ax2 = ax1.twinx()
-    ax2.bar(x + width/2, mean_fitness_impact, width, color='r', label='Mean Fitness Impact')
-    ax2.set_ylabel('Mean Fitness Impact')
-    ax2.tick_params(axis='y', labelcolor='r')
-    
-    plt.title('Best Genome: Mutation Count and Mean Fitness Impact by Mutation Type', fontsize=14)
-    ax1.legend(loc='upper left')
-    ax2.legend(loc='upper right')
-    plt.tight_layout()
-    plt.savefig(f"{savedir}/best_mutation_impacts.pdf")
