@@ -53,6 +53,7 @@ def save_report(ga_info: dict, savedir: str) -> None:
     time_stackplot(gen_info_df, savedir)
     fitness_plot(gen_info_df, use_species, savedir)
     components_plot(gen_info_df, savedir)
+    unique_components(pop_df, savedir)
     mutation_effects_plot(pop_df, savedir)
     metrics_plot(pop_df, savedir)
 
@@ -199,7 +200,27 @@ def components_plot(gen_info_df: pd.DataFrame, savedir: str):
     plt.title("Total components")
     plt.xlabel("Generation")
     plt.ylabel("num components")
-    plt.savefig(f"{savedir}/components_plot.pdf")
+    plt.savefig(f"{savedir}/num_components.pdf")
+
+def unique_components(pop_df: pd.DataFrame, savedir: str):
+    """Plot the number of unique components in every generation to visualize
+    convergence
+    """
+    # Group by generation and count unique components
+    unique_components_per_gen = pop_df.groupby('gen')['my_components'].apply(
+        lambda x: len(set(component for sublist in x for component in sublist))
+        )
+    plot_df = pd.DataFrame({
+        'Generation': unique_components_per_gen.index,
+        'UniqueComponents': unique_components_per_gen.values
+    })
+    # Plot the unique components
+    plt.figure(figsize=(10, 6))
+    plt.plot(plot_df['Generation'], plot_df['UniqueComponents'], linestyle='-')
+    plt.title('Number of Unique Components per Generation')
+    plt.xlabel('Generation')
+    plt.ylabel('Number of Unique Components')
+    plt.savefig(f"{savedir}/unique_components.pdf")
 
 # ----- METRICS/FITNESS PLOTS
 
