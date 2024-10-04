@@ -20,15 +20,15 @@ def load_component_dict(filename):
     with gzip.open(filename, 'rb') as f:
         return pickle.load(f)
 
-# data_fp = "E:/migrate_o/github_repos/EvolvePetriNets/results/data/test_data_speciation_09-30-2024_19-45-31/whatever/2_09-30-2024_19-45-39/data"
+data_fp = "E:/migrate_o/github_repos/EvolvePetriNets/results/data/test_data_speciation_09-30-2024_19-45-31/whatever/2_09-30-2024_19-45-39/data"
 # data_fp = "E:/migrate_o/github_repos/EvolvePetriNets/results/data/test_data_speciation_09-30-2024_19-45-31/whatever/1_09-30-2024_19-45-39/data"
 # data_fp = "E:/migrate_o/github_repos/EvolvePetriNets/results/data/test_data_speciation_09-30-2024_19-45-31/whatever/4_09-30-2024_19-45-39/data"
-data_fp = "E:/migrate_o/github_repos/EvolvePetriNets/results/data/merge_worked_10-02-2024_13-28-17/whatever/4_10-02-2024_13-28-26/data"
+# data_fp = "E:/migrate_o/github_repos/EvolvePetriNets/results/data/merge_worked_10-02-2024_13-28-17/whatever/4_10-02-2024_13-28-26/data"
 
 gen_info_df = pd.read_feather(data_fp + "/gen_info.feather")
 pop_df = pd.read_feather(data_fp + "/population.feather")
 species_df = pd.read_feather(data_fp + "/species.feather")
-component_dict = load_component_dict(data_fp + "/component_dict.pkl.gz")
+# component_dict = load_component_dict(data_fp + "/component_dict.pkl.gz")
 
 savedir = data_fp
 
@@ -92,7 +92,7 @@ def plot_lineage(best_genomes_df, savedir=str):
             label=f'Mutation: {mutation}'
         )
     
-    plt.legend(loc='bottom right', fontsize='medium')
+    plt.legend(loc='lower right', fontsize='medium')
     plt.xlabel('Generation', fontsize=12)
     plt.ylabel('Fitness', fontsize=12)
     plt.title('Best Genome: Fitness Progression with Mutation Types', fontsize=14)
