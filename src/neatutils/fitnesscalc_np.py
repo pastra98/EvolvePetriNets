@@ -4,6 +4,7 @@ from functools import cache
 from statistics import mean
 import random as rd
 
+
 class PetriNetNP:
     def __init__(self, places: List[str], transitions: List[str], log: Dict[str, dict]):
         self.places = places
@@ -13,71 +14,72 @@ class PetriNetNP:
         self.num_places = len(places)
         self.num_transitions = len(transitions)
         
-        # Initialize matrices
         self.input_matrix = np.zeros((self.num_places, self.num_transitions), dtype=int)
         self.output_matrix = np.zeros((self.num_places, self.num_transitions), dtype=int)
         self.marking = np.zeros(self.num_places, dtype=int)
         
-        # Map place and transition names to indices
         self.place_to_index = {place: i for i, place in enumerate(places)}
         self.transition_to_index = {trans: i for i, trans in enumerate(transitions)}
         self.index_to_transition = {i: trans for trans, i in self.transition_to_index.items()}
         
-        # Set of task transitions (to be populated when adding arcs)
+        self.task_transition_ids = set()
         self.task_transitions = set()
+        self.hidden_transitions = []
+        self.change_matrix = None
+        self.enabled_mask = None
 
     def add_arc(self, place: str, transition: str, is_input: bool, is_task: bool = True):
-        p_idx = self.place_to_index[place]
-        t_idx = self.transition_to_index[transition]
-        
+        p_idx, t_idx = self.place_to_index[place], self.transition_to_index[transition]
         if is_input:
             self.input_matrix[p_idx, t_idx] = 1
         else:
             self.output_matrix[p_idx, t_idx] = 1
-        
         if is_task:
-            self.task_transitions.add(transition)
+            self.task_transitions.add(t_idx)
+            self.task_transition_ids.add(transition)
+        else:
+            self.hidden_transitions.append(t_idx)
+
+    def finalize_setup(self):
+        self.change_matrix = self.output_matrix - self.input_matrix
+        self.enabled_mask = np.zeros(self.num_transitions, dtype=bool)
+        self.hidden_transitions = np.array(self.hidden_transitions)
 
     def set_initial_marking(self, initial_place: str):
-        self.marking = np.zeros(self.num_places, dtype=int)
+        self.marking.fill(0)
         self.marking[self.place_to_index[initial_place]] = 1
+        self._update_enabled_mask()
 
-    def is_enabled(self, t_idx: int) -> bool:
-        return np.all(self.marking >= self.input_matrix[:, t_idx])
+    def _update_enabled_mask(self):
+        self.enabled_mask = np.all(self.marking[:, np.newaxis] >= self.input_matrix, axis=0)
 
     def fire_transition(self, t_idx: int) -> Tuple[int, int, int]:
         consumed = np.sum(self.input_matrix[:, t_idx])
         produced = np.sum(self.output_matrix[:, t_idx])
         
-        if not self.is_enabled(t_idx):
+        if not self.enabled_mask[t_idx]:
             missing = np.sum(np.maximum(self.input_matrix[:, t_idx] - self.marking, 0))
             self.marking = np.maximum(self.marking, self.input_matrix[:, t_idx])
         else:
             missing = 0
         
-        self.marking += self.output_matrix[:, t_idx] - self.input_matrix[:, t_idx]
+        self.marking += self.change_matrix[:, t_idx]
+        self._update_enabled_mask()
         
         return consumed, produced, missing
 
-    def get_enabled_transitions(self) -> List[str]:
-        enabled = np.all(self.marking[:, np.newaxis] >= self.input_matrix, axis=0)
-        return [self.index_to_transition[idx] for idx, is_enabled in enumerate(enabled) if is_enabled]
-
-    def _try_enable_trans_through_hidden(self, t_idx: int) -> List[Tuple[str, Tuple[int, int, int], List[str]]]:
+    def _try_enable_trans_through_hidden(self, t_idx: int) -> List[Tuple[int, Tuple[int, int, int]]]:
         fired_hiddens = []
         places_missing_token = set(np.where(self.marking < self.input_matrix[:, t_idx])[0])
         
-        hidden_trans = [t for t in self.transitions if t not in self.task_transitions]
-        rd.shuffle(hidden_trans)
+        np.random.shuffle(self.hidden_transitions)
         
-        for ht in hidden_trans:
-            ht_idx = self.transition_to_index[ht]
-            overlap = set(np.where(self.output_matrix[:, ht_idx] > 0)[0]).intersection(places_missing_token)
+        for ht_idx in self.hidden_transitions:
+            overlap = set(np.where(self.output_matrix[:, ht_idx] > 0)[0]) & places_missing_token
             
-            if overlap and self.is_enabled(ht_idx):
+            if overlap and self.enabled_mask[ht_idx]:
                 quality = self.fire_transition(ht_idx)
-                enabled_t = self.get_enabled_transitions()
-                fired_hiddens.append((ht, quality, enabled_t))
+                fired_hiddens.append((ht_idx, quality))
                 places_missing_token -= overlap
                 if not places_missing_token:
                     break
@@ -87,6 +89,7 @@ class PetriNetNP:
     def replay_log(self) -> List[dict]:
         log_replay = []
         for trace in self.log["variants"]:
+            self.finalize_setup()
             trace_replay = self.replay_trace(trace)
             trace_fitness = self._get_trace_fitness(trace_replay)
             log_replay.append({**trace_replay, "fitness": trace_fitness})
@@ -95,34 +98,30 @@ class PetriNetNP:
     def replay_trace(self, trace: Tuple[str]) -> dict:
         self.set_initial_marking("start")
         replay = []
-        c, p, m, r = 0, 0, 0, 0  # consumed, produced, missing, remaining
-
-        enabled_mask = np.all(self.marking[:, np.newaxis] >= self.input_matrix, axis=0)
+        c, p, m, r = 0, 0, 0, 0
 
         for task in trace:
-            if task not in self.transitions:
+            if task not in self.transition_to_index:
                 replay.append((task, (0, 0, 0), []))
                 continue
 
             t_idx = self.transition_to_index[task]
 
-            if not enabled_mask[t_idx]:
+            if not self.enabled_mask[t_idx]:
                 fired_hiddens = self._try_enable_trans_through_hidden(t_idx)
-                for fh in fired_hiddens:
-                    quality = fh[1]
+                for ht_idx, quality in fired_hiddens:
                     c += quality[0]
                     p += quality[1]
-                    replay.append(fh)
-                enabled_mask = np.all(self.marking[:, np.newaxis] >= self.input_matrix, axis=0)
+                    replay.append((self.index_to_transition[ht_idx], quality, 
+                                   [self.index_to_transition[i] for i, e in enumerate(self.enabled_mask) if e]))
 
             quality = self.fire_transition(t_idx)
             c += quality[0]
             p += quality[1]
             m += quality[2]
 
-            enabled_mask = np.all(self.marking[:, np.newaxis] >= self.input_matrix, axis=0)
-            enabled_t = [self.index_to_transition[idx] for idx, is_enabled in enumerate(enabled_mask) if is_enabled]
-            replay.append((task, quality, enabled_t))
+            replay.append((task, quality, 
+                           [self.index_to_transition[i] for i, e in enumerate(self.enabled_mask) if e]))
 
         r = np.sum(self.marking) - self.marking[self.place_to_index["end"]]
         return {"replay": replay, "consumed": c, "produced": p, "missing": m, "remaining": r}
@@ -141,7 +140,7 @@ class PetriNetNP:
 
         for firing_info in trace_replay["replay"]:
             trans, quality = firing_info[0], firing_info[1]
-            if trans not in self.task_transitions:
+            if trans not in self.task_transition_ids:
                 continue
 
             pts = MAX_PTS
