@@ -1,12 +1,59 @@
-import numpy as np
 from typing import Dict, List, Tuple
 from functools import cache
 from statistics import mean
 import random as rd
 
+import numpy as np
+from numba import jit, boolean, int32, float64
+
+@jit(nopython=True)
+def custom_setdiff1d(ar1, ar2):
+    mask = np.ones(len(ar1), dtype=np.bool_)
+    for element in ar2:
+        mask &= (ar1 != element)
+    return ar1[mask]
+
+@jit(nopython=True)
+def update_enabled_mask_numba(marking, input_matrix):
+    result = np.empty(input_matrix.shape[1], dtype=np.bool_)
+    for i in range(input_matrix.shape[1]):
+        result[i] = np.all(marking >= input_matrix[:, i])
+    return result
+
+@jit(nopython=True)
+def fire_transition_numba(marking, input_matrix, output_matrix, change_matrix, t_idx):
+    consumed = np.sum(input_matrix[:, t_idx])
+    produced = np.sum(output_matrix[:, t_idx])
+    
+    if not np.all(marking >= input_matrix[:, t_idx]):
+        missing = np.sum(np.maximum(input_matrix[:, t_idx] - marking, 0))
+        marking = np.maximum(marking, input_matrix[:, t_idx])
+    else:
+        missing = 0
+    
+    marking += change_matrix[:, t_idx]
+    
+    return marking, consumed, produced, missing
+
+@jit(nopython=True)
+def try_enable_trans_through_hidden_numba(marking, input_matrix, output_matrix, change_matrix, t_idx, hidden_transitions, enabled_mask):
+    fired_hiddens = []
+    places_missing_token = np.where(marking < input_matrix[:, t_idx])[0]
+    
+    for ht_idx in hidden_transitions:
+        overlap = np.where((output_matrix[:, ht_idx] > 0) & (marking < input_matrix[:, t_idx]))[0]
+        
+        if len(overlap) > 0 and enabled_mask[ht_idx]:
+            marking, consumed, produced, missing = fire_transition_numba(marking, input_matrix, output_matrix, change_matrix, ht_idx)
+            fired_hiddens.append((ht_idx, (int(consumed), int(produced), int(missing))))
+            places_missing_token = custom_setdiff1d(places_missing_token, overlap)
+            if len(places_missing_token) == 0:
+                break
+
+    return marking, fired_hiddens
 
 class PetriNetNP:
-    def __init__(self, places: List[str], transitions: List[str], log: Dict[str, dict]):
+    def __init__(self, places, transitions, log):
         self.places = places
         self.transitions = transitions
         self.log = log
@@ -14,9 +61,9 @@ class PetriNetNP:
         self.num_places = len(places)
         self.num_transitions = len(transitions)
         
-        self.input_matrix = np.zeros((self.num_places, self.num_transitions), dtype=int)
-        self.output_matrix = np.zeros((self.num_places, self.num_transitions), dtype=int)
-        self.marking = np.zeros(self.num_places, dtype=int)
+        self.input_matrix = np.zeros((self.num_places, self.num_transitions), dtype=np.int32)
+        self.output_matrix = np.zeros((self.num_places, self.num_transitions), dtype=np.int32)
+        self.marking = np.zeros(self.num_places, dtype=np.int32)
         
         self.place_to_index = {place: i for i, place in enumerate(places)}
         self.transition_to_index = {trans: i for i, trans in enumerate(transitions)}
@@ -28,7 +75,7 @@ class PetriNetNP:
         self.change_matrix = None
         self.enabled_mask = None
 
-    def add_arc(self, place: str, transition: str, is_input: bool, is_task: bool = True):
+    def add_arc(self, place, transition, is_input, is_task=True):
         p_idx, t_idx = self.place_to_index[place], self.transition_to_index[transition]
         if is_input:
             self.input_matrix[p_idx, t_idx] = 1
@@ -42,48 +89,30 @@ class PetriNetNP:
 
     def finalize_setup(self):
         self.change_matrix = self.output_matrix - self.input_matrix
-        self.enabled_mask = np.zeros(self.num_transitions, dtype=bool)
-        self.hidden_transitions = np.array(self.hidden_transitions)
+        self.enabled_mask = np.zeros(self.num_transitions, dtype=np.bool_)
+        self.hidden_transitions = np.array(self.hidden_transitions, dtype=np.int32)
 
-    def set_initial_marking(self, initial_place: str):
+    def set_initial_marking(self, initial_place):
         self.marking.fill(0)
         self.marking[self.place_to_index[initial_place]] = 1
         self._update_enabled_mask()
 
     def _update_enabled_mask(self):
-        self.enabled_mask = np.all(self.marking[:, np.newaxis] >= self.input_matrix, axis=0)
+        self.enabled_mask = update_enabled_mask_numba(self.marking, self.input_matrix)
 
-    def fire_transition(self, t_idx: int) -> Tuple[int, int, int]:
-        consumed = np.sum(self.input_matrix[:, t_idx])
-        produced = np.sum(self.output_matrix[:, t_idx])
-        
-        if not self.enabled_mask[t_idx]:
-            missing = np.sum(np.maximum(self.input_matrix[:, t_idx] - self.marking, 0))
-            self.marking = np.maximum(self.marking, self.input_matrix[:, t_idx])
-        else:
-            missing = 0
-        
-        self.marking += self.change_matrix[:, t_idx]
+    def fire_transition(self, t_idx):
+        self.marking, consumed, produced, missing = fire_transition_numba(
+            self.marking, self.input_matrix, self.output_matrix, self.change_matrix, t_idx
+        )
         self._update_enabled_mask()
-        
-        return consumed, produced, missing
+        return int(consumed), int(produced), int(missing)
 
-    def _try_enable_trans_through_hidden(self, t_idx: int) -> List[Tuple[int, Tuple[int, int, int]]]:
-        fired_hiddens = []
-        places_missing_token = set(np.where(self.marking < self.input_matrix[:, t_idx])[0])
-        
-        np.random.shuffle(self.hidden_transitions)
-        
-        for ht_idx in self.hidden_transitions:
-            overlap = set(np.where(self.output_matrix[:, ht_idx] > 0)[0]) & places_missing_token
-            
-            if overlap and self.enabled_mask[ht_idx]:
-                quality = self.fire_transition(ht_idx)
-                fired_hiddens.append((ht_idx, quality))
-                places_missing_token -= overlap
-                if not places_missing_token:
-                    break
-
+    def _try_enable_trans_through_hidden(self, t_idx):
+        self.marking, fired_hiddens = try_enable_trans_through_hidden_numba(
+            self.marking, self.input_matrix, self.output_matrix, self.change_matrix,
+            t_idx, self.hidden_transitions, self.enabled_mask
+        )
+        self._update_enabled_mask()
         return fired_hiddens
 
     def replay_log(self) -> List[dict]:
@@ -124,8 +153,7 @@ class PetriNetNP:
                            [self.index_to_transition[i] for i, e in enumerate(self.enabled_mask) if e]))
 
         r = np.sum(self.marking) - self.marking[self.place_to_index["end"]]
-        return {"replay": replay, "consumed": c, "produced": p, "missing": m, "remaining": r}
-
+        return {"replay": replay, "consumed": c, "produced": p, "missing": m, "remaining": int(r)}
 
     def _get_trace_fitness(self, trace_replay: dict) -> float:
         # Constants
