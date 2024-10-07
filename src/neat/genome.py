@@ -13,6 +13,7 @@ from pm4py.algo.evaluation.simplicity.variants.arc_degree import apply as get_si
 from pm4py.algo.analysis.woflan.algorithm import apply as get_soundness
 
 import neatutils.fitnesscalc as fc
+# import neatutils.fitnesscalc_np as fc_np # <- numpy implementation, abandoned POC
 from neat import params
 
 import random as rd
@@ -553,6 +554,9 @@ class GeneticNet:
 # FITNESS RELATED STUFF --------------------------------------------------------
 # ------------------------------------------------------------------------------
     def build_fc_petri(self, log) -> fc.Petri:
+        """Returns an OOP-based petri net for token replay. For very small models & logs
+        it performs better than numpy
+        """
         connected = self.get_connected()
         # add connected places
         p_dict: Dict[str, fc.Place] = {}
@@ -574,8 +578,33 @@ class GeneticNet:
         return fc.Petri(p_dict, t_dict, log)
 
 
+    def build_fc_np_petri(self, log) -> fc_np.PetriNetNP:
+        """Returns a numpy petri net for token replay. Code for that is not really
+        verified however, written with great haste using ClaudeAI. Performance is not
+        that great for small models. I'm sure there are lot's of possible improvments
+        but this was just a Proof of concept implementation.
+        """
+        connected = self.get_connected()
+        # Create lists of place and transition IDs
+        place_ids = list(self.places.keys())
+        transition_ids = [t_id for t_id, t in self.transitions.items() if t_id in connected]
+        # Create the PetriNet object
+        petri_net = fc_np.PetriNetNP(place_ids, transition_ids, log)
+        # Add arcs to the PetriNet
+        for arc in self.arcs.values():
+            if arc.source_id in self.transitions:  # t -> p
+                petri_net.add_arc(arc.target_id, arc.source_id, is_input=False, 
+                                  is_task=self.transitions[arc.source_id].is_task)
+            else:  # p -> t
+                petri_net.add_arc(arc.source_id, arc.target_id, is_input=True, 
+                                  is_task=self.transitions[arc.target_id].is_task)
+        return petri_net
+
+
     @cache
     def build_petri(self):
+        """Returns a pm4py PetriNet object. Deprecated for fitness calc at this moment
+        """
         net = PetriNet(f"{self.id}-Net")
         temp_obj_d = {} # stores both trans and place pm4py objs in the scope of this method
         # genome contains all tasks, but not all are connected necessarily
@@ -603,9 +632,13 @@ class GeneticNet:
 
 
     def evaluate_fitness(self, log, curr_gen=0):
-        # TODO: curr_gen argument? keep it?
+        """builds petri net for fitness calculations, aggregates/combines it's fitness
+        metrics based on the log. Optional curr_gen argument is currently unused.
+        """
         # fitness eval
+        # model_eval = self.build_fc_np_petri(log).evaluate() # <- for using numpy, not recommended
         model_eval = self.build_fc_petri(log).evaluate()
+
         self.fitness_metrics = model_eval["metrics"]
 
         agg_rep = self.fitness_metrics["aggregated_replay_fitnesss"]

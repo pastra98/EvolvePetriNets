@@ -5,6 +5,7 @@ from tool_scripts.useful_functions import \
 
 from neat import params, genome, initial_population
 import neatutils.fitnesscalc as fc
+import neatutils.fitnesscalc_np as fc_np
 from pprint import pprint
 from importlib import reload
 from pm4py.objects.petri_net.exporter.variants.pnml import export_net
@@ -119,12 +120,38 @@ for t in rp["log_replay"]:
 
 print("Too much enabled:", enabled_too_much)
 # %%
-from neatutils.log import get_log_from_xes
+################################################################################
+#################### TESTING NEW MATMUL IMPLEMENTATION #########################
+################################################################################
 
+from neatutils.log import get_log_from_xes
 reload(fc)
+reload(fc_np)
 reload(genome)
 
+print("old")
 log = get_log_from_xes("../pm_data/running_example.xes")
+old_petri = alpha_g.build_fc_petri(log)
+old_replay = old_petri.replay_log()
+# print(old_petri._over_enabled_transitions(old_replay))
+# print(old_petri._aggregate_trace_fitness(old_replay))
+# pprint(old_replay)
+old_eval = old_petri.evaluate()
+pprint(old_eval["metrics"])
 
-rp = only_exec.build_fc_petri(log).evaluate()
-pprint(rp)
+print("new")
+new_petri = alpha_g.build_fc_np_petri(log)
+new_replay = new_petri.replay_log()
+# print(new_petri._over_enabled_transitions(new_replay))
+# print(new_petri._aggregate_trace_fitness(old_replay))
+# pprint(new_replay)
+
+new_eval = new_petri.evaluate()
+pprint(new_eval["metrics"])
+
+# %%
+reload(genome)
+reload(fc)
+reload(fc_np)
+
+res = alpha_g.evaluate_fitness(log)

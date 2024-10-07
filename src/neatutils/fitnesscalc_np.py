@@ -13,12 +13,14 @@ def custom_setdiff1d(ar1, ar2):
         mask &= (ar1 != element)
     return ar1[mask]
 
+
 @jit(nopython=True)
 def update_enabled_mask_numba(marking, input_matrix):
     result = np.empty(input_matrix.shape[1], dtype=np.bool_)
     for i in range(input_matrix.shape[1]):
         result[i] = np.all(marking >= input_matrix[:, i])
     return result
+
 
 @jit(nopython=True)
 def fire_transition_numba(marking, input_matrix, output_matrix, change_matrix, t_idx):
@@ -34,6 +36,7 @@ def fire_transition_numba(marking, input_matrix, output_matrix, change_matrix, t
     marking += change_matrix[:, t_idx]
     
     return marking, consumed, produced, missing
+
 
 @jit(nopython=True)
 def try_enable_trans_through_hidden_numba(marking, input_matrix, output_matrix, change_matrix, t_idx, hidden_transitions, enabled_mask):
@@ -51,6 +54,7 @@ def try_enable_trans_through_hidden_numba(marking, input_matrix, output_matrix, 
                 break
 
     return marking, fired_hiddens
+
 
 class PetriNetNP:
     def __init__(self, places, transitions, log):
@@ -75,6 +79,7 @@ class PetriNetNP:
         self.change_matrix = None
         self.enabled_mask = None
 
+
     def add_arc(self, place, transition, is_input, is_task=True):
         p_idx, t_idx = self.place_to_index[place], self.transition_to_index[transition]
         if is_input:
@@ -87,18 +92,22 @@ class PetriNetNP:
         else:
             self.hidden_transitions.append(t_idx)
 
+
     def finalize_setup(self):
         self.change_matrix = self.output_matrix - self.input_matrix
         self.enabled_mask = np.zeros(self.num_transitions, dtype=np.bool_)
         self.hidden_transitions = np.array(self.hidden_transitions, dtype=np.int32)
+
 
     def set_initial_marking(self, initial_place):
         self.marking.fill(0)
         self.marking[self.place_to_index[initial_place]] = 1
         self._update_enabled_mask()
 
+
     def _update_enabled_mask(self):
         self.enabled_mask = update_enabled_mask_numba(self.marking, self.input_matrix)
+
 
     def fire_transition(self, t_idx):
         self.marking, consumed, produced, missing = fire_transition_numba(
@@ -106,6 +115,7 @@ class PetriNetNP:
         )
         self._update_enabled_mask()
         return int(consumed), int(produced), int(missing)
+
 
     def _try_enable_trans_through_hidden(self, t_idx):
         self.marking, fired_hiddens = try_enable_trans_through_hidden_numba(
@@ -115,6 +125,7 @@ class PetriNetNP:
         self._update_enabled_mask()
         return fired_hiddens
 
+
     def replay_log(self) -> List[dict]:
         log_replay = []
         for trace in self.log["variants"]:
@@ -123,6 +134,7 @@ class PetriNetNP:
             trace_fitness = self._get_trace_fitness(trace_replay)
             log_replay.append({**trace_replay, "fitness": trace_fitness})
         return log_replay
+
 
     def replay_trace(self, trace: Tuple[str]) -> dict:
         self.set_initial_marking("start")
@@ -154,6 +166,7 @@ class PetriNetNP:
 
         r = np.sum(self.marking) - self.marking[self.place_to_index["end"]]
         return {"replay": replay, "consumed": c, "produced": p, "missing": m, "remaining": int(r)}
+
 
     def _get_trace_fitness(self, trace_replay: dict) -> float:
         # Constants
