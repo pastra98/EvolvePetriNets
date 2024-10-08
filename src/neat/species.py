@@ -111,11 +111,7 @@ class Species:
         """Copy a member from the pool, mutates it, and returns it.
         """
         # As long as not every pool member as been spawned, pick next one from pool
-        if self.spawn_count < len(self.pool):
-            baby = self.pool[self.spawn_count].clone()
-        # if more spawns than pool size, start again
-        else:
-            baby = self.pool[self.spawn_count % len(self.pool)].clone()
+        baby = self.pool[self.spawn_count % len(self.pool)].clone()
         baby.mutate(self.curr_mutation_rate)
         self.spawn_count += 1
         return baby
