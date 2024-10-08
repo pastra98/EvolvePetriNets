@@ -44,7 +44,8 @@ def save_report(ga_info: dict, savedir: str) -> None:
         species_cmap = get_species_color_map(species_df)
         species_stackplot(species_df, species_cmap, savedir)
         plot_species_evolution(species_df, pop_df, gen_info_df, species_cmap, savedir)
-        ridgeline_plot(pop_df, savedir, cmap=species_cmap)
+        ridgeline_plot(pop_df, species_cmap, savedir)
+        plot_avg_species_fit(species_df, species_cmap, savedir)
     
     # save the improvements, species leaders & best genome, delete ga info after
     save_improvements(ga_info["improvements"], savedir)
@@ -228,12 +229,12 @@ def unique_components(pop_df: pd.DataFrame, savedir: str):
 
 def ridgeline_plot(
         pop_df: pd.DataFrame,
+        cmap: dict,
         savedir: str,
         n_points=200,
         overlap=0.5,
         alpha=0.6,
         top_n=20,
-        cmap=None
         ):
     """Ridgeline plot to show distribution of components among different species
     """
@@ -347,7 +348,7 @@ def mutation_effects_plot(pop_df, savedir: str):
     ax1.set_ylabel('Fitness Impact Distribution', color=color)
     ax1.axhline(y=0, color='lightgray', linestyle='--')
 
-    bp = ax1.boxplot(data_for_boxplot, patch_artist=True, meanline=True, showmeans=True)
+    bp = ax1.boxplot(data_for_boxplot, patch_artist=True, meanline=True, showmeans=True, showfliers=False)
 
     for box in bp['boxes']:
         box.set(color=color, linewidth=2)
@@ -585,3 +586,19 @@ def plot_species_evolution(
     figlegend.tight_layout()
     figlegend.savefig(f"{savedir}/species_tree_legend.pdf", bbox_inches='tight')
     
+
+def plot_avg_species_fit(species_df: pd.DataFrame, cmap: dict, savedir: str, use_adjusted=True):
+    """Plots the average fitness of all species, defaults to adjusted fitness
+    """
+    plt.figure(figsize=FSIZE)
+    for species_name in cmap:
+        filtered_df = species_df[species_df["name"]==species_name]
+        if use_adjusted:
+            plt.plot(filtered_df["gen"], filtered_df["avg_fitness_adjusted"], color=cmap[species_name])
+        else:
+            plt.plot(filtered_df["gen"], filtered_df["avg_fitness"], color=cmap[species_name])
+
+    plt.title(f"Average {'adjusted ' if use_adjusted else ''}fitness of species")
+    plt.xlabel("Generation")
+    plt.ylabel("Fitness")
+    plt.savefig(f"{savedir}/avg_species_fitness.pdf")
