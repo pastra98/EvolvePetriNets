@@ -1,3 +1,7 @@
+"""
+Small helper functions that can be re-used in other analysis scripts for stuff like
+visualizing genomes, printing traces & variants, printing metrics, resetting the ga.
+"""
 from neat import params, genome, initial_population
 from neatutils import log as lg
 

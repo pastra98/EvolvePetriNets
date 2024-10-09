@@ -1,3 +1,10 @@
+"""
+Tests log splicing techniques (i.e. feeding the miners only a subset of the variants
+in the log), incl. funcs to quickly iterate pm4py implemented miners on a given log &
+convert them into genomes. Also hosts the Measuring genomic drift plots (onenote: 1st.
+progress report, fig. 4), as well as code for printing fitness metrics of various mined
+models.
+"""
 # %%
 import pm4py
 log = pm4py.read_xes("../pm_data/running_example.xes")
@@ -54,36 +61,6 @@ def get_all_nets(log):
     return allnets
 
 allnets = get_all_nets(log)
-
-# %%
-################################################################################
-#################### PLOT OVERLAP AS HEATMAP ###################################
-################################################################################
-
-
-import seaborn as sns
-import matplotlib.pyplot as plt
-import numpy as np
-
-def visualize_heatmap(df):
-    """
-    Visualizes the given DataFrame as a heatmap without annotations.
-    Assumes DataFrame values are already log-transformed.
-    """
-    plt.figure(figsize=(10, 8))
-    sns.heatmap(df, cmap="viridis", cbar=True, annot=False)
-    plt.title('Overlap Scores Heatmap')
-    plt.xlabel('Network Index')
-    plt.ylabel('Network Index')
-    plt.show()
-
-# overlap_df = compare_all_nets(allnets)
-# log_transformed_df = np.log(overlap_df + 0.001) # Add a small value to avoid log(0)
-
-# print("normal heatmap")
-# visualize_heatmap(overlap_df)
-# print("log-transformed heatmap")
-# visualize_heatmap(log_transformed_df)
 
 
 # %%
@@ -149,72 +126,6 @@ def reload_module_and_get_fresh_genome():
     return build_mined_nets(nets)
 
 genetic_nets = build_mined_nets(allnets)
-
-# %%
-################################################################################
-#################### TEST CROSSOVER ###########################################
-################################################################################
-from pprint import pprint
-
-# order of algs: alpha, inductive (best), heuristics, ilp
-
-dad: genome.GeneticNet = reload_module_and_get_fresh_genome()[1]
-mom: genome.GeneticNet = reload_module_and_get_fresh_genome()[1]
-
-def show_genome_petri(g: genome.GeneticNet):
-    g.build_petri.cache_clear()
-    net, im, fm = g.build_petri()
-    pm4py.view_petri_net(net, im, fm)
-
-
-def print_stuff():
-    print("dad")
-    show_genome_petri(dad)
-    pprint(dad.get_unique_component_set())
-
-    print("mom")
-    show_genome_petri(mom)
-    pprint(mom.get_unique_component_set())
-
-    dad_comp = dad.get_unique_component_set()
-    mom_comp = mom.get_unique_component_set()
-    print("\nshared components:")
-    shared = dad_comp.intersection(mom_comp)
-    pprint(shared)
-    print(f"\ncomponent compat: {dad.get_genetic_distance(mom.get_unique_component_set())}")
-    only_dad = dad_comp.difference(mom_comp)
-    print("\nonly dad:")
-    pprint(only_dad)
-    only_mom = mom_comp.difference(dad_comp)
-    print("\nonly mom:")
-    pprint(only_mom)
-
-baby = mom.crossover(dad)
-
-print("mom"); show_genome_petri(mom)
-print("dad"); show_genome_petri(dad)
-print("baby"); show_genome_petri(baby)
-
-# %%
-################################################################################
-#################### TEST NODE REACHABILITY FITNESS ############################
-################################################################################
-# need to define my own func bc. pm4py does not add labels
-
-def build_digraph(net: genome.GeneticNet):
-    graph = nx.DiGraph()
-    for p in net.places:
-        graph.add_node(p)
-    for t in net.transitions:
-        graph.add_node(t)
-    for a in net.arcs.values():
-        graph.add_edge(a.source_id, a.target_id)
-    return graph
-
-nx_graph = build_digraph(mom)
-nx.draw(nx_graph, with_labels=True)
-
-nx.descendants(nx_graph, "start")
 
 # %%
 ################################################################################
@@ -364,3 +275,10 @@ plt.show()
 
 # %%
 mine_bootstrapped_nets(log_sepsis, debug=True)
+# %%
+l = [1,2,3]
+
+for a in {1,2,3,4}:
+    print(a)
+
+print(l)

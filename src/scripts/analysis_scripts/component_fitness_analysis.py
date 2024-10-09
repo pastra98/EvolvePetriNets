@@ -1,5 +1,6 @@
 """
 This analyzes which metric is suitable for identifying good components.
+The idea was to use this info for guided mutations
 """
 # %%
 import pandas as pd
