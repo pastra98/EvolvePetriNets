@@ -5,7 +5,10 @@ import pm4py
 
 def get_log_from_xes(logpath: str) -> dict:
     log = pm4py.read_xes(logpath)
+    footprints = get_footprints(log)
     return {
+        "dataframe": log,
+        "footprints": footprints,
         "variants": get_variants(log),
-        "footprints": get_footprints(log)
+        "task_list": [a for a in footprints["activities"]]
     }

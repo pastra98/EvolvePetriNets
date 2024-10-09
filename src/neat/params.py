@@ -39,9 +39,14 @@ def get_curr_curr_dict() -> dict:
 
 
 # ---------- GENERAL GA SETTINGS
-start_config: str # "random" / "bootstrap"
-popsize: int
 selection_strategy: str # "speciation" / "roulette" / "truncation"
+
+# -------------------- population setup
+popsize: int
+n_alpha_genomes: int
+n_inductive_genomes: int
+n_heuristics_genomes: int
+n_ilp_genomes: int
 
 # -------------------- start config: random
 connect_sa_ea: bool # should start/end activities be connected to source/sink

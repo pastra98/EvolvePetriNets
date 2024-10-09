@@ -65,67 +65,23 @@ allnets = get_all_nets(log)
 
 # %%
 ################################################################################
-######################### FOR BUILDING THE MINED NETS ##########################
+############### TESTING BOOTSTRAP CONFIG IN STARTCONFIGS #######################
 ################################################################################
-from pm4py.algo.discovery.footprints.algorithm import apply as footprints
-from neat import params, genome, initial_population
-from pm4py.objects.petri_net.obj import PetriNet as pn
-from importlib import reload
+import neatutils.log as lg
+import neat.initial_population as ip
+import scripts.analysis_scripts.useful_functions as uf
+from neat.ga import PopulationComponentTracker
 
-footprints = footprints(log)
-task_list = list(footprints["activities"])
+uf.reset_ga()
 
-def reset_ga():
-    neat_modules = [params, genome, initial_population]
-    for module in neat_modules:
-        reload(module)
-    params.load('../params/testing/test_params.json')
+log = lg.get_log_from_xes("../pm_data/running_example.xes")
+comp_tracker = PopulationComponentTracker()
 
-def build_mined_nets(net_list):
-    reset_ga()
-    # There will be a higher level function that will call this function
-    # It shall be responsible for creating the task list and setting it in innovs
-    # generate genomes
-    new_genomes = []
-    for i, net in enumerate(net_list):
-        net, im, fm = net['net'], net['im'], net['fm']
-        g = construct_genome_from_mined_net(net)
-        new_genomes.append(g)
-    return new_genomes
+initial_pop = ip.create_initial_pop(log, comp_tracker)
 
-def construct_genome_from_mined_net(net):
-    g = genome.GeneticNet(dict(), dict(), dict(), task_list=task_list)
-    place_dict = {"source":"start", "start":"start", "sink":"end", "end":"end"}
-    trans_dict = {t:t for t in task_list} # map t.label to genome id
-    
-    for p in net.places:
-        if p.name not in ["start", "end", "source", "sink"]:
-            new_id = g.add_new_place()
-            place_dict[p.name] = new_id
+for g in initial_pop:
+    uf.show_genome(g)
 
-    for t in net.transitions:
-        if t.label not in task_list:
-            new_id = g.add_new_trans()
-            trans_dict[t.label] = new_id
-
-    for a in net.arcs:
-        if type(a.source) == pn.Place:
-            p_id = place_dict[a.source.name]
-            t_id = trans_dict[a.target.label]
-            g.add_new_arc(p_id, t_id)
-        else:
-            t_id = trans_dict[a.source.label]
-            p_id = place_dict[a.target.name]
-            g.add_new_arc(t_id, p_id)
-    
-    return g
-
-def reload_module_and_get_fresh_genome():
-    reload(genome)
-    nets = mine_bootstrapped_nets(log)
-    return build_mined_nets(nets)
-
-genetic_nets = build_mined_nets(allnets)
 
 # %%
 ################################################################################
@@ -144,7 +100,7 @@ reset_ga()
 n_genomes = 10
 n_generations = 30
 
-genomes = initial_population.generate_n_random_genomes(n_genomes, log)
+genomes = initial_population.get_random_genomes(n_genomes, log)
 unchanged = [g.clone() for g in genomes]
 
 distance_dict = {}
@@ -250,7 +206,7 @@ def print_all_fit_metrics(g: genome.GeneticNet):
     print("---> overall fitness", g.fitness, "\n")
 
 
-bs_list: List[genome.GeneticNet] = initial_population.get_bootstrapped_population(4, log, None)
+bs_list: List[genome.GeneticNet] = initial_population.get_bootstrap_genomes(4, log, None)
 for g in bs_list:
     display(g.get_gviz())
     g.evaluate_fitness(log)

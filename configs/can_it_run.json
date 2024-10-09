@@ -1,5 +1,5 @@
 {
-    "name": "truncation_new_formula_with_hiddens",
+    "name": "testing_bootstrap",
     "setups": [
         {
             "setupname": "whatever",
@@ -13,8 +13,8 @@
                 "var": "gen",
                 "val": 200
             },
-            "n_runs": 8,
-            "send_gen_info_to_console": true,
+            "n_runs": 4,
+            "send_gen_info_to_console": false,
             "is_profiled": false
         }
     ]

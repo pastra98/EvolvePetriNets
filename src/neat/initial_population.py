@@ -1,8 +1,7 @@
 from random import gauss
 from neat import genome, params
+
 from pm4py.objects.petri_net.obj import PetriNet as pn
-from pm4py.algo.discovery.footprints.algorithm import apply as footprints
-from pm4py.objects.conversion.log import converter as log_converter
 from pm4py.discovery import (
     discover_petri_net_alpha as alpha,
     discover_petri_net_inductive as inductive,
@@ -11,14 +10,21 @@ from pm4py.discovery import (
 )
 
 
-def get_log_footprints(log) -> list:
-    log = log_converter.apply(log, variant=log_converter.Variants.TO_DATA_FRAME)
-    return footprints(log)
+def create_initial_pop(log, component_tracker) -> list:
+    """Creates an initial population consisting of random genomes and bootstrapped
+    genomes (if specified).
+    """
+    bootstrap_g = get_bootstrap_genomes(log, component_tracker)
+    n_random_g = params.popsize - len(bootstrap_g)
+
+    if n_random_g < 0:
+        raise Exception("Number of random genomes should not exceed population size")
+
+    random_g = get_random_genomes(n_random_g, log, component_tracker)
+    return bootstrap_g + random_g
 
 
-# TODO - this can be improved
-def generate_n_random_genomes(n_genomes, log, component_tracker):
-    tl = [a for a in log["footprints"]["activities"]]
+def get_random_genomes(n_genomes, log, component_tracker):
     # generate n random genomes
     new_genomes = []
     for _ in range(n_genomes):
@@ -26,7 +32,7 @@ def generate_n_random_genomes(n_genomes, log, component_tracker):
             transitions = dict(),
             places = dict(),
             arcs = dict(),
-            task_list=tl,
+            task_list=log["task_list"],
             pop_component_tracker = component_tracker
             )
 
@@ -65,32 +71,28 @@ def generate_n_random_genomes(n_genomes, log, component_tracker):
     return new_genomes
 
 
-def get_bootstrapped_population(n_genomes, log, component_tracker):
-    """This is just the simplest implementation to test how the fitness func
-    will deal with mined nets
+def get_bootstrap_genomes(log, component_tracker):
     """
-    # TODO: bootstrapping requires legacy log format
-    fp_log = get_log_footprints(log)
-    tl = [a for a in fp_log["activities"]]
+    """
+    bootstrap_setup = {
+        alpha: params.n_alpha_genomes,
+        inductive: params.n_inductive_genomes,
+        heuristics: params.n_heuristics_genomes,
+        ilp: params.n_ilp_genomes
+    }
     mined_nets = []
-    # miners = [alpha, inductive, heuristics, ilp]
-    miners = [alpha]
-    for miner in miners:
-        net, im, fm = miner(log)
-        g = construct_genome_from_mined_net(net, im, fm, tl, component_tracker)
-        for _ in range(int(n_genomes/len(miners))):
+    for miner, count in bootstrap_setup.items():
+        net, im, fm = miner(log["dataframe"])
+        g = construct_genome_from_mined_net(net, im, fm, log["task_list"], component_tracker)
+        for _ in range(count):
             mined_nets.append(g.clone(self_is_parent=False))
-    # if rounding errors lead to len(mined_nets) != n_genomes
-    delta = n_genomes - len(mined_nets)
-    if delta > 0:
-        mined_nets += [g.clone(self_is_parent=False) for _ in range(delta)]
-    elif delta < 0:
-        mined_nets = mined_nets[:n_genomes]
     return mined_nets
 
 
 def construct_genome_from_mined_net(net, im, fm, tl, ct):
     g = genome.GeneticNet(dict(), dict(), dict(), task_list=tl, pop_component_tracker=ct)
+
+    # different miners call source/sink by different names
     place_dict = {"source":"start", "start":"start", "sink":"end", "end":"end"}
     trans_dict = {t:t for t in tl} # map t.label to genome id
     

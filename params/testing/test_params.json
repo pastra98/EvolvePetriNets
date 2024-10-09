@@ -1,6 +1,9 @@
 {
-    "start_config": "random",
     "popsize": 500,
+    "n_alpha_genomes": 10,
+    "n_inductive_genomes": 10,
+    "n_heuristics_genomes": 10,
+    "n_ilp_genomes": 10,
     "selection_strategy": "speciation",
     "initial_tp_gauss_dist": [
         2.0,

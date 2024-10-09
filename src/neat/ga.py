@@ -18,6 +18,7 @@ class GeneticAlgorithm:
     def __init__(self, params_name:str, log)-> None:
 
         self.start_time = datetime.now()
+        self.population: List[GeneticNet] = []
         self.history = {}
         self.improvements = {} # store every best genome that improved upon the previous one
         self.params_name = params_name
@@ -46,7 +47,6 @@ class GeneticAlgorithm:
         self.num_new_species = 0 # these are set by calling get_initial_pop (only used if strat speciation)
         self.species: List[Species] = []
         self.surviving_species: List[Species] = []
-        self.population: List[GeneticNet]= []
         self.best_species: Species = None
 
         params.load(params_name)
@@ -173,21 +173,11 @@ class GeneticAlgorithm:
     def set_initial_pop(self) -> None:
         """
         """ 
-        # TODO: consider moving this stuff into one function and start_config as arg
-        if params.start_config == "random":
-            initial_pop = initial_population.generate_n_random_genomes(
-                params.popsize,
-                self.log,
-                self.pop_component_tracker
-                )
-        elif params.start_config == "bootstrap":
-            initial_pop = initial_population.get_bootstrapped_population(
-                params.popsize,
-                self.log,
-                self.pop_component_tracker
-                )
-        else:
-            raise NotImplementedError()
+        # create initial pop
+        initial_pop = initial_population.create_initial_pop(
+            self.log,
+            self.pop_component_tracker
+            )
         # if using speciation, generate initial set of spec, place genomes there
         if params.selection_strategy == "speciation":
             # initialize species and add a first one based on first genome
