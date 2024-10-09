@@ -4,15 +4,14 @@ more than one unique place.
 The dataframe needs to be generated with minimal_serialization = False
 """
 # %%
-from neat import params, innovs, genome, netobj, initial_population
 import pm4py
 from tqdm import tqdm
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 
-population = "../results/data/test_components_05-16-2024_12-36-11/test_components/1_05-16-2024_12-36-20/reports/population.pkl"
-df = pd.read_pickle(population)
+population = "C:/Users/pauls/Documents/GitHubRepos/EvolvePetriNets/results/data/test_sa_ea_10-09-2024_12-27-17/whatever/4_10-09-2024_12-27-23/data/population.feather"
+df = pd.read_feather(population)
 
 # %%
 # i = 0

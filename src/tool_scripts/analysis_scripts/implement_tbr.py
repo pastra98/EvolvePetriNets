@@ -1,5 +1,9 @@
+"""
+Used this when implementing token-replay from scratch, to compare with pm4py implementation.
+Could also be used later for comparing numpy-based implementation to current OOP implementation.
+"""
 # %%
-from tool_scripts.useful_functions import \
+from tool_scripts.analysis_scripts.useful_functions import \
     load_genome, show_genome, get_aligned_traces, get_log_variants, log, reset_ga, \
     eval_and_print_metrics
 

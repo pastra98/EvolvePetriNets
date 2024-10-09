@@ -1,3 +1,8 @@
+"""
+Unholy mess of a script a script that had something to do with automating param creation.
+I plan to start from first principles again for param creation tool, but I am keeping
+this for now just because I don't know what the functionality of this was exactly.
+"""
 # %%
 import sys # syspath fuckery to run from same location as main
 import os # set cwd to same as project cwd from vscode

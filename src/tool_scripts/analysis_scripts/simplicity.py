@@ -1,5 +1,9 @@
+"""
+Copied pm4py simplicity code out and make it work standalone. Turns out pm4py simplicity
+has nothing to do with ProDiGen implementation.
+"""
 # %%
-from tool_scripts.useful_functions import \
+from tool_scripts.analysis_scripts.useful_functions import \
     load_genome, show_genome, get_aligned_traces, get_log_variants, log, reset_ga, \
     eval_and_print_fitness
 

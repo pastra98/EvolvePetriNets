@@ -1,3 +1,8 @@
+"""
+Most of this file will probably need to be scrapped, it was last touched in 2021
+while doing early testing for my bachelor thesis. Maybe there is still some useful
+boilerplate for using pm4py, which is why I haven't deleted it yet.
+"""
 # %%
 import sys # syspath fuckery to run from same location as main
 import os # set cwd to same as project cwd from vscode
@@ -219,39 +224,3 @@ def footprints(log, visualize=True, printit=True):
 
 footprints(log)
 
-
-# %% Unused
-# ###############################################################################
-# ############################# UNUSED FEATURES #################################
-# ###############################################################################
-# # Unused imports
-# from pm4py.objects.petri_net.utils.decomposition import decompose
-
-# # %% Decompose
-
-
-# list_nets = decompose(net, initial_marking, final_marking)
-# gviz = []
-
-# for index, model in enumerate(list_nets):
-#     subnet, s_im, s_fm = model
-#     gviz.append(visualizer.apply(subnet, s_im, s_fm))
-#     visualizer.save(gviz[-1], str(index)+".png")
-
-
-# # %% Individual traces token replay
-# Tokener = pm4py.algo.conformance.tokenreplay.algorithm
-# TbrParams = Tokener.Variants.TOKEN_REPLAY.value.Parameters
-# parameters_tbr = {
-#     TbrParams.DISABLE_VARIANTS: True,
-#     TbrParams.ENABLE_PLTR_FITNESS: True,
-#     TbrParams.STOP_IMMEDIATELY_UNFIT : True
-#     # TbrParams.CLEANING_TOKEN_FLOOD : True
-#     }
-# total_fitness = 0
-# tbr_results = Tokener.apply(log, net, initial_marking, final_marking, parameters=parameters_tbr)
-# replayed_traces, place_fitness, trans_fitness, unwanted_activities = tbr_results 
-# for trace in replayed_traces:
-#     total_fitness += trace["trace_fitness"]
-# print(f"total traces: {len(replayed_traces)}")
-# print(f"fitness fraction: {total_fitness/len(replayed_traces)}\n")

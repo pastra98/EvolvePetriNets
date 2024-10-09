@@ -1,3 +1,10 @@
+"""
+This piece of crap one-off helper script was used in the Bachelor thesis to help me
+quickly rate how I percieved the quality of process models. I don't think I've ever used
+those ratings and strongly doubt I'll have any use for them in the Master thesis.
+Even If I were to rate the all the models in the Master thesis, I should write a better
+tool for this. Keeping it for sentimentality and ideas (yeah right) for now.
+"""
 # %%
 import sys # syspath fuckery to run from same location as main
 import os # set cwd to same as project cwd from vscode
