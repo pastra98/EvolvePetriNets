@@ -44,6 +44,7 @@ popsize: int
 selection_strategy: str # "speciation" / "roulette" / "truncation"
 
 # -------------------- start config: random
+connect_sa_ea: bool # should start/end activities be connected to source/sink
 initial_tp_gauss_dist: list[float, float]
 initial_pt_gauss_dist: list[float, float]
 initial_tt_gauss_dist: list[float, float]

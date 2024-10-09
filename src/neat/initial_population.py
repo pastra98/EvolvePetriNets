@@ -42,21 +42,25 @@ def generate_n_random_genomes(n_genomes, log, component_tracker):
             gen_net.extend_new_trans()
         for _ in range(int(abs(gauss(*params.initial_as_gauss_dist)))):
             gen_net.split_arc()
+
+        # connect start/end activities to source/sink
+        if params.connect_sa_ea:
+            # sets of all start and end activities
+            start_act = set(log["footprints"]["start_activities"])
+            end_act = set(log["footprints"]["end_activities"])
+            # filter out all start/end activities that are already connected to source/sink
+            for a in gen_net.arcs.values():
+                if a.source_id == "start" and a.target_id in start_act:
+                    start_act.remove(a.target_id)
+                elif a.source_id in end_act and a.target_id == "end":
+                    end_act.remove(a.source_id)
+            # if there are still unconnected sa/ea, connect them to source and sink
+            for sa in start_act:
+                gen_net.place_trans_arc("start", sa)
+            for ea in end_act:
+                gen_net.trans_place_arc(ea, "end")
+
         new_genomes.append(gen_net)
-        # TODO: remove this cheating later
-        # connect all start and end activities to start and end - debateable
-        has_start_conn, has_end_conn = False, False
-        sa = list(log["footprints"]["start_activities"])[0]
-        ea = list(log["footprints"]["end_activities"])[0]
-        for a in gen_net.arcs.values():
-            if a.source_id == "start" and a.target_id == sa:
-                has_start_conn = True
-            elif a.source_id == ea and a.target_id == "end":
-                has_end_conn = True
-        if not has_start_conn:
-            gen_net.place_trans_arc("start", sa)
-        if not has_end_conn:
-            gen_net.trans_place_arc(ea, "end")
 
     return new_genomes
 

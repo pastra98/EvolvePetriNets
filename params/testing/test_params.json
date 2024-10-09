@@ -35,10 +35,10 @@
     "update_species_rep": true,
     "leader_is_rep": true,
     "selection_threshold": 30,
-    "spawn_cutoff": 0.7,
+    "spawn_cutoff": 0.2,
     "elitism": true,
     "allowed_gens_no_improvement": 99999,
-    "old_age": 30,
+    "old_age": 99999,
     "old_penalty": 0.8,
     "youth_bonus": 1.4,
     "perc_fit_traces_weight": 10,
@@ -90,5 +90,6 @@
         0
     ],
     "is_no_preference_for_tasks": false,
-    "prob_pick_empty_trans": 0.3
+    "prob_pick_empty_trans": 0.3,
+    "connect_sa_ea": true
 }
