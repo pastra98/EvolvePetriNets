@@ -57,8 +57,9 @@ def save_report(ga_info: dict, savedir: str) -> None:
     fitness_plot(gen_info_df, use_species, savedir)
     components_plot(gen_info_df, savedir)
     unique_components(pop_df, savedir)
-    mutation_effects_plot(pop_df, savedir)
     metrics_plot(pop_df, savedir)
+    mutation_stats = mutation_effects_plot(pop_df, savedir)
+    mutation_stats.to_feather(f"{savedir}/data/mutation_stats.feather")
 
     # analysis of best genome mutation lineage
     best_genomes = filter_best_genomes(gen_info_df, pop_df)
@@ -315,70 +316,97 @@ def metrics_plot(pop_df: pd.DataFrame, savedir: str):
 
 # ----- MUTATION PLOTS
 
-def mutation_effects_plot(pop_df, savedir: str):
-    """Boxplots of the fitness impacts of mutations over the whole run
+def mutation_effects_plot(pop_df, savedir: str, max_gen: int = None):
     """
+    Generate visualizations for mutation effects using pandas operations:
+    1. Boxplot of fitness impacts with relative frequency on secondary axis
+    2. Line chart of mutation impact per generation (up to max_gen if specified)
+
+    Args:
+    max_gen (int, optional): Maximum generation to include in the line plot. If None, include all generations.
+
+    Returns:
+    mutations effect summary df
+    """
+    # Calculate fitness deltas to parents
     df_with_parents = pop_df[pop_df["gen"] > 1].copy()
     fitness_dict = pop_df.set_index('id')['fitness'].to_dict()
-    # df_with_parents.loc[:, 'fitness_difference'] = df_with_parents.apply(lambda row: row['fitness'] - fitness_dict[row['parent_id']], axis=1)
-    df_with_parents['fitness_difference'] = df_with_parents.apply(lambda row: row['fitness'] - fitness_dict[row['parent_id']], axis=1)
-    mutation_effects = {}
-    mutation_frequency = {}
+    df_with_parents['fitness_difference'] = df_with_parents.apply(
+        lambda row: row['fitness'] - fitness_dict[row['parent_id']], axis=1
+        )
+    
+    # Explode the mutations column to get one row per mutation, Group by mutation and calculate statistics
+    df_exploded = df_with_parents.explode('my_mutations')
+    mutation_stats = df_exploded.groupby('my_mutations').agg({
+        'fitness_difference': [
+            'count',
+            'min',
+            lambda x: x.quantile(0.25),
+            'median',
+            lambda x: x.quantile(0.75),
+            'max',
+            'mean'
+        ],
+        'gen': 'unique'
+    })
+    mutation_stats.columns = ['frequency', 'min', '25%', 'median', '75%', 'max', 'mean', 'generations']
+    mutation_stats = mutation_stats.sort_index()
+    
+    # Calculate relative frequencies
+    total_mutations = mutation_stats['frequency'].sum()
+    mutation_stats['relative_frequency'] = mutation_stats['frequency'] / total_mutations
 
-    for _, row in df_with_parents.iterrows():
-        mutations = row['my_mutations']
-        fitness_diff = row['fitness_difference']
-        for mutation in mutations:
-            if mutation not in mutation_effects:
-                mutation_effects[mutation] = []
-            mutation_effects[mutation].append(fitness_diff)
-            mutation_frequency[mutation] = mutation_frequency.get(mutation, 0) + 1
-
-    mutation_effects = {m: mutation_effects[m] for m in sorted(mutation_effects)}
-    total_mutations = sum(mutation_frequency.values())
-    relative_frequencies = {mutation: count / total_mutations for mutation, count in mutation_frequency.items()}
-
-    mutations = mutation_effects.keys()
-    data_for_boxplot = mutation_effects.values()
-
+    # Create boxplot with relative frequencies on secondary axis
     fig, ax1 = plt.subplots(figsize=(12, 6))
-
     color = 'tab:blue'
     ax1.set_xlabel('Mutation')
     ax1.set_ylabel('Fitness Impact Distribution', color=color)
     ax1.axhline(y=0, color='lightgray', linestyle='--')
-
-    bp = ax1.boxplot(data_for_boxplot, patch_artist=True, meanline=True, showmeans=True, showfliers=False)
-
+    bp = ax1.boxplot(
+        [group['fitness_difference'].values for name, group in df_exploded.groupby('my_mutations')],
+        patch_artist=True, meanline=True, showmeans=True, showfliers=False
+    )
     for box in bp['boxes']:
         box.set(color=color, linewidth=2)
         box.set(facecolor='lightblue')
-
-    ax1.set_xticks(np.arange(1, len(mutations) + 1))
-    ax1.set_xticklabels(mutations, rotation=45, ha='right')
+    ax1.set_xticks(range(1, len(mutation_stats) + 1))
+    ax1.set_xticklabels(mutation_stats.index, rotation=45, ha='right')
     ax1.tick_params(axis='y', labelcolor=color)
-
     ax2 = ax1.twinx()
     color = 'tab:red'
     ax2.set_ylabel('Relative Frequency', color=color)
-    ax2.plot(np.arange(1, len(mutations) + 1), [relative_frequencies[mutation] for mutation in mutations], color=color, marker='o', linestyle='-')
+    ax2.plot(range(1, len(mutation_stats) + 1), mutation_stats['relative_frequency'], color=color, marker='o', linestyle='-')
     ax2.tick_params(axis='y', labelcolor=color)
-
     plt.title('Fitness Impact Distribution and Relative Frequency of Each Mutation')
     fig.tight_layout()
-
-    # save a dataframe as well
-    summary_df = pd.DataFrame(columns=['Min', '25%', 'Median', '75%', 'Max', 'Mean', 'Frequency'])
-    for mutation, effects in mutation_effects.items():
-        df_temp = pd.DataFrame(effects, columns=['Effects'])
-        summary = df_temp['Effects'].describe(percentiles=[.25, .5, .75])
-        summary_df.loc[mutation] = [
-            summary['min'], summary['25%'], summary['50%'], summary['75%'], summary['max'],
-            summary['mean'], summary['count']
-        ]
-
     fig.savefig(f"{savedir}/mutation_analysis.pdf", dpi=300)
-    summary_df.to_markdown(f"{savedir}/mutation_effects.txt")
+    plt.close(fig)
+    
+    # Create line chart for mutations over time
+    fig, ax = plt.subplots(figsize=(12, 6))
+    for mutation, data in df_exploded.groupby('my_mutations'):
+        impact_by_gen = data.groupby('gen')['fitness_difference'].apply(list).reset_index()
+        if max_gen is not None:
+            impact_by_gen = impact_by_gen[impact_by_gen['gen'] <= max_gen]
+        ax.plot(impact_by_gen['gen'], impact_by_gen['fitness_difference'].apply(np.mean), label=mutation)
+    ax.set_xlabel('Generation')
+    ax.set_ylabel('Average Fitness Impact')
+    title = 'Average Impact of Mutations Over Generations'
+    if max_gen is not None:
+        title += f' (up to gen {max_gen})'
+        ax.set_xlim(right=max_gen)
+    ax.set_title(title)
+    
+    # Add legend with adjusted layout
+    ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left', borderaxespad=0.)
+    plt.tight_layout()
+    plt.savefig(f"{savedir}/mutations_over_time.pdf", dpi=300, bbox_inches='tight')
+    plt.close(fig)
+
+    
+    # Save summary statistics
+    mutation_stats.drop('generations', axis=1).to_markdown(f"{savedir}/mutation_effects.txt")
+    return mutation_stats
 
 
 def best_genome_lineage(best_genomes_df: pd.DataFrame, savedir=str):
