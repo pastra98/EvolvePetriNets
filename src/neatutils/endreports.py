@@ -525,20 +525,28 @@ def plot_species_evolution(
     popsize = len(pop_df[pop_df["gen"]==1])
 
     # Calculate species offsets, used for making nice tree structure vis
-    offsets = {}
-    current_offset = 1
-    def dfs(species):
-        nonlocal current_offset
-        if species not in offsets:
-            offsets[species] = current_offset
-            current_offset += 1
-        children = [child for child, data in species_tree.items() if data.get('forked_from') == species]
-        for child in sorted(children):
-            dfs(child)
-    # Find the root species and start DFS
-    root = next(node for node, data in species_tree.items() if not data['forked_from'])
-    dfs(root)
+    def calculate_offsets(tree):
+        offsets = {}
+        current_offset = 1
 
+        def dfs(species):
+            nonlocal current_offset
+            if species not in offsets:
+                offsets[species] = current_offset
+                current_offset += 1
+            children = sorted([child for child, data in tree.items() if data.get('forked_from') == species])
+            for child in children:
+                dfs(child)
+
+        # Find all root species (species with no 'forked_from')
+        roots = [node for node, data in tree.items() if not data['forked_from']]
+        roots.sort()
+        # Perform DFS starting from each root
+        for root in roots:
+            dfs(root)
+        return offsets
+
+    offsets = calculate_offsets(species_tree)
     # Plot species lines
     legend_elements = []
     for species_id, data in species_tree.items():
