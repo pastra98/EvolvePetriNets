@@ -216,9 +216,17 @@ class GeneticNet:
         with higher probability i.e. arcs that might correlate with negative fitness
         """
         choose_from = sorted(list(set(self.arcs).difference(filter_out)))
+        # if just one element, no need to do choice computation
+        if len(choose_from) == 1: return choose_from.pop()
         if params.use_t_vals:
             a_weights_dict = self.get_arc_t_values()
-            arc_weights = [a_weights_dict[a] for a in choose_from]
+            # multiply weights by -1, to give higher prob for choosing bad arcs
+            arc_weights = [-1*a_weights_dict[a] for a in choose_from] # most arc weights are negative
+            # if weightsum < 0, make weights positive by multiplying (negative) sum with *-2
+            arc_weights_sum = sum(arc_weights)
+            if arc_weights_sum  < 0:
+                arc_weights = [a - arc_weights_sum*2 for a in arc_weights]
+            # weighted choice
             arc_id = rd.choices(choose_from, weights=arc_weights, k=1)[0]
         else:
             arc_id = rd.choices(choose_from, k=1)[0]
