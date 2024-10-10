@@ -3,6 +3,7 @@ import random as rd
 from datetime import datetime
 from uuid import uuid4
 from typing import List
+from numba import njit
 
 from neatutils import timer
 
@@ -507,7 +508,6 @@ class PopulationComponentTracker:
     def get_comp_info(self, comp: tuple) -> dict:
         return self.component_dict[comp]
 
-    # @njit(parallel=True)
     def update_t_vals(self, gen, pop_fit_vals) -> dict:
         # TODO: this logic could also be handled in caller, especially if other
         # keys are added to the dict for other prob_map influences
@@ -523,30 +523,9 @@ class PopulationComponentTracker:
             # this should only happen in the first gen, when the start and end connections
             # yield components, shared by everyone, making t value comparison impossible
             if gen == 1:
-                data["t_val"][gen] = 1 # TODO: revisit this number maybe later
+                data["t_val"][gen] = -1
             else:
-                data["t_val"][gen] = self.compute_t(included, pop_fit_vals, pop_len, pop_sum, pop_df)
-
-    # @njit(parallel=True)
-    @staticmethod
-    def compute_t(inc, pop_fit_vals, pop_len, pop_sum, pop_df):
-        inc_sum, inc_len = inc.sum(), len(inc)
-        inc_avg_fit = inc_sum / inc_len
-        exc_len = pop_len - inc_len
-        exc_avg_fit = (pop_sum - inc_sum) / exc_len
-        mean_diff = inc_avg_fit - exc_avg_fit
-
-        inc_df, exc_df = inc_len-1, exc_len-1
-
-        inc_ss = ((inc - inc_avg_fit)**2).sum()
-        inc_var = inc_ss / inc_len
-        
-        exc_ss = ((pop_fit_vals - exc_avg_fit)**2).sum() - inc_ss - inc_len*mean_diff**2
-        exc_var = exc_ss / exc_len
-
-        pool_var = (inc_var*inc_df + exc_var*exc_df) / pop_df
-        se = (pool_var/inc_len + pool_var/exc_len)**0.5
-        return float(mean_diff/se)
+                data["t_val"][gen] = compute_t(included, pop_fit_vals, pop_len, pop_sum, pop_df)
 
 
     def get_inverted_comp_dict(self):
@@ -560,3 +539,22 @@ class PopulationComponentTracker:
         return inverted_comp_dict
 
     
+@njit
+def compute_t(inc, pop_fit_vals, pop_len, pop_sum, pop_df):
+    inc_sum, inc_len = inc.sum(), len(inc)
+    inc_avg_fit = inc_sum / inc_len
+    exc_len = pop_len - inc_len
+    exc_avg_fit = (pop_sum - inc_sum) / exc_len
+    mean_diff = inc_avg_fit - exc_avg_fit
+
+    inc_df, exc_df = inc_len-1, exc_len-1
+
+    inc_ss = ((inc - inc_avg_fit)**2).sum()
+    inc_var = inc_ss / inc_len
+    
+    exc_ss = ((pop_fit_vals - exc_avg_fit)**2).sum() - inc_ss - inc_len*mean_diff**2
+    exc_var = exc_ss / exc_len
+
+    pool_var = (inc_var*inc_df + exc_var*exc_df) / pop_df
+    se = (pool_var/inc_len + pool_var/exc_len)**0.5
+    return float(mean_diff/se)
