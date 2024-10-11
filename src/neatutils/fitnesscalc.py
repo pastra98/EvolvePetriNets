@@ -357,5 +357,16 @@ class Petri:
         """Adapted metric by Buijs, vanDongen & vanDerAalst (2014)
         https://doi.org/10.1142/S0218843014400012
         punishes highly uneven amount transition activations
+
+        not used because this only really makes sense with more hidden transitions..
+        it should look the same for every replay anyways
         """
-        pass
+        task_trans_cts = {name: 0 for name, t in self.transitions.items() if t.is_task}
+        for trace in replay:
+            for firing_info in trace["replay"]:
+                task_trans_cts[firing_info[0]] += 1
+        cnt_sum = 0
+        for cnt in task_trans_cts.values():
+            cnt_sum += 1 / (cnt**0.5)
+        gen_score = 1 - (len(task_trans_cts) / cnt_sum)
+        return max(gen_score, 0)
