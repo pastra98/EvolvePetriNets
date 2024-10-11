@@ -1,9 +1,9 @@
 {
     "popsize": 500,
-    "n_alpha_genomes": 10,
-    "n_inductive_genomes": 10,
-    "n_heuristics_genomes": 10,
-    "n_ilp_genomes": 10,
+    "n_alpha_genomes": 0,
+    "n_inductive_genomes": 0,
+    "n_heuristics_genomes": 0,
+    "n_ilp_genomes": 0,
     "selection_strategy": "speciation",
     "initial_tp_gauss_dist": [
         2.0,
@@ -44,9 +44,6 @@
     "old_age": 99999,
     "old_penalty": 0.8,
     "youth_bonus": 1.4,
-    "perc_fit_traces_weight": 10,
-    "average_trace_fitness_weight": 0,
-    "log_fitness_weight": 0,
     "soundness_weight": 0,
     "precision_weight": 1,
     "generalization_weight": 0,
@@ -54,7 +51,7 @@
     "fraction_used_trans_weight": 0,
     "fraction_tasks_weight": 0,
     "mutation_type": "atomic",
-    "use_t_vals": false,
+    "use_t_vals": true,
     "prob_remove_arc": [
         0.1,
         0.4
@@ -94,5 +91,9 @@
     ],
     "is_no_preference_for_tasks": false,
     "prob_pick_empty_trans": 0.3,
-    "connect_sa_ea": true
+    "connect_sa_ea": true,
+    "replay_mult": 1.5,
+    "missing_penal": 0.4,
+    "remaining_penal": 1,
+    "min_tokens_for_replay": 51
 }

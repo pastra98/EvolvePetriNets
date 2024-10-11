@@ -68,14 +68,27 @@ class Transition:
         return produced
 
 # constants for replay
-MULT = 1.5
-MAX_PTS = 1
+MAX_PTS = 1 #
 NO_INPUTS_PENAL = 0.5
 NO_OUTPUTS_PENAL = 0.5
-MISSING_PENAL = 0.4
-REMAINING_PENAL = 1
+
+@cache
+def max_replay_fitness(len_and_card: tuple):
+    """Uses closed form for sum of multipliers, distributes multiplier across them
+    works under the assumption that MAX_PTS == 1
+    """
+    if MAX_PTS != 1:
+        raise Exception("this function was built under the assumptio MAX_PTS == 1")
+    fit = 0
+    for tlen, cardinality in len_and_card:
+        trace_fit = 1 + params.replay_mult * ((tlen * (tlen-1)) / 2)
+        fit += trace_fit * cardinality
+    return fit
 
 class Petri:
+    """A Petri net implementation specifically for performing token replay and
+    calculating fitness metrics
+    """
     def __init__(
             self,
             places: Dict[str, Place],
@@ -88,6 +101,30 @@ class Petri:
             t_id: t for t_id, t in transitions.items() if not t.is_task
             }
         self.log = log
+
+
+    def evaluate(self):
+        """Get all fitness metrics
+        """
+        # get replay & node degrees
+        replay = self.replay_log()
+        node_degrees = self._get_node_degrees()
+        # simplicity / generalization metrics
+        metrics = {
+            "aggregated_replay_fitnesss": self._aggregate_trace_fitness(replay),
+            "io_connectedness": self._io_connectedness(node_degrees),
+            "mean_by_max": self._mean_by_max_simplicity(node_degrees),
+            "trans_by_tasks": self._fraction_task_trans(),
+            "precision": self._precision(replay),
+            "token_usage": self._token_usage(replay),
+            "over_enabled_trans": self._over_enabled_transitions(replay),
+            "num_arcs": self._num_arcs(),
+            "trans_by_places": self._trans_place_ratio()
+        }
+        return {
+            "replay": replay,
+            "metrics": metrics
+        }
 
 # -------------------- REPLAY -------------------- 
 
@@ -182,18 +219,19 @@ class Petri:
             if not produced: pts -= NO_OUTPUTS_PENAL
             # missing token penalty
             if missing:
-                pts -= MISSING_PENAL * (consumed/missing)
+                pts -= params.missing_penal * (consumed/missing)
             # update multiplier
             if pts == MAX_PTS:
                 n_flawless += 1
             else:
                 n_flawless = 0
-            fitness += pts * max(1, MULT * (n_flawless-1))
+            fitness += pts * max(1, params.replay_mult * (n_flawless-1))
         # penalize for remaining tokens
-        fitness -= REMAINING_PENAL * trace_replay["remaining"]
+        fitness -= params.remaining_penal * trace_replay["remaining"]
         return fitness
 
 # -------------------- METRICS -------------------- 
+# ---------- REPLAY FITNESS
 
     def _aggregate_trace_fitness(self, log_replay: list):
         """Aggregate fitness from all traces of replay, divides by max achievable fitness.
@@ -206,6 +244,15 @@ class Petri:
             )
         return agg_fitness / max_fit
 
+
+    def _io_connectedness(self, node_degrees):
+        """Fraction of places that have both inputs and outputs
+        """
+        # could do similar thing for transitions, but for now just disable
+        io_connected = [p for p in node_degrees["places"].values() if p[0]>0 and p[1]>0]
+        return len(io_connected) / len(self.places)
+
+# ---------- SIMPLICITY
 
     def _get_node_degrees(self):
         """Helper func to calculate degrees of nodes and places
@@ -223,6 +270,7 @@ class Petri:
 
     def _mean_by_max_simplicity(self, node_degrees):
         """Idea is to penalize the max degree being further away from the mean
+        Could be seen as a sort of simplicity metric
         """
         # TODO: could also use variance maybe?
         p_degrees = [sum(p) for p in list(node_degrees["places"].values())]
@@ -231,33 +279,14 @@ class Petri:
         return mean(all_degrees) / max(all_degrees)
     
 
-    def _io_connectedness_simplicity(self, node_degrees):
-        """Fraction of places that have both inputs and outputs
+    def _token_usage(self, replay):
+        """Penalize the model for producing too many tokens
         """
-        # could do similar thing for transitions, but for now just disable
-        io_connected = [p for p in node_degrees["places"].values() if p[0]>0 and p[1]>0]
-        return len(io_connected) / len(self.places)
-
-
-    def _precision(self, replay):
-        """Precision formula from ProDiGen miner
-        """
-        all_enabled = 0
+        token_sum = 0
         for trace in replay:
-            for q in trace["replay"]:
-                all_enabled += len(q[2])
-        return 1 / max(all_enabled, 1)
-
-
-    def _transitions_by_tokens(self, replay):
-        """Penalize the model for producing lots of tokens
-        """
-        all_produced = 0
-        for trace in replay:
-            for q in trace["replay"]:
-                all_produced += q[1][1]
-        tbt = len(self.transitions) / max(all_produced, 1)
-        return min(tbt, 1)
+            token_sum += trace["produced"]
+        token_ratio = params.min_tokens_for_replay / max(token_sum, 1)
+        return min(token_ratio, 1) # cap it to 1
 
 
     def _fraction_task_trans(self):
@@ -281,19 +310,31 @@ class Petri:
         """
         return min(len(self.transitions) / len(self.places), 1)
 
+# ---------- PRECISION
 
-    def _over_enabled_transitions(self, log_replay):
+    def _precision(self, replay):
+        """Precision formula from ProDiGen miner
+        """
+        all_enabled = 0
+        for trace in replay:
+            for q in trace["replay"]:
+                all_enabled += len(q[2])
+        return 1 / max(all_enabled, 1)
+
+
+    def _over_enabled_transitions(self, replay):
         """Whenever more trans are enabled than indicated in dfg, increase denominator
+        Basically an improved version of the _precision() metric above.
         """
         s_dict = {t: [] for t in self.log["footprints"]["activities"]}
         for s in self.log["footprints"]["dfg"]:
             s_dict[s[0]].append(s[1])
 
         enabled_too_much = 0
-        for trace_replay in log_replay:
+        for trace in replay:
             # if a fired trans is hidden, count its enabled trans towards next task
             enabled_by_hiddens = []
-            for firing_info in trace_replay["replay"]:
+            for firing_info in trace["replay"]:
                 trans = firing_info[0]
                 enables = firing_info[2]
                 # hidden trans
@@ -310,39 +351,11 @@ class Petri:
 
         return 1 / max(enabled_too_much, 1) # if none were enabled too much, perfect score
 
+# ---------- GENERALIZATION
 
-    def evaluate(self):
-        """Get all fitness metrics
+    def _generalization(self, replay):
+        """Adapted metric by Buijs, vanDongen & vanDerAalst (2014)
+        https://doi.org/10.1142/S0218843014400012
+        punishes highly uneven amount transition activations
         """
-        # get replay & node degrees
-        replay = self.replay_log()
-        node_degrees = self._get_node_degrees()
-        # simplicity / generalization metrics
-        metrics = {
-            "aggregated_replay_fitnesss": self._aggregate_trace_fitness(replay),
-            "io_connectedness": self._io_connectedness_simplicity(node_degrees),
-            "mean_by_max": self._mean_by_max_simplicity(node_degrees),
-            "trans_by_tasks": self._fraction_task_trans(),
-            "precision": self._precision(replay),
-            "trans_by_tokens": self._transitions_by_tokens(replay),
-            "over_enabled_trans": self._over_enabled_transitions(replay),
-            "num_arcs": self._num_arcs(),
-            "trans_by_places": self._trans_place_ratio()
-        }
-        return {
-            "replay": replay,
-            "metrics": metrics
-        }
-
-@cache
-def max_replay_fitness(len_and_card: tuple):
-    """Uses closed form for sum of multipliers, distributes multiplier across them
-    works under the assumption that MAX_PTS == 1
-    """
-    if MAX_PTS != 1:
-        raise Exception("this function was built under the assumptio MAX_PTS == 1")
-    fit = 0
-    for tlen, cardinality in len_and_card:
-        trace_fit = 1 + MULT * ((tlen * (tlen-1)) / 2)
-        fit += trace_fit * cardinality
-    return fit
+        pass
