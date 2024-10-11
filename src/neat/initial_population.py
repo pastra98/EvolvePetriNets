@@ -72,8 +72,6 @@ def get_random_genomes(n_genomes, log, component_tracker):
 
 
 def get_bootstrap_genomes(log, component_tracker):
-    """
-    """
     bootstrap_setup = {
         alpha: params.n_alpha_genomes,
         inductive: params.n_inductive_genomes,
@@ -92,8 +90,11 @@ def get_bootstrap_genomes(log, component_tracker):
 def construct_genome_from_mined_net(net, im, fm, tl, ct):
     g = genome.GeneticNet(dict(), dict(), dict(), task_list=tl, pop_component_tracker=ct)
 
-    # different miners call source/sink by different names
-    place_dict = {"source":"start", "start":"start", "sink":"end", "end":"end"}
+    # different miners call source/sink by different names - this is hacky crap
+    place_dict = {
+        "source":"start", "start":"start", "source0":"start",
+        "sink":"end", "end":"end", "sink0":"end"
+        }
     trans_dict = {t:t for t in tl} # map t.label to genome id
     
     for p in net.places:
@@ -106,6 +107,7 @@ def construct_genome_from_mined_net(net, im, fm, tl, ct):
     for t in net.transitions:
         if t.label not in tl:
             new_id = g.add_new_trans()
+            t.label = t.name
             trans_dict[t.label] = new_id
 
     for a in net.arcs:
