@@ -227,7 +227,7 @@ class Petri:
         # TODO: could also use variance maybe?
         p_degrees = [sum(p) for p in list(node_degrees["places"].values())]
         t_degrees = [sum(t) for t in list(node_degrees["transitions"].values())]
-        all_degrees = [d for d in t_degrees + t_degrees if d > 0]
+        all_degrees = [d for d in t_degrees + p_degrees if d > 0]
         return mean(all_degrees) / max(all_degrees)
     
 
