@@ -1,4 +1,5 @@
 import json
+from typing import Dict, List, Union, TypedDict
 
 name = None
 
@@ -91,13 +92,15 @@ remaining_penal: float # is multiplied with every remaining token after replay
 min_tokens_for_replay: int # 51 for simple running_example log
 
 # other fitness measures
-soundness_weight: float
-precision_weight: float
-generalization_weight: float
-simplicity_weight: float
-fraction_used_trans_weight: float
-fraction_tasks_weight: float
-remaining_score_weight: float
+class MetricParams(TypedDict):
+    weight: float # weight to multiply metric with
+    raise_by: float # metric is raised by that, default should be 1
+    active_gen: int # in which generation start adding that metric
+    # anchor_to[0]: key to metric, default "". If specified, only add fitness if other metric reaches anchor_to[1]
+    anchor_to: List[Union[str, float]] 
+
+metric_dict: Dict[str, MetricParams] # metric: MetricParams
+
 
 # ---------- MUTATIONS GENERAL
 mutation_type: str # "multi" / "atomic"

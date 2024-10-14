@@ -684,24 +684,43 @@ class GeneticNet:
         return net, im, fm
 
 
-    def evaluate_fitness(self, log, curr_gen=0):
+    def evaluate_fitness(self, log, curr_gen=1):
         """builds petri net for fitness calculations, aggregates/combines it's fitness
         metrics based on the log. Optional curr_gen argument is currently unused.
+
+        for efficiency, I could calculate the max achievable fitness only once and
+        save it, but the perf is ok for me so far.
         """
-        # fitness eval
         # model_eval = self.build_fc_np_petri(log).evaluate() # <- for using numpy, not recommended
         model_eval = self.build_fc_petri(log).evaluate()
 
         self.fitness_metrics = model_eval["metrics"]
 
-        agg_rep = self.fitness_metrics["aggregated_replay_fitnesss"]
-        oet = self.fitness_metrics["over_enabled_trans"]
-
-        self.fitness = max(agg_rep, 0)
-        if agg_rep >= 0.7:
-            # almost like a a one way pareto thing
-            self.fitness += min(oet, agg_rep)# cap oet to agg_rep
-
+        fit, max_fit = 0, 0
+        for m, val in self.fitness_metrics.items():
+            # skip metrics that are not listed in the fitness dict
+            metric_params = params.metric_dict.get(m)
+            if not metric_params or metric_params["weight"]==0:
+                continue
+            # skip metric if only active at later gen
+            if curr_gen < metric_params["active_gen"]:
+                continue
+            # this is the max achievable fitness value, it gets the same transformations
+            max_val = 1
+            # check if the fitness value should be anchored to another fitness value
+            anchor_metric = self.fitness_metrics.get(metric_params["anchor_to"][0])
+            if anchor_metric and anchor_metric > metric_params["anchor_to"][1]:
+                val = min(anchor_metric, val) # cap to anchor metric
+            # transform the variable (default = 1, so no change)
+            pow = metric_params.get("raise_by")
+            val, max_val = val ** pow, max_val ** pow
+            # apply weight
+            weight = metric_params.get("weight")
+            val, max_val = val * weight, max_val * weight
+            # update the actual and maximum fitness
+            fit += val; max_fit += max_val
+        # assign fitness
+        self.fitness = fit / max_fit
         return model_eval
 
 # ------------------------------------------------------------------------------
