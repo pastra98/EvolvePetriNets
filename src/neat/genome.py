@@ -87,6 +87,9 @@ class GeneticNet:
 # ------------------------------------------------------------------------------
 
     def mutate(self, mutation_rate):
+        """Depending on chosen params, the genome either applies just one or multiple
+        mutations (param: mutation_type)
+        """
         if params.mutation_type == "multi":
             self.multi_mutation(mutation_rate)
         elif params.mutation_type == "atomic":
@@ -101,6 +104,9 @@ class GeneticNet:
 
 
     def clear_cache(self):
+        """GeneticNet uses function caching to improve speed, after mutations this
+        needs to be cleared.
+        """
         self.get_arc_t_values.cache_clear()
         self.build_petri.cache_clear()
         self.get_component_list.cache_clear()
@@ -235,7 +241,11 @@ class GeneticNet:
 
     @cache
     def get_arc_t_values(self) -> dict:
-        # extend this method for whatever info we need about arcs, places, transitions        # arc_values = {a.id: 1 for a in self.arcs.values()}
+        """Returns a dict, mapping the t-value (calculated from population fitness
+        in the ga.PopulationComponentTracker.update_t_vals() method) of the component
+        of which an arc is part of to the arc id. Used for targetted mutations
+        """
+        # extend this method for whatever info we need about arcs, places, transitions
         # from innovs during mutations
         arc_values = {}
         all_c = self.get_component_list()
@@ -249,18 +259,24 @@ class GeneticNet:
 
 
     def add_new_place(self, id=""):
+        """Adds a new place to the genome
+        """
         new_place = GPlace() if not id else GPlace(id)
         self.places[new_place.id] = new_place
         return new_place.id
 
 
     def add_new_trans(self, id="", is_task=False):
+        """Adds a new transition to the genome
+        """
         new_trans = GTrans() if not id else GTrans(id, is_task)
         self.transitions[new_trans.id] = new_trans
         return new_trans.id
 
 
     def add_new_arc(self, source_id, target_id):
+        """Adds a new arc to the genome
+        """
         new_arc = GArc(source_id, target_id)
         self.arcs[new_arc.id] = new_arc
         return new_arc.id
@@ -270,6 +286,9 @@ class GeneticNet:
 # ------------------------------------------------------------------------------
 
     def place_trans_arc(self, place_id=None, trans_id=None) -> None:
+        """connects a place with a transition, if no args are specified, two random
+        are chosen
+        """
         if not place_id and not trans_id: # no trans/place specified in arguments
             # pick a place that is not the end place, pick a trans
             place_id = rd.choice(list(set(self.places).difference({'end'})))
@@ -282,6 +301,9 @@ class GeneticNet:
 
 
     def trans_place_arc(self, trans_id=None, place_id=None) -> None:
+        """connects transition a with a place, if no args are specified, two random
+        are chosen
+        """
         if not trans_id and not place_id: # no trans/place specified in arguments
             # pick a trans, pick a place that is not the start place
             trans_id = self.pick_trans_with_preference()
@@ -294,6 +316,8 @@ class GeneticNet:
 
 
     def extend_new_place(self, trans_id=None) -> None:
+        """Chooses random transition, adds an input or output place (50% prob)
+        """
         if not trans_id: # TODO: could also filter out trans that have leaf extensions?
             trans_id = self.pick_trans_with_preference()
         new_place_id = self.add_new_place()
@@ -306,6 +330,8 @@ class GeneticNet:
 
 
     def extend_new_trans(self, place_id=None, is_output=False) -> str:
+        """Chooses random place, adds an input or output hidden trans (50% prob)
+        """
         new_trans_id = self.add_new_trans()
         if not place_id: # TODO: could also filter out place that have leaf extensions?
             place_id = rd.choice(list(set(self.places).difference({'end'})))
@@ -325,6 +351,8 @@ class GeneticNet:
 
 
     def trans_trans_conn(self, source_id=None, target_id=None):
+        """Chooses 2 random transitions, adds 2 arcs and a place in the middle between them
+        """
         if not source_id and not target_id:
             source_id = self.pick_trans_with_preference()
             target_id = rd.choice([t for t in self.transitions.keys() if t != source_id])
@@ -336,6 +364,8 @@ class GeneticNet:
 
 
     def split_arc(self):
+        """Chooses random arc, splits it by adding a hidden trans and place
+        """
         if not self.arcs:
             return
 
@@ -400,6 +430,8 @@ class GeneticNet:
 
 
     def remove_arcs(self, arcs_to_remove=None) -> None:
+        """chooses a random arc and removes it from the genome
+        """
         if len(self.arcs) <= ((len(self.places) + len(self.transitions)) / 3):
             return # if the number of arcs is less than third of all nodes, do not remove
         if not arcs_to_remove: # no arcs to remove specified
@@ -415,6 +447,8 @@ class GeneticNet:
 
 
     def flip_arc(self, arc_to_flip=None):
+        """flips the direction of a randomly chosen arc
+        """
         if len(self.arcs) <= ((len(self.places) + len(self.transitions)) / 3):
             return # no arcs left to flip
         if not arc_to_flip:
@@ -511,6 +545,8 @@ class GeneticNet:
 # ----- component distance
     @cache
     def get_component_list(self) -> list:
+        """Returns the list of components in the genome
+        """
 
         def format_tname(t): # all hidden transitions are named "t"
             return t if t in self.task_list else "t"
@@ -698,6 +734,8 @@ class GeneticNet:
 
 
     def remove_unused_nodes(self) -> None:
+        """removes orphan hidden transitions and places
+        """
         connected = self.get_connected()
         t_to_del = []
         for t in self.transitions:
