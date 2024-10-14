@@ -86,6 +86,7 @@ youth_bonus: float
 # token replay mult/penalties
 replay_mult: float # for every successive full points transition execution, mult doubles
 missing_penal: float # is subtracted from replay pts at ratio (consumed / missing)
+# remaining penalty can be set to 0 if the "remaining_score" metric is used
 remaining_penal: float # is multiplied with every remaining token after replay
 
 # for min token use metric, value is user-defined but can probably be calculated in a smart way
