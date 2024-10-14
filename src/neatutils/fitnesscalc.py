@@ -120,7 +120,8 @@ class Petri:
             "token_usage": self._token_usage(replay),
             "over_enabled_trans": self._over_enabled_transitions(replay),
             "num_arcs": self._num_arcs(),
-            "trans_by_places": self._trans_place_ratio()
+            "trans_by_places": self._trans_place_ratio(),
+            "remaining_score": self._remaining_score(replay)
         }
         return {
             "replay": replay,
@@ -234,11 +235,11 @@ class Petri:
 # -------------------- METRICS -------------------- 
 # ---------- REPLAY FITNESS
 
-    def _aggregate_trace_fitness(self, log_replay: list):
+    def _aggregate_trace_fitness(self, replay: list):
         """Aggregate fitness from all traces of replay, divides by max achievable fitness.
         """
         agg_fitness = 0
-        for replay, cardinality in zip(log_replay, self.log["variants"].values()):
+        for replay, cardinality in zip(replay, self.log["variants"].values()):
             agg_fitness += replay["fitness"] * cardinality
         max_fit = max_replay_fitness( # tuples len of trace with cardinality
             tuple([(len(t), cardinality) for t, cardinality in self.log["variants"].items()])
@@ -253,6 +254,20 @@ class Petri:
         # could do similar thing for transitions, but for now just disable
         io_connected = [p for p in node_degrees["places"].values() if p[0]>0 and p[1]>0]
         return len(io_connected) / len(self.places)
+
+
+    def _remaining_score(self, replay):
+        """Calculated based on the fraction of remaining tokens after replay vs.
+        produced tokens
+        """
+        tot_produced, tot_remaining = 0, 0
+        for trace in replay:
+            tot_produced += trace["produced"]
+            tot_remaining += trace["remaining"]
+
+        if tot_produced == 0:
+            return 1
+        return 1 - (tot_remaining / tot_produced)
 
 # ---------- SIMPLICITY
 

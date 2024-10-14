@@ -97,6 +97,7 @@ generalization_weight: float
 simplicity_weight: float
 fraction_used_trans_weight: float
 fraction_tasks_weight: float
+remaining_score_weight: float
 
 # ---------- MUTATIONS GENERAL
 mutation_type: str # "multi" / "atomic"
