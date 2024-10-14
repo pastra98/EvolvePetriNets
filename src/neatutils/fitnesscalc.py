@@ -85,6 +85,7 @@ def max_replay_fitness(len_and_card: tuple):
         fit += trace_fit * cardinality
     return fit
 
+
 class Petri:
     """A Petri net implementation specifically for performing token replay and
     calculating fitness metrics
@@ -242,7 +243,8 @@ class Petri:
         max_fit = max_replay_fitness( # tuples len of trace with cardinality
             tuple([(len(t), cardinality) for t, cardinality in self.log["variants"].items()])
             )
-        return agg_fitness / max_fit
+        fraction = agg_fitness / max_fit
+        return max(fraction, 0)
 
 
     def _io_connectedness(self, node_degrees):
