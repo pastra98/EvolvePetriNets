@@ -58,9 +58,19 @@ initial_pe_gauss_dist: list[float, float]
 initial_te_gauss_dist: list[float, float]
 initial_as_gauss_dist: list[float, float]
 
-# -------------------- selection strategy: SPECIATION
+
+# -------------------- selection strategies: SHARED PARAMS
+# used by all 3 selection strategies
 pop_perc_crossover: float # percentage of population spawns that will be crossover
 start_crossover: int # [0-1], after what generation start crossover
+
+# used by roulette and truncation selection
+pop_perc_elite: float # percentage of population spawns that will be crossover
+
+# used by speciation and trunctation
+spawn_cutoff: float # either determines cutoff within species mating pool or entire pop
+
+# -------------------- selection strategy: SPECIATION
 species_boundary: float
 
 compat_to_multiple: bool # if true, then new genomes are compared to components from multiple members
@@ -72,15 +82,12 @@ enough_gens_to_change_things: int
 update_species_rep: bool
 leader_is_rep: bool
 selection_threshold: int
-spawn_cutoff: float # actually also used by truncation_pop_update
 elitism: bool
 
 allowed_gens_no_improvement: int
 old_age: int
 old_penalty: float
 youth_bonus: float
-# -------------------- selection strategy: ROULETTE 
-# -------------------- selection strategy: TRUNCATION
 
 # ---------- FITNESS CHECK
 # token replay mult/penalties

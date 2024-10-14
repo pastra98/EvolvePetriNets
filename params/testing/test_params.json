@@ -4,7 +4,7 @@
     "n_inductive_genomes": 0,
     "n_heuristics_genomes": 0,
     "n_ilp_genomes": 0,
-    "selection_strategy": "speciation",
+    "selection_strategy": "truncation",
     "initial_tp_gauss_dist": [
         2.0,
         1.0
@@ -30,7 +30,8 @@
         0.0
     ],
     "pop_perc_crossover": 0.3,
-    "start_crossover": 5,
+    "pop_perc_elite": 0.05,
+    "start_crossover": 15,
     "species_boundary": 0.8,
     "compat_to_multiple": true,
     "species_component_pool_size": 3,

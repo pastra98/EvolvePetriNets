@@ -393,9 +393,13 @@ class GeneticAlgorithm:
         fit_sum = sum(fitnesses)
         probabilities = [fit / fit_sum for fit in fitnesses]
 
-        # TODO use params here, like when start crossover etc.
-        n_elites, n_crossover = 10, 90
-        n_asex = params.popsize - n_elites- n_crossover
+        # determine number of spawns
+        if self.curr_gen >= params.start_crossover:
+            n_crossover = int(params.popsize * params.pop_perc_crossover)
+        else:
+            n_crossover = 0
+        n_elites = int(params.popsize * params.pop_perc_elite)
+        n_asex = params.popsize - n_elites - n_crossover
 
         # elite spawns - without mutation
         elite_spawns = []
@@ -413,6 +417,7 @@ class GeneticAlgorithm:
             new_g = p1.crossover(p2)
             if new_g:
                 crossover_spawns.append(new_g)
+
         # asex spawns - with mutation
         asex_spawns = []
         for _ in range(n_asex):
@@ -426,15 +431,17 @@ class GeneticAlgorithm:
 # TRUNCATION -------------------------------------------------------------------
 
     def truncation_pop_update(self) -> None:
-        """
+        """Simply chops away the sorted population falling below spawn_cutoff
+        Makes no effort at maintaining diversity
         """ 
-        # TODO use params here, like when start crossover etc.
-        n_elites, n_crossover = 10, 90
-        n_asex = params.popsize - n_elites- n_crossover
-        poolsize = 200
+        if self.curr_gen >= params.start_crossover:
+            n_crossover = int(params.popsize * params.pop_perc_crossover)
+        else:
+            n_crossover = 0
+        n_elites = int(params.popsize * params.pop_perc_elite)
+        n_asex = params.popsize - n_elites - n_crossover
 
-        # pool = self.population[:int(params.popsize*params.spawn_cutoff)]
-        # pool = self.population[:poolsize]
+        pool = self.population[:int(params.popsize*params.spawn_cutoff)]
 
         # elite spawns - without mutation
         elite_spawns = []
@@ -443,27 +450,18 @@ class GeneticAlgorithm:
             elite_spawns.append(new_elite)
             if i == n_elites - 1: break
 
-        # crossover spawns - without mutation
-        crossover_spawns = []
-        while len(crossover_spawns) < n_crossover:
-            # those should be from the previous gen - which they are??
-            # TODO: temporary hack to get two parents in truncation
-            p1 = np.random.choice(self.population)
-            p2 = np.random.choice(self.population)
-            new_g = p1.crossover(p2)
-            if new_g:
-                crossover_spawns.append(new_g)
+        # crossover spawns, using speciation method (so truncation not active here)
+        crossover_spawns = self.get_crossover_spawns(n_crossover)
 
         # asex spawns - with mutation
         asex_spawns = []
         for i in range(n_asex):
-            i = i % poolsize if i else i
-            new_g = self.population[i].clone()
+            i = i % len(pool)
+            new_g = pool[i].clone()
             new_g.mutate(0)
             asex_spawns.append(new_g)
 
         self.population = elite_spawns + crossover_spawns + asex_spawns
-
 
 # ------------------------------------------------------------------------------
 # ComponentTracker class -------------------------------------------------------
