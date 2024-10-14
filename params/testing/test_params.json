@@ -30,7 +30,7 @@
         0.0
     ],
     "pop_perc_crossover": 0.3,
-    "start_crossover": 15,
+    "start_crossover": 5,
     "species_boundary": 0.8,
     "compat_to_multiple": true,
     "species_component_pool_size": 3,
@@ -95,5 +95,6 @@
     "replay_mult": 1.5,
     "missing_penal": 0.4,
     "remaining_penal": 1,
-    "min_tokens_for_replay": 51
+    "min_tokens_for_replay": 51,
+    "tournament_size": 10
 }
