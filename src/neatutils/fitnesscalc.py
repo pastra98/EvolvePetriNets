@@ -228,8 +228,6 @@ class Petri:
             else:
                 n_flawless = 0
             fitness += pts * max(1, params.replay_mult * (n_flawless-1))
-        # penalize for remaining tokens
-        fitness -= params.remaining_penal * trace_replay["remaining"]
         return fitness
 
 # -------------------- METRICS -------------------- 
