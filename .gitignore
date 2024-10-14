@@ -2,6 +2,7 @@
 results/data
 pm_data/
 results/results_used_in_analysis
+results/runs_that_did_it
 
 # don't save compiled modules
 *.pyc
