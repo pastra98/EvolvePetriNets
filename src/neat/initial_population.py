@@ -80,6 +80,8 @@ def get_bootstrap_genomes(log, component_tracker):
     }
     mined_nets = []
     for miner, count in bootstrap_setup.items():
+        if not count:
+            continue
         net, im, fm = miner(log["dataframe"])
         g = construct_genome_from_mined_net(net, im, fm, log["task_list"], component_tracker)
         for _ in range(count):
