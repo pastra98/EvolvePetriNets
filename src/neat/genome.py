@@ -721,7 +721,8 @@ class GeneticNet:
 
 
     def get_connected(self) -> set:
-        # get set of all nodes that are connected to the network via arcs
+        """Get set of all nodes that are connected to the network via arcs
+        """
         connected = [(a.source_id, a.target_id) for a in self.arcs.values()]
         return set(itertools.chain.from_iterable(connected))
 
