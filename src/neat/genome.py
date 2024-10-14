@@ -363,22 +363,30 @@ class GeneticNet:
         return
 
 
-    def prune_leaf(self) -> None: # TODO: name this prune leafs later
-        all_nodes = self.places | self.transitions
+    def prune_leaf(self) -> None:
+        """This mutation randomly chooses a place or hidden transition that only has an
+        input or output arc, but not both - and removes it from the genome.
+        """
+        all_nodes = self.places | {n:t for n,t in self.transitions.items() if not t.is_task}
         del all_nodes["start"], all_nodes["end"] # exclude start and end
 
-        # filter all leaves
-        leaves = all_nodes.copy()
+        has_inputs, has_outputs = set(), set()
         for a in self.arcs.values():
-           leaves.pop(a.source_id, None)
+            has_inputs.add(a.target_id)
+            has_outputs.add(a.source_id)
+
+        leaves = all_nodes.copy()
+        for n in all_nodes:
+            if n in has_inputs and n in has_outputs:
+                leaves.pop(n, None)
 
         # prevent this mutation from deleting the last nodes
         if len(leaves) == len(all_nodes) or not leaves:
             return
 
-        # choose leaf, delete all arcs pointing to the leaf
+        # choose leaf, delete all arcs connecting to the leaf
         leaf_id = rd.choice(list(leaves.keys()))
-        arcs_to_del = [a.id for a in self.arcs.values() if a.target_id == leaf_id]
+        arcs_to_del = [a.id for a in self.arcs.values() if leaf_id in (a.source_id, a.target_id) ]
         for a_id in arcs_to_del:
             del self.arcs[a_id]
 
@@ -386,6 +394,7 @@ class GeneticNet:
             del self.places[leaf_id]
         else:
             del self.transitions[leaf_id]
+
         self.my_mutations.append("pruned_leaf")
         return
 
