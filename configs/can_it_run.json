@@ -1,5 +1,5 @@
 {
-    "name": "testing_bootstrap",
+    "name": "metrics_test",
     "setups": [
         {
             "setupname": "whatever",
@@ -11,9 +11,9 @@
             },
             "stop_cond": {
                 "var": "gen",
-                "val": 200
+                "val": 300
             },
-            "n_runs": 4,
+            "n_runs": 8,
             "send_gen_info_to_console": false,
             "is_profiled": false
         }
