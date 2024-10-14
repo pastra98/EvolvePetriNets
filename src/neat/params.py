@@ -63,7 +63,8 @@ start_crossover: int # [0-1], after what generation start crossover
 species_boundary: float
 
 compat_to_multiple: bool # if true, then new genomes are compared to components from multiple members
-species_component_pool_size: int
+species_component_pool_size: int # how many (randomly chosen) species membrs contrib their comp to species comp pool
+tournament_size: int # for crossover, how big should tournament be that selects 2 parents
 
 # species relevant stuff
 enough_gens_to_change_things: int

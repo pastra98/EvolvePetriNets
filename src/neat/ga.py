@@ -339,10 +339,9 @@ class GeneticAlgorithm:
     def get_crossover_spawns(self, num_to_spawn: int) -> list:
         # tournament selection approach
         new_genomes = []
-        tournament_size = 10 # TODO: make this a param
 
         while len(new_genomes) < num_to_spawn:
-            tournament = rd.sample(self.population, tournament_size)
+            tournament = rd.sample(self.population, params.tournament_size)
             tournament.sort(key=lambda g: g.fitness)
             mom, dad = tournament[0], tournament[1]
             baby = mom.crossover(dad)
