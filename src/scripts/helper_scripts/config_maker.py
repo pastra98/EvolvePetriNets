@@ -135,7 +135,9 @@ class MainWindow(QMainWindow):
                         "var": "gen",
                         "val": self.stop_after.value()
                     },
-                    "n_runs": self.setup_runs.value()
+                    "n_runs": self.setup_runs.value(),
+                    "send_gen_info_to_console": False,
+                    "is_profiled": False
                 }
                 config["setups"].append(setup)
             
