@@ -22,6 +22,7 @@ class MainWindow(QMainWindow):
         config_widget.setLayout(config_layout)
         
         self.logpath = QLineEdit()
+        self.logpath.setText("pm_data/running_example.xes")
         config_layout.addWidget(QLabel("Log Path:"))
         config_layout.addWidget(self.logpath)
         
@@ -33,11 +34,13 @@ class MainWindow(QMainWindow):
         
         self.stop_after = QSpinBox()
         self.stop_after.setRange(1, 10000)
-        config_layout.addWidget(QLabel("Stop After:"))
+        self.stop_after.setValue(500)
+        config_layout.addWidget(QLabel("Number of Generations:"))
         config_layout.addWidget(self.stop_after)
         
         self.setup_runs = QSpinBox()
-        self.setup_runs.setRange(1, 100)
+        self.setup_runs.setRange(1, 1000)
+        self.setup_runs.setValue(16)
         config_layout.addWidget(QLabel("Number of Setup Runs:"))
         config_layout.addWidget(self.setup_runs)
         
