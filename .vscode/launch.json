@@ -4,6 +4,7 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
+        
         {
             "name": "debug file",
             "type": "python",
@@ -11,6 +12,16 @@
             "request": "launch",
             "console": "integratedTerminal",
             "cwd": "${workspaceFolder}/src",
+            "justMyCode": false,
+
+        },
+        {
+            "name": "debug gui",
+            "type": "python",
+            "program": "${file}",
+            "request": "launch",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
             "justMyCode": false,
 
         },
