@@ -66,6 +66,10 @@ class MainWindow(QMainWindow):
         self.load_params_button.clicked.connect(self.load_params)
         params_layout.addWidget(self.load_params_button)
         
+        # Add info box for currently loaded base params
+        self.base_params_info = QLabel()
+        params_layout.addWidget(self.base_params_info)
+        
         self.params_scroll = QScrollArea()
         self.params_scroll.setWidgetResizable(True)
         self.params_content = QWidget()
@@ -104,6 +108,7 @@ class MainWindow(QMainWindow):
             with open(file_name, 'r') as f:
                 self.base_params = json.load(f)
             self.update_info_box()
+            self.base_params_info.setText(f"Currently loaded: {file_name}")
     
     def add_parameter(self):
         param_widget = QWidget()
