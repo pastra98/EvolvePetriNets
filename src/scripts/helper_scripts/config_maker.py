@@ -90,6 +90,7 @@ class MainWindow(QMainWindow):
         
         # Load default params
         self.load_params("params/default_params.json")
+        self.add_parameter()
         self.update_info_box()
 
         
