@@ -76,7 +76,7 @@ Here I plan to keep track about all the ^^temporary scripts and notebooks I made
 
 ### Config maker (old)
 **path:**
-* src/scripts/helper_scripts/config_maker.py
+* src/scripts/helper_scripts/config_maker_old.py
 
 **purpose:**
 * Unholy mess of a script a script that had something to do with automating param creation.  I plan to start from first principles again for param creation tool, but I am keeping this for now just because I don't know what the functionality of this was exactly.
