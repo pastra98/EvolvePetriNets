@@ -5,7 +5,9 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QH
                              QLabel, QLineEdit, QCheckBox, QPushButton, QFileDialog, 
                              QScrollArea, QComboBox, QSpinBox, QTextEdit, QInputDialog, QMessageBox)
 from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtGui import QPixmap
 from itertools import product
+import graphviz
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -87,10 +89,29 @@ class MainWindow(QMainWindow):
         param_buttons_layout.addWidget(self.remove_param_button)
         
         params_layout.addLayout(param_buttons_layout)
+
+        # Tree visualization section
+        tree_widget = QWidget()
+        tree_layout = QVBoxLayout()
+        tree_widget.setLayout(tree_layout)
+        
+        self.tree_label = QLabel()
+        tree_layout.addWidget(self.tree_label)
+        
+        self.checkbox_scroll = QScrollArea()
+        self.checkbox_scroll.setWidgetResizable(True)
+        self.checkbox_content = QWidget()
+        self.checkbox_layout = QVBoxLayout()
+        self.checkbox_content.setLayout(self.checkbox_layout)
+        self.checkbox_scroll.setWidget(self.checkbox_content)
+        tree_layout.addWidget(self.checkbox_scroll)
+
         
         # Add sections to main layout
         main_layout.addWidget(config_widget)
         main_layout.addWidget(params_widget)
+        main_layout.addWidget(tree_widget)
+
         
         main_widget.setLayout(main_layout)
         self.setCentralWidget(main_widget)
@@ -115,6 +136,7 @@ class MainWindow(QMainWindow):
             self.update_info_box()
             self.base_params_info.setText(f"Currently loaded: {file_name}")
     
+
     def add_parameter(self):
         param_widget = QWidget()
         param_layout = QHBoxLayout()
@@ -124,12 +146,14 @@ class MainWindow(QMainWindow):
         param_layout.addWidget(param_key)
         
         param_values = QLineEdit()
+        param_values.editingFinished.connect(self.update_tree)
         param_values.editingFinished.connect(self.update_info_box)
         param_layout.addWidget(param_values)
         
         param_widget.setLayout(param_layout)
         self.params_content_layout.addWidget(param_widget)
-        self.update_info_box()
+        self.update_tree()
+
 
     def remove_parameter(self):
         if self.params_content_layout.count() > 0:
@@ -137,8 +161,83 @@ class MainWindow(QMainWindow):
             widget = item.widget()
             if widget:
                 widget.deleteLater()
-            self.update_info_box()
-    
+            self.update_tree()
+
+
+    def update_tree(self):
+        param_values = self.get_param_values()
+        if not param_values:
+            return
+
+        dot = graphviz.Digraph(comment='Parameter Tree')
+        dot.attr(rankdir='TB')  # Top to Bottom layout
+
+        def create_node_label(params):
+            return '\n'.join([f"{k}: {v}" for k, v in params.items()])
+
+        def add_nodes(current_params, remaining_params, parent_id=None):
+            if not remaining_params:
+                setup_number = len(dot.body) // 2 + 1  # Approximate setup number
+                node_id = f"setup_{setup_number}"
+                dot.node(node_id, f"Setup {setup_number}\n{create_node_label(current_params)}")
+                if parent_id:
+                    dot.edge(parent_id, node_id)
+                return
+
+            current_key, current_values = next(iter(remaining_params.items()))
+            new_remaining = dict(list(remaining_params.items())[1:])
+
+            for value in current_values:
+                new_params = {**current_params, current_key: value}
+                node_id = f"node_{'_'.join(map(str, new_params.values()))}"
+                dot.node(node_id, create_node_label(new_params))
+
+                if parent_id:
+                    dot.edge(parent_id, node_id)
+
+                add_nodes(new_params, new_remaining, node_id)
+
+        # Add root node
+        root_id = "root"
+        dot.node(root_id, "base params")
+
+        # Start the recursion with the root node as parent
+        add_nodes({}, param_values, root_id)
+
+        # Render the tree
+        dot.render('tree', format='png', cleanup=True)
+        
+        # Display the tree
+        pixmap = QPixmap('tree.png')
+        self.tree_label.setPixmap(pixmap.scaled(600, 400, Qt.AspectRatioMode.KeepAspectRatio))
+
+        # Update checkboxes
+        num_setups = len(list(product(*param_values.values())))
+        self.update_checkboxes(num_setups)
+
+
+    def get_param_values(self):
+        param_values = {}
+        for i in range(self.params_content_layout.count()):
+            widget = self.params_content_layout.itemAt(i).widget()
+            key = widget.layout().itemAt(0).widget().currentText()
+            values = widget.layout().itemAt(1).widget().text().split(';')
+            param_values[key] = values
+        return param_values
+
+
+    def update_checkboxes(self, num_setups):
+        # Clear existing checkboxes
+        for i in reversed(range(self.checkbox_layout.count())): 
+            self.checkbox_layout.itemAt(i).widget().setParent(None)
+
+        # Add new checkboxes
+        for i in range(num_setups):
+            checkbox = QCheckBox(f'Setup {i+1}')
+            checkbox.setChecked(True)
+            self.checkbox_layout.addWidget(checkbox)
+
+
     def get_nested_keys(self, d, prefix=''):
         keys = []
         for k, v in d.items():
