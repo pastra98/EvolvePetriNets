@@ -1,0 +1,193 @@
+import sys
+import json
+import os
+from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
+                             QLabel, QLineEdit, QCheckBox, QPushButton, QFileDialog, 
+                             QScrollArea, QComboBox, QSpinBox)
+from PyQt6.QtCore import Qt
+from itertools import product
+
+class MainWindow(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Genetic Algorithm Configuration")
+        self.setGeometry(100, 100, 800, 600)
+
+        main_widget = QWidget()
+        main_layout = QHBoxLayout()
+        
+        # Config section
+        config_widget = QWidget()
+        config_layout = QVBoxLayout()
+        config_widget.setLayout(config_layout)
+        
+        self.logpath = QLineEdit()
+        config_layout.addWidget(QLabel("Log Path:"))
+        config_layout.addWidget(self.logpath)
+        
+        self.serialize_pop = QCheckBox("Serialize Population")
+        config_layout.addWidget(self.serialize_pop)
+        
+        self.time_execution = QCheckBox("Time Execution")
+        config_layout.addWidget(self.time_execution)
+        
+        self.stop_after = QSpinBox()
+        self.stop_after.setRange(1, 10000)
+        config_layout.addWidget(QLabel("Stop After:"))
+        config_layout.addWidget(self.stop_after)
+        
+        self.setup_runs = QSpinBox()
+        self.setup_runs.setRange(1, 100)
+        config_layout.addWidget(QLabel("Number of Setup Runs:"))
+        config_layout.addWidget(self.setup_runs)
+        
+        self.save_config_button = QPushButton("Save Config")
+        self.save_config_button.clicked.connect(self.save_config)
+        config_layout.addWidget(self.save_config_button)
+        
+        # Parameters section
+        params_widget = QWidget()
+        params_layout = QVBoxLayout()
+        params_widget.setLayout(params_layout)
+        
+        self.load_params_button = QPushButton("Load Params")
+        self.load_params_button.clicked.connect(self.load_params)
+        params_layout.addWidget(self.load_params_button)
+        
+        self.params_scroll = QScrollArea()
+        self.params_scroll.setWidgetResizable(True)
+        self.params_content = QWidget()
+        self.params_content_layout = QVBoxLayout()
+        self.params_content.setLayout(self.params_content_layout)
+        self.params_scroll.setWidget(self.params_content)
+        params_layout.addWidget(self.params_scroll)
+        
+        self.add_param_button = QPushButton("Add New Parameter")
+        self.add_param_button.clicked.connect(self.add_parameter)
+        params_layout.addWidget(self.add_param_button)
+        
+        # Add sections to main layout
+        main_layout.addWidget(config_widget)
+        main_layout.addWidget(params_widget)
+        
+        main_widget.setLayout(main_layout)
+        self.setCentralWidget(main_widget)
+        
+        self.base_params = {}
+        self.param_changes = {}
+        
+    def load_params(self):
+        file_name, _ = QFileDialog.getOpenFileName(self, "Open Params File", "", "JSON Files (*.json)")
+        if file_name:
+            with open(file_name, 'r') as f:
+                self.base_params = json.load(f)
+    
+    def add_parameter(self):
+        param_widget = QWidget()
+        param_layout = QHBoxLayout()
+        
+        param_key = QComboBox()
+        param_key.addItems(self.get_nested_keys(self.base_params))
+        param_layout.addWidget(param_key)
+        
+        param_values = QLineEdit()
+        param_layout.addWidget(param_values)
+        
+        param_widget.setLayout(param_layout)
+        self.params_content_layout.addWidget(param_widget)
+    
+    def get_nested_keys(self, d, prefix=''):
+        keys = []
+        for k, v in d.items():
+            new_key = f"{prefix}.{k}" if prefix else k
+            if isinstance(v, dict):
+                keys.extend(self.get_nested_keys(v, new_key))
+            else:
+                keys.append(new_key)
+        return keys
+    
+    def save_config(self):
+        name, ok = QFileDialog.getSaveFileName(self, "Save Config", "", "JSON Files (*.json)")
+        if ok:
+            config = {
+                "name": os.path.splitext(os.path.basename(name))[0],
+                "setups": []
+            }
+            
+            param_combinations = self.generate_param_combinations()
+
+            config_dir = f"./configs/{config["name"]}"
+            os.makedirs(config_dir, exist_ok=True)
+            
+            for i, params in enumerate(param_combinations):
+                setup = {
+                    "setupname": f"setup_{i+1}",
+                    "parampath": f"{config_dir}/setup_{i+1}.json",
+                    "logpath": self.logpath.text(),
+                    "ga_kwargs": {
+                        "is_pop_serialized": self.serialize_pop.isChecked(),
+                        "is_timed": self.time_execution.isChecked()
+                    },
+                    "stop_cond": {
+                        "var": "gen",
+                        "val": self.stop_after.value()
+                    },
+                    "n_runs": self.setup_runs.value()
+                }
+                config["setups"].append(setup)
+            
+            with open(f"{config_dir}/{config['name']}.json", 'w') as f:
+                json.dump(config, f, indent=4)
+
+            for i, params in enumerate(param_combinations):
+                with open(f"{config_dir}/setup_{i+1}.json", 'w') as f:
+                    json.dump(params, f, indent=4)
+            
+            with open(f"{config_dir}/param_changes.txt", 'w') as f:
+                for i, changes in enumerate(self.param_changes):
+                    f.write(f"Setup {i+1}:\n")
+                    for key, value in changes.items():
+                        f.write(f"  {key}: {value}\n")
+                    f.write("\n")
+    
+    def generate_param_combinations(self):
+        param_values = {}
+        for i in range(self.params_content_layout.count()):  # -1 to exclude the "Add New Parameter" button
+            widget = self.params_content_layout.itemAt(i).widget()
+            key = widget.layout().itemAt(0).widget().currentText()
+            values = widget.layout().itemAt(1).widget().text().split(';')
+            param_values[key] = values
+        
+        keys, value_lists = zip(*param_values.items())
+        combinations = list(product(*value_lists))
+        
+        param_combinations = []
+        self.param_changes = []
+        
+        for combo in combinations:
+            new_params = self.base_params.copy()
+            changes = {}
+            for key, value in zip(keys, combo):
+                nested_set(new_params, key.split('.'), parse_value(value))
+                changes[key] = value
+            param_combinations.append(new_params)
+            self.param_changes.append(changes)
+        
+        return param_combinations
+
+def nested_set(dic, keys, value):
+    for key in keys[:-1]:
+        dic = dic.setdefault(key, {})
+    dic[keys[-1]] = value
+
+def parse_value(value):
+    try:
+        return json.loads(value)
+    except json.JSONDecodeError:
+        return value
+
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    window = MainWindow()
+    window.show()
+    sys.exit(app.exec())
