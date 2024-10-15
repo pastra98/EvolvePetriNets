@@ -3,8 +3,8 @@ import json
 import os
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
                              QLabel, QLineEdit, QCheckBox, QPushButton, QFileDialog, 
-                             QScrollArea, QComboBox, QSpinBox)
-from PyQt6.QtCore import Qt
+                             QScrollArea, QComboBox, QSpinBox, QTextEdit, QInputDialog, QMessageBox)
+from PyQt6.QtCore import Qt, QTimer
 from itertools import product
 
 class MainWindow(QMainWindow):
@@ -35,14 +35,23 @@ class MainWindow(QMainWindow):
         self.stop_after = QSpinBox()
         self.stop_after.setRange(1, 10000)
         self.stop_after.setValue(500)
+        self.stop_after.valueChanged.connect(self.update_info_box)  # Connect signal to slot
         config_layout.addWidget(QLabel("Number of Generations:"))
         config_layout.addWidget(self.stop_after)
         
         self.setup_runs = QSpinBox()
         self.setup_runs.setRange(1, 1000)
-        self.setup_runs.setValue(16)
+        self.setup_runs.setValue(4)
+        self.setup_runs.valueChanged.connect(self.update_info_box)  # Connect signal to slot
         config_layout.addWidget(QLabel("Number of Setup Runs:"))
         config_layout.addWidget(self.setup_runs)
+        
+        self.config_description = QTextEdit()
+        config_layout.addWidget(QLabel("Config Description:"))
+        config_layout.addWidget(self.config_description)
+        
+        self.info_box = QLabel()
+        config_layout.addWidget(self.info_box)
         
         self.save_config_button = QPushButton("Save Config")
         self.save_config_button.clicked.connect(self.save_config)
@@ -79,11 +88,21 @@ class MainWindow(QMainWindow):
         self.base_params = {}
         self.param_changes = {}
         
-    def load_params(self):
-        file_name, _ = QFileDialog.getOpenFileName(self, "Open Params File", "", "JSON Files (*.json)")
+        # Load default params
+        self.load_params("params/default_params.json")
+        self.update_info_box()
+
+        
+    def load_params(self, file_path=None):
+        if file_path is None:
+            file_name, _ = QFileDialog.getOpenFileName(self, "Open Params File", "", "JSON Files (*.json)")
+        else:
+            file_name = file_path
+        
         if file_name:
             with open(file_name, 'r') as f:
                 self.base_params = json.load(f)
+            self.update_info_box()
     
     def add_parameter(self):
         param_widget = QWidget()
@@ -94,10 +113,12 @@ class MainWindow(QMainWindow):
         param_layout.addWidget(param_key)
         
         param_values = QLineEdit()
+        param_values.editingFinished.connect(self.update_info_box)
         param_layout.addWidget(param_values)
         
         param_widget.setLayout(param_layout)
         self.params_content_layout.addWidget(param_widget)
+        self.update_info_box()
     
     def get_nested_keys(self, d, prefix=''):
         keys = []
@@ -110,16 +131,16 @@ class MainWindow(QMainWindow):
         return keys
     
     def save_config(self):
-        name, ok = QFileDialog.getSaveFileName(self, "Save Config", "", "JSON Files (*.json)")
-        if ok:
+        name, ok = QInputDialog.getText(self, "Save Config", "Enter config name:")
+        if ok and name:
             config = {
-                "name": os.path.splitext(os.path.basename(name))[0],
+                "name": name,
                 "setups": []
             }
             
             param_combinations = self.generate_param_combinations()
 
-            config_dir = f"./configs/{config["name"]}"
+            config_dir = f"configs/{name}"
             os.makedirs(config_dir, exist_ok=True)
             
             for i, params in enumerate(param_combinations):
@@ -141,7 +162,7 @@ class MainWindow(QMainWindow):
                 }
                 config["setups"].append(setup)
             
-            with open(f"{config_dir}/{config['name']}.json", 'w') as f:
+            with open(f"{config_dir}/{name}.json", 'w') as f:
                 json.dump(config, f, indent=4)
 
             for i, params in enumerate(param_combinations):
@@ -149,22 +170,25 @@ class MainWindow(QMainWindow):
                     json.dump(params, f, indent=4)
             
             with open(f"{config_dir}/param_changes.txt", 'w') as f:
+                f.write(f"Config Description:\n{self.config_description.toPlainText()}\n\n")
                 for i, changes in enumerate(self.param_changes):
                     f.write(f"Setup {i+1}:\n")
                     for key, value in changes.items():
                         f.write(f"  {key}: {value}\n")
                     f.write("\n")
+            
+            self.show_notification("Config saved successfully!")
     
     def generate_param_combinations(self):
         param_values = {}
-        for i in range(self.params_content_layout.count()):  # -1 to exclude the "Add New Parameter" button
+        for i in range(self.params_content_layout.count()):
             widget = self.params_content_layout.itemAt(i).widget()
             key = widget.layout().itemAt(0).widget().currentText()
             values = widget.layout().itemAt(1).widget().text().split(';')
             param_values[key] = values
         
-        keys, value_lists = zip(*param_values.items())
-        combinations = list(product(*value_lists))
+        keys, value_lists = zip(*param_values.items()) if param_values else ([], [])
+        combinations = list(product(*value_lists)) if value_lists else [[]]
         
         param_combinations = []
         self.param_changes = []
@@ -179,17 +203,42 @@ class MainWindow(QMainWindow):
             self.param_changes.append(changes)
         
         return param_combinations
+    
+
+    def update_info_box(self):
+        num_setups = max(1, len(self.generate_param_combinations()))
+
+        num_runs = num_setups * self.setup_runs.value()
+        total_generations = num_runs * self.stop_after.value()
+        
+        info_text = f"Number of setups: {num_setups}\n"
+        info_text += f"Total runs: {num_runs}\n"
+        info_text += f"Total generations: {total_generations}"
+        
+        self.info_box.setText(info_text)
+    
+
+    def show_notification(self, message):
+        notification = QMessageBox(self)
+        notification.setText(message)
+        notification.setWindowTitle("Notification")
+        notification.setStandardButtons(QMessageBox.StandardButton.NoButton)
+        notification.show()
+        QTimer.singleShot(500, notification.accept)
+
 
 def nested_set(dic, keys, value):
     for key in keys[:-1]:
         dic = dic.setdefault(key, {})
     dic[keys[-1]] = value
 
+
 def parse_value(value):
     try:
         return json.loads(value)
     except json.JSONDecodeError:
         return value
+
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
