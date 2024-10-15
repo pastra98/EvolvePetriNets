@@ -35,14 +35,14 @@ class MainWindow(QMainWindow):
         self.stop_after = QSpinBox()
         self.stop_after.setRange(1, 10000)
         self.stop_after.setValue(500)
-        self.stop_after.valueChanged.connect(self.update_info_box)  # Connect signal to slot
+        self.stop_after.valueChanged.connect(self.update_info_box)
         config_layout.addWidget(QLabel("Number of Generations:"))
         config_layout.addWidget(self.stop_after)
         
         self.setup_runs = QSpinBox()
         self.setup_runs.setRange(1, 1000)
         self.setup_runs.setValue(4)
-        self.setup_runs.valueChanged.connect(self.update_info_box)  # Connect signal to slot
+        self.setup_runs.valueChanged.connect(self.update_info_box)
         config_layout.addWidget(QLabel("Number of Setup Runs:"))
         config_layout.addWidget(self.setup_runs)
         
@@ -66,7 +66,6 @@ class MainWindow(QMainWindow):
         self.load_params_button.clicked.connect(self.load_params)
         params_layout.addWidget(self.load_params_button)
         
-        # Add info box for currently loaded base params
         self.base_params_info = QLabel()
         params_layout.addWidget(self.base_params_info)
         
@@ -78,9 +77,16 @@ class MainWindow(QMainWindow):
         self.params_scroll.setWidget(self.params_content)
         params_layout.addWidget(self.params_scroll)
         
+        param_buttons_layout = QHBoxLayout()
         self.add_param_button = QPushButton("Add New Parameter")
         self.add_param_button.clicked.connect(self.add_parameter)
-        params_layout.addWidget(self.add_param_button)
+        param_buttons_layout.addWidget(self.add_param_button)
+        
+        self.remove_param_button = QPushButton("Remove Parameter")
+        self.remove_param_button.clicked.connect(self.remove_parameter)
+        param_buttons_layout.addWidget(self.remove_param_button)
+        
+        params_layout.addLayout(param_buttons_layout)
         
         # Add sections to main layout
         main_layout.addWidget(config_widget)
@@ -94,7 +100,6 @@ class MainWindow(QMainWindow):
         
         # Load default params
         self.load_params("params/default_params.json")
-        self.add_parameter()
         self.update_info_box()
 
         
@@ -125,6 +130,14 @@ class MainWindow(QMainWindow):
         param_widget.setLayout(param_layout)
         self.params_content_layout.addWidget(param_widget)
         self.update_info_box()
+
+    def remove_parameter(self):
+        if self.params_content_layout.count() > 0:
+            item = self.params_content_layout.takeAt(self.params_content_layout.count() - 1)
+            widget = item.widget()
+            if widget:
+                widget.deleteLater()
+            self.update_info_box()
     
     def get_nested_keys(self, d, prefix=''):
         keys = []
