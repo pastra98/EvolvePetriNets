@@ -95,7 +95,7 @@ class Species:
 
     def calculate_fitness_share(self, total_avg_species_fitness) -> None:
         """Assigns the fitness share to the species
-        TODO: could test alternatives to mean here, maybe mode?
+        FUTUREIMPROVEMENT: could test alternatives to mean here, maybe mode?
         """
         self.fitness_share = self.avg_fitness_adjusted / total_avg_species_fitness
 

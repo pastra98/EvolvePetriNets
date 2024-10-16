@@ -495,9 +495,9 @@ class PopulationComponentTracker:
                     self.component_dict[c]["fitnesses"].setdefault(gen, []).append(g.fitness)
 
 
-        # TODO: can do other stuff that influences the probability map here
+        # FUTUREIMPROVEMENT: can do other stuff that influences the probability map here
         # like check the best improvements
-        # TODO: maybe use multiple gens later
+        # FUTUREIMPROVEMENT: maybe use multiple gens later, with a discount factor
         if params.use_t_vals:
             self.update_t_vals(gen, pop_fit_vals)
 
@@ -506,7 +506,7 @@ class PopulationComponentTracker:
         return self.component_dict[comp]
 
     def update_t_vals(self, gen, pop_fit_vals) -> dict:
-        # TODO: this logic could also be handled in caller, especially if other
+        # FUTUREIMPROVEMENT: this logic could also be handled in caller, especially if other
         # keys are added to the dict for other prob_map influences
         pop_fit_vals = np.array(pop_fit_vals)
         pop_sum, pop_len = pop_fit_vals.sum(), len(pop_fit_vals)

@@ -24,7 +24,7 @@ def main(conf: dict) -> None:
     with Pool() as p:
         setup_fitnesses = p.starmap(run_setup, argslist)
 
-    # info about overall execution (may put log in there) TODO: dump output log here
+    # info about overall execution (may put log in there)
     exec_end_time = datetime.datetime.now()
     dur = exec_end_time - exec_start_time
     main_logger.info(f"Execution finished at: {exec_end_time}\nTime: {dur}")
@@ -41,7 +41,6 @@ def main(conf: dict) -> None:
 
 
 if __name__ == "__main__":
-    # TODO: SET UP MODE "W" to start a new file every time, make sure info also gets printed to console
     try:
         with open(sys.argv[1]) as f:
             config = json.load(f)

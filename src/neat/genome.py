@@ -136,7 +136,7 @@ class GeneticNet:
             if rd.random() < params.prob_prune_leafs[mutation_rate]:
                 self.flip_arc()
         except:
-            print(traceback.format_exc()) # TODO: meh, aint got not time to do logging here
+            print(traceback.format_exc())
 
 
     def atomic_mutation(self, mutation_rate):
@@ -251,7 +251,8 @@ class GeneticNet:
         all_c = self.get_component_list()
         for c_dict in all_c:
             c_info = self.pop_component_tracker.component_dict[c_dict['comp']]
-            # TODO: hack to just get the biggest t_val
+            # FUTUREIMPROVEMENT: this is just a hack to just get the biggest t_val,
+            # other approaches may be more justified
             t_val = max(c_info["t_val"].values())
             for arc_id in c_dict['arcs']:
                 arc_values[arc_id] = t_val
@@ -318,7 +319,7 @@ class GeneticNet:
     def extend_new_place(self, trans_id=None) -> None:
         """Chooses random transition, adds an input or output place (50% prob)
         """
-        if not trans_id: # TODO: could also filter out trans that have leaf extensions?
+        if not trans_id: # FUTUREIMPROVEMENT: could also filter out trans that have leaf extensions?
             trans_id = self.pick_trans_with_preference()
         new_place_id = self.add_new_place()
         if rd.random() < 0.5: # t -> p
@@ -333,7 +334,7 @@ class GeneticNet:
         """Chooses random place, adds an input or output hidden trans (50% prob)
         """
         new_trans_id = self.add_new_trans()
-        if not place_id: # TODO: could also filter out place that have leaf extensions?
+        if not place_id: # FUTUREIMPROVEMENT: could also filter out place that have leaf extensions?
             place_id = rd.choice(list(set(self.places).difference({'end'})))
         else:
             if is_output:

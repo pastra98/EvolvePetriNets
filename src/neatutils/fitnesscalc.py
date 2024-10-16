@@ -289,7 +289,7 @@ class Petri:
         """Idea is to penalize the max degree being further away from the mean
         Could be seen as a sort of simplicity metric
         """
-        # TODO: could also use variance maybe?
+        # FUTUREIMPROVEMENT: could also use variance maybe?
         p_degrees = [sum(p) for p in list(node_degrees["places"].values())]
         t_degrees = [sum(t) for t in list(node_degrees["transitions"].values())]
         all_degrees = [d for d in t_degrees + p_degrees if d > 0]
@@ -313,7 +313,7 @@ class Petri:
         if my_task_trans:
             return len(my_task_trans) / len(self.transitions)
         else:
-            return 0 # TODO: this is bullshit, but basically if a model has 0 task trans its fitness is 0
+            return 0 # if a model has 0 task trans its fitness is 0
 
 
     def _num_arcs(self):

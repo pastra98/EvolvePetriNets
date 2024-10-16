@@ -86,7 +86,7 @@ def run_ga(setup: logging.Logger, logger):
             result["EXCEPTION"] = traceback.format_exc()
             return result
         # check if reach stopping codition, could be anything
-        if gen_info[stopvar] == stopval: # TODO probably will have to think about other operators
+        if gen_info[stopvar] == stopval: # FUTUREIMPROVEMENT: could add other criteria here
             logger.info(f"{setup['setupname']} reached {stopvar} of {stopval}")
             result = curr_ga.get_ga_final_info()
             return result
