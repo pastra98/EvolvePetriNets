@@ -259,8 +259,11 @@ class MainWindow(QMainWindow):
         self.setup_list.clear()
         for setup_num in self.setup_map.keys():
             item = QListWidgetItem(f"Setup {setup_num}")
-            item.setSelected(True)  # Select all by default
             self.setup_list.addItem(item)
+
+        for index in range(self.setup_list.count()):
+            self.setup_list.item(index).setSelected(True)
+
 
 
     def get_nested_keys(self, d, prefix=''):
