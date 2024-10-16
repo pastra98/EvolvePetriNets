@@ -3,7 +3,8 @@ import json
 import os
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
                              QLabel, QLineEdit, QCheckBox, QPushButton, QFileDialog, 
-                             QScrollArea, QComboBox, QSpinBox, QTextEdit, QInputDialog, QMessageBox)
+                             QScrollArea, QComboBox, QSpinBox, QTextEdit, QInputDialog, QMessageBox,
+                             QSplitter, QSizePolicy)
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QPixmap
 from itertools import product
@@ -13,16 +14,17 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Genetic Algorithm Configuration")
-        self.setGeometry(100, 100, 800, 600)
+        self.setGeometry(100, 100, 1600, 900)  # Increased initial size
 
         main_widget = QWidget()
         main_layout = QHBoxLayout()
         
-        # Config section
+        # Config section (Section 1)
         config_widget = QWidget()
+        config_widget.setFixedWidth(300)
         config_layout = QVBoxLayout()
         config_widget.setLayout(config_layout)
-        
+
         self.logpath = QLineEdit()
         self.logpath.setText("pm_data/running_example.xes")
         config_layout.addWidget(QLabel("Log Path:"))
@@ -59,6 +61,16 @@ class MainWindow(QMainWindow):
         self.save_config_button.clicked.connect(self.save_config)
         config_layout.addWidget(self.save_config_button)
         
+                # Middle section (Section 2)
+        middle_widget = QWidget()
+        middle_layout = QVBoxLayout()
+        middle_widget.setLayout(middle_layout)
+        
+        # Tree visualization
+        self.tree_label = QLabel()
+        self.tree_label.setFixedSize(1220, 700)
+        middle_layout.addWidget(self.tree_label)
+        
         # Parameters section
         params_widget = QWidget()
         params_layout = QVBoxLayout()
@@ -89,14 +101,14 @@ class MainWindow(QMainWindow):
         param_buttons_layout.addWidget(self.remove_param_button)
         
         params_layout.addLayout(param_buttons_layout)
-
-        # Tree visualization section
-        tree_widget = QWidget()
-        tree_layout = QVBoxLayout()
-        tree_widget.setLayout(tree_layout)
         
-        self.tree_label = QLabel()
-        tree_layout.addWidget(self.tree_label)
+        middle_layout.addWidget(params_widget)
+        
+        # Checkboxes section (Section 3)
+        checkbox_widget = QWidget()
+        checkbox_widget.setFixedWidth(90)
+        checkbox_layout = QVBoxLayout()
+        checkbox_widget.setLayout(checkbox_layout)
         
         self.checkbox_scroll = QScrollArea()
         self.checkbox_scroll.setWidgetResizable(True)
@@ -104,15 +116,20 @@ class MainWindow(QMainWindow):
         self.checkbox_layout = QVBoxLayout()
         self.checkbox_content.setLayout(self.checkbox_layout)
         self.checkbox_scroll.setWidget(self.checkbox_content)
-        tree_layout.addWidget(self.checkbox_scroll)
-
+        checkbox_layout.addWidget(self.checkbox_scroll)
         
-        # Add sections to main layout
-        main_layout.addWidget(config_widget)
-        main_layout.addWidget(params_widget)
-        main_layout.addWidget(tree_widget)
-
+        # Set up splitter
+        splitter = QSplitter(Qt.Orientation.Horizontal)
+        splitter.addWidget(config_widget)
+        splitter.addWidget(middle_widget)
+        splitter.addWidget(checkbox_widget)
         
+        # Set size policies
+        config_widget.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Expanding)
+        middle_widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        checkbox_widget.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Expanding)
+        
+        main_layout.addWidget(splitter)
         main_widget.setLayout(main_layout)
         self.setCentralWidget(main_widget)
         
@@ -205,11 +222,13 @@ class MainWindow(QMainWindow):
         add_nodes({}, param_values, root_id)
 
         # Render the tree
+        dot.attr(size='1220,700')
         dot.render('tree', format='png', cleanup=True)
         
         # Display the tree
         pixmap = QPixmap('tree.png')
-        self.tree_label.setPixmap(pixmap.scaled(600, 400, Qt.AspectRatioMode.KeepAspectRatio))
+        self.tree_label.setPixmap(pixmap.scaled(1220, 700, Qt.AspectRatioMode.KeepAspectRatio))
+
 
         # Update checkboxes
         num_setups = len(list(product(*param_values.values())))
@@ -233,7 +252,7 @@ class MainWindow(QMainWindow):
 
         # Add new checkboxes
         for i in range(num_setups):
-            checkbox = QCheckBox(f'Setup {i+1}')
+            checkbox = QCheckBox(f'Set {i+1}')
             checkbox.setChecked(True)
             self.checkbox_layout.addWidget(checkbox)
 
