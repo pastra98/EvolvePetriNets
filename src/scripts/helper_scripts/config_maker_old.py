@@ -38,6 +38,23 @@ import json
 
 
 # %%
+############################################################
+######### generating new param file from old ###############
+############################################################
+
+from neat import params
+
+import json
+import os
+
+params.load("../params/default_params.json")
+p_dict = params.get_curr_curr_dict()
+print(p_dict)
+
+with open("test.json", "w") as f:
+    json.dump(p_dict, f, indent=4)
+
+# %%
 # ---------- FUNC TO COMPARE PARAMS
 
 def compare_params(p1: dict, p2: dict):
