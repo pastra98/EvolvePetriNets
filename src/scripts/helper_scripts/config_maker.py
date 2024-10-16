@@ -190,14 +190,15 @@ class MainWindow(QMainWindow):
         dot = graphviz.Digraph(comment='Parameter Tree')
         dot.attr(rankdir='TB')  # Top to Bottom layout
 
-        def create_node_label(params):
-            return '\n'.join([f"{k}: {v}" for k, v in params.items()])
+        def create_node_label(params, setup_number=None):
+            label = f"<FONT POINT-SIZE='16'><B>Setup {setup_number}</B></FONT><BR/>" if setup_number else ""
+            label += "<BR/>".join([f"{k}: {v}" for k, v in params.items()])
+            return f"<{label}>"
 
-        def add_nodes(current_params, remaining_params, parent_id=None):
+        def add_nodes(current_params, remaining_params, parent_id=None, setup_number=None):
             if not remaining_params:
-                setup_number = len(dot.body) // 2 + 1  # Approximate setup number
                 node_id = f"setup_{setup_number}"
-                dot.node(node_id, f"Setup {setup_number}\n{create_node_label(current_params)}")
+                dot.node(node_id, create_node_label(current_params, setup_number), shape="box")
                 if parent_id:
                     dot.edge(parent_id, node_id)
                 return
@@ -208,12 +209,18 @@ class MainWindow(QMainWindow):
             for value in current_values:
                 new_params = {**current_params, current_key: value}
                 node_id = f"node_{'_'.join(map(str, new_params.values()))}"
-                dot.node(node_id, create_node_label(new_params))
+                
+                if not new_remaining:
+                    # This is a leaf node, include setup number
+                    setup_number = len(dot.body) // 2 + 1
+                    dot.node(node_id, create_node_label(new_params, setup_number), shape="box")
+                else:
+                    dot.node(node_id, create_node_label(new_params), shape="box")
 
                 if parent_id:
                     dot.edge(parent_id, node_id)
 
-                add_nodes(new_params, new_remaining, node_id)
+                add_nodes(new_params, new_remaining, node_id, setup_number)
 
         # Add root node
         root_id = "root"
@@ -228,8 +235,7 @@ class MainWindow(QMainWindow):
         
         # Display the tree
         pixmap = QPixmap('tree.png')
-        self.tree_label.setPixmap(pixmap.scaled(1320,700, Qt.AspectRatioMode.KeepAspectRatio))
-
+        self.tree_label.setPixmap(pixmap.scaled(1320, 700, Qt.AspectRatioMode.KeepAspectRatio))
 
         # Update checkboxes
         num_setups = len(list(product(*param_values.values())))
