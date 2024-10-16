@@ -1,8 +1,6 @@
 import sys, os, json, datetime
 from multiprocessing import Pool
 
-from pm4py.objects.log.importer.xes import importer as xes_importer
-
 from neatutils import neatlogger as nl
 from neatutils.setuprunner import run_setup
 import pandas as pd
