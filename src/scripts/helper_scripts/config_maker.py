@@ -4,7 +4,8 @@ import os
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
                              QLabel, QLineEdit, QCheckBox, QPushButton, QFileDialog, 
                              QScrollArea, QComboBox, QSpinBox, QTextEdit, QInputDialog, QMessageBox,
-                             QSplitter, QSizePolicy)
+                             QSplitter, QSizePolicy, QListWidget, QAbstractItemView, QListWidgetItem)
+
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QPixmap
 from itertools import product
@@ -44,6 +45,7 @@ class MainWindow(QMainWindow):
         config_layout.addWidget(QLabel("Number of Generations:"))
         config_layout.addWidget(self.stop_after)
         
+        self.setup_map = {}
         self.setup_runs = QSpinBox()
         self.setup_runs.setRange(1, 1000)
         self.setup_runs.setValue(4)
@@ -105,30 +107,26 @@ class MainWindow(QMainWindow):
         
         middle_layout.addWidget(params_widget)
         
-        # Checkboxes section (Section 3)
-        checkbox_widget = QWidget()
-        checkbox_widget.setFixedWidth(90)
-        checkbox_layout = QVBoxLayout()
-        checkbox_widget.setLayout(checkbox_layout)
+        # Setup list section (Section 3)
+        setup_list_widget = QWidget()
+        setup_list_widget.setFixedWidth(90)
+        setup_list_layout = QVBoxLayout()
+        setup_list_widget.setLayout(setup_list_layout)
         
-        self.checkbox_scroll = QScrollArea()
-        self.checkbox_scroll.setWidgetResizable(True)
-        self.checkbox_content = QWidget()
-        self.checkbox_layout = QVBoxLayout()
-        self.checkbox_content.setLayout(self.checkbox_layout)
-        self.checkbox_scroll.setWidget(self.checkbox_content)
-        checkbox_layout.addWidget(self.checkbox_scroll)
+        self.setup_list = QListWidget()
+        self.setup_list.setSelectionMode(QAbstractItemView.SelectionMode.MultiSelection)
+        setup_list_layout.addWidget(self.setup_list)
         
         # Set up splitter
         splitter = QSplitter(Qt.Orientation.Horizontal)
         splitter.addWidget(config_widget)
         splitter.addWidget(middle_widget)
-        splitter.addWidget(checkbox_widget)
+        splitter.addWidget(setup_list_widget)
         
         # Set size policies
         config_widget.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Expanding)
         middle_widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-        checkbox_widget.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Expanding)
+        setup_list_widget.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Expanding)
         
         main_layout.addWidget(splitter)
         main_widget.setLayout(main_layout)
@@ -140,6 +138,7 @@ class MainWindow(QMainWindow):
         # Load default params
         self.load_params("params/default_params.json")
         self.update_info_box()
+
 
         
     def load_params(self, file_path=None):
@@ -244,7 +243,7 @@ class MainWindow(QMainWindow):
         self.tree_label.setPixmap(pixmap.scaled(1320, 700, Qt.AspectRatioMode.KeepAspectRatio))
 
         # Update checkboxes
-        self.update_checkboxes(len(self.setup_map))
+        self.update_setup_list()
 
     def get_param_values(self):
         param_values = {}
@@ -256,16 +255,12 @@ class MainWindow(QMainWindow):
         return param_values
 
 
-    def update_checkboxes(self, num_setups):
-        # Clear existing checkboxes
-        for i in reversed(range(self.checkbox_layout.count())): 
-            self.checkbox_layout.itemAt(i).widget().setParent(None)
-
-        # Add new checkboxes
-        for i in range(num_setups):
-            checkbox = QCheckBox(f'Set {i+1}')
-            checkbox.setChecked(True)
-            self.checkbox_layout.addWidget(checkbox)
+    def update_setup_list(self):
+        self.setup_list.clear()
+        for setup_num in self.setup_map.keys():
+            item = QListWidgetItem(f"Setup {setup_num}")
+            item.setSelected(True)  # Select all by default
+            self.setup_list.addItem(item)
 
 
     def get_nested_keys(self, d, prefix=''):
@@ -291,24 +286,27 @@ class MainWindow(QMainWindow):
             config_dir = f"configs/{name}"
             os.makedirs(config_dir, exist_ok=True)
             
-            for i, params in enumerate(param_combinations):
-                setup = {
-                    "setupname": f"setup_{i+1}",
-                    "parampath": f"{config_dir}/setup_{i+1}.json",
-                    "logpath": self.logpath.text(),
-                    "ga_kwargs": {
-                        "is_pop_serialized": self.serialize_pop.isChecked(),
-                        "is_timed": self.time_execution.isChecked()
-                    },
-                    "stop_cond": {
-                        "var": "gen",
-                        "val": self.stop_after.value()
-                    },
-                    "n_runs": self.setup_runs.value(),
-                    "send_gen_info_to_console": False,
-                    "is_profiled": False
-                }
-                config["setups"].append(setup)
+            selected_setups = [int(item.text().split()[1]) for item in self.setup_list.selectedItems()]
+            
+            for setup_num, params in self.setup_map.items():
+                if setup_num in selected_setups:
+                    setup = {
+                        "setupname": f"setup_{setup_num}",
+                        "parampath": f"{config_dir}/setup_{setup_num}.json",
+                        "logpath": self.logpath.text(),
+                        "ga_kwargs": {
+                            "is_pop_serialized": self.serialize_pop.isChecked(),
+                            "is_timed": self.time_execution.isChecked()
+                        },
+                        "stop_cond": {
+                            "var": "gen",
+                            "val": self.stop_after.value()
+                        },
+                        "n_runs": self.setup_runs.value(),
+                        "send_gen_info_to_console": False,
+                        "is_profiled": False
+                    }
+                    config["setups"].append(setup)
             
             with open(f"{config_dir}/{name}.json", 'w') as f:
                 json.dump(config, f, indent=4)
@@ -319,9 +317,9 @@ class MainWindow(QMainWindow):
             
             with open(f"{config_dir}/param_changes.txt", 'w') as f:
                 f.write(f"Config Description:\n{self.config_description.toPlainText()}\n\n")
-                for i, changes in enumerate(self.param_changes):
-                    f.write(f"Setup {i+1}:\n")
-                    for key, value in changes.items():
+                for setup_num in selected_setups:
+                    f.write(f"Setup {setup_num}:\n")
+                    for key, value in self.setup_map[setup_num].items():
                         f.write(f"  {key}: {value}\n")
                     f.write("\n")
             
@@ -354,7 +352,7 @@ class MainWindow(QMainWindow):
     
 
     def update_info_box(self):
-        num_setups = max(1, len(self.generate_param_combinations()))
+        num_setups = max(1, len(self.setup_map))
 
         num_runs = num_setups * self.setup_runs.value()
         total_generations = num_runs * self.stop_after.value()
