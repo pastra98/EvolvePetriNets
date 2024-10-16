@@ -32,16 +32,12 @@ def get_genome_place_degrees(g: genome.GeneticNet):
 
 # %%
 from statistics import mean
-"""
-todos
-* copy pm4py simplicity into this
-"""
 
 def pm4py_simplicity(g: genome.GeneticNet):
     # keep the default to 2
     k = 2
 
-    # TODO: verify the real provenence of the approach before!
+    # copied pretty much straight out of pm4py. Credit: https://github.com/pm4py/pm4py-core
 
     all_nodes = g.places | g.transitions
     all_arc_degrees  = {k: 0 for k in all_nodes.keys()}

@@ -97,7 +97,6 @@ def analyze_offspring_distribution(pop_df, popsize=500):
     max_gen = pop_df['gen'].max()
 
     # this does not work for species, because they might not exist in a given generation
-    # popsize = len(pop_df[pop_df['gen']==1]) # TODO: calculate this dynamically
 
     rank_spawns = {i: 0 for i in range(1, popsize+1)}
     
@@ -159,8 +158,6 @@ rank_spawns = analyze_offspring_distribution(pop_df)
 plot_offspring_distribution(rank_spawns)
 
 
-# TODO: filter for a species 
-# s_id = pop_df["species_id"].unique()[0]
 
 for s_id in pop_df["species_id"].unique():
     if type(s_id) == str:
