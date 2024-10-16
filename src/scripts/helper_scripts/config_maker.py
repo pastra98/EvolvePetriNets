@@ -190,17 +190,28 @@ class MainWindow(QMainWindow):
         dot = graphviz.Digraph(comment='Parameter Tree')
         dot.attr(rankdir='TB')  # Top to Bottom layout
 
-        def create_node_label(params, setup_number=None):
-            label = f"<FONT POINT-SIZE='16'><B>Setup {setup_number}</B></FONT><BR/>" if setup_number else ""
+        setup_counter = 1
+        self.setup_map = {}
+
+        def create_node_label(params, is_leaf=False):
+            if is_leaf:
+                label = f"<FONT POINT-SIZE='16'><B>Setup {setup_counter}</B></FONT><BR/>"
+            else:
+                label = ""
             label += "<BR/>".join([f"{k}: {v}" for k, v in params.items()])
             return f"<{label}>"
 
-        def add_nodes(current_params, remaining_params, parent_id=None, setup_number=None):
+        def add_nodes(current_params, remaining_params, parent_id=None):
+            nonlocal setup_counter
+
             if not remaining_params:
-                node_id = f"setup_{setup_number}"
-                dot.node(node_id, create_node_label(current_params, setup_number), shape="box")
+                # This is a leaf node (complete setup)
+                node_id = f"setup_{setup_counter}"
+                dot.node(node_id, create_node_label(current_params, is_leaf=True), shape="box")
                 if parent_id:
                     dot.edge(parent_id, node_id)
+                self.setup_map[setup_counter] = current_params
+                setup_counter += 1
                 return
 
             current_key, current_values = next(iter(remaining_params.items()))
@@ -210,17 +221,12 @@ class MainWindow(QMainWindow):
                 new_params = {**current_params, current_key: value}
                 node_id = f"node_{'_'.join(map(str, new_params.values()))}"
                 
-                if not new_remaining:
-                    # This is a leaf node, include setup number
-                    setup_number = len(dot.body) // 2 + 1
-                    dot.node(node_id, create_node_label(new_params, setup_number), shape="box")
-                else:
-                    dot.node(node_id, create_node_label(new_params), shape="box")
+                dot.node(node_id, create_node_label({current_key: value}), shape="box")
 
                 if parent_id:
                     dot.edge(parent_id, node_id)
 
-                add_nodes(new_params, new_remaining, node_id, setup_number)
+                add_nodes(new_params, new_remaining, node_id)
 
         # Add root node
         root_id = "root"
@@ -238,9 +244,7 @@ class MainWindow(QMainWindow):
         self.tree_label.setPixmap(pixmap.scaled(1320, 700, Qt.AspectRatioMode.KeepAspectRatio))
 
         # Update checkboxes
-        num_setups = len(list(product(*param_values.values())))
-        self.update_checkboxes(num_setups)
-
+        self.update_checkboxes(len(self.setup_map))
 
     def get_param_values(self):
         param_values = {}
