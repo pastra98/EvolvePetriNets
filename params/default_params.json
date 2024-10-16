@@ -97,6 +97,15 @@
                 0.0
             ]
         },
+        "remaining_score": {
+            "weight": 0,
+            "raise_by": 1,
+            "active_gen": 0,
+            "anchor_to": [
+                "",
+                0.0
+            ]
+        },
         "token_usage": {
             "weight": 0,
             "raise_by": 1,
