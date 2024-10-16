@@ -2,6 +2,7 @@ from typing import Dict, List, Tuple
 from functools import cache
 from statistics import mean
 import random as rd
+from neat import params
 
 import numpy as np
 from numba import jit, boolean, int32, float64
@@ -322,10 +323,8 @@ def max_replay_fitness(len_and_card: tuple):
     """Uses closed form for sum of multipliers, distributes multiplier across them
     works under the assumption that MAX_PTS == 1
     """
-    # TODO: import the constants again
-    MULT = 1.5
     fit = 0
     for tlen, cardinality in len_and_card:
-        trace_fit = 1 + MULT * ((tlen * (tlen-1)) / 2)
+        trace_fit = 1 + params.replay_mult * ((tlen * (tlen-1)) / 2)
         fit += trace_fit * cardinality
     return fit

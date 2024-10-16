@@ -1,3 +1,9 @@
+"""
+This module is my abandoned attempt at splitting/splicing a log into different subsets
+of the variants, to apply (deterministic) mining algorithms on the subsets and bootstrap
+the initial generation. However it exceeded the scope of this thesis, but could be a part
+of FUTUREIMPROVEMENT.
+"""
 from collections import defaultdict
 from pm4py import filter_variants, get_variants
 
@@ -7,7 +13,7 @@ def balanced_splice(log, n_splices):
     """Splits variants into n evenly distributed splices based on variant lengths.
     Returns filtered logs for the variants
     """
-    # TODO:
+    # Ideas:
     # x needs to transform it back to a log
     # - develop a more balanced algo
     # - make it more explicit that we need a log
