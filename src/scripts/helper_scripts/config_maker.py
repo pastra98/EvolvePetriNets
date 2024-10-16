@@ -14,7 +14,8 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Genetic Algorithm Configuration")
-        self.setGeometry(100, 100, 1600, 900)  # Increased initial size
+        self.setGeometry(100, 100, 1700, 900)  # Increased initial size
+        self.showMaximized()  # Start the window maximized
 
         main_widget = QWidget()
         main_layout = QHBoxLayout()
@@ -68,7 +69,7 @@ class MainWindow(QMainWindow):
         
         # Tree visualization
         self.tree_label = QLabel()
-        self.tree_label.setFixedSize(1220, 700)
+        self.tree_label.setFixedSize(1320,700)
         middle_layout.addWidget(self.tree_label)
         
         # Parameters section
@@ -222,12 +223,12 @@ class MainWindow(QMainWindow):
         add_nodes({}, param_values, root_id)
 
         # Render the tree
-        dot.attr(size='1220,700')
+        dot.attr(size='1320,700')
         dot.render('tree', format='png', cleanup=True)
         
         # Display the tree
         pixmap = QPixmap('tree.png')
-        self.tree_label.setPixmap(pixmap.scaled(1220, 700, Qt.AspectRatioMode.KeepAspectRatio))
+        self.tree_label.setPixmap(pixmap.scaled(1320,700, Qt.AspectRatioMode.KeepAspectRatio))
 
 
         # Update checkboxes
