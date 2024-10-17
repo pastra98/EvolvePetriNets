@@ -246,3 +246,17 @@ def show_species_piechart(species_df, gen):
     plt.show()
 
 show_species_piechart(species_df, 182)
+
+# %%
+"""
+--------------------------------------------------------------------------------
+--- Looking at the results summary df
+--------------------------------------------------------------------------------
+"""
+import pandas as pd
+
+summary_df_fp = "C:/Users/pauls/Documents/GitHubRepos/EvolvePetriNets/results/data/superfuckingbig_10-16-2024_21-03-49/final_report_df.feather"
+# summary_df_fp = "C:/Users/pauls/Documents/GitHubRepos/EvolvePetriNets/results/data/test_import_params_10-16-2024_19-55-43/final_report_df.feather"
+summary_df = pd.read_feather(summary_df_fp)
+
+summary_df["max_fitness"].plot(kind="hist", bins=50)
