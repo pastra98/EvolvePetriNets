@@ -1,7 +1,10 @@
+# TODO: analysis data will be uploaded as archive later
+analysis/data
+
 # don't save results and pm_data
 results/data
 pm_data/
-results/results_used_in_analysis
+results/old_results_used_in_analysis
 results/runs_that_did_it
 
 # don't save compiled modules
