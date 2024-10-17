@@ -3,7 +3,6 @@ import random as rd
 from datetime import datetime
 from uuid import uuid4
 from typing import List
-from numba import njit
 
 from neatutils import timer
 
@@ -536,7 +535,6 @@ class PopulationComponentTracker:
         return inverted_comp_dict
 
     
-@njit
 def compute_t(inc, pop_fit_vals, pop_len, pop_sum, pop_df):
     inc_sum, inc_len = inc.sum(), len(inc)
     inc_avg_fit = inc_sum / inc_len
