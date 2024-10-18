@@ -1,5 +1,5 @@
 {
-    "selection_strategy": "truncation",
+    "selection_strategy": "speciation",
     "popsize": 500,
     "n_alpha_genomes": 0,
     "n_inductive_genomes": 0,
@@ -49,7 +49,6 @@
     "youth_bonus": 1.4,
     "replay_mult": 1.5,
     "missing_penal": 0.4,
-    "remaining_penal": 1,
     "min_tokens_for_replay": 51,
     "metric_dict": {
         "aggregated_replay_fitnesss": {
@@ -98,12 +97,12 @@
             ]
         },
         "remaining_score": {
-            "weight": 0,
+            "weight": 1,
             "raise_by": 1,
             "active_gen": 0,
             "anchor_to": [
-                "",
-                0.0
+                "aggregated_replay_fitnesss",
+                0.7
             ]
         },
         "token_usage": {
@@ -121,7 +120,7 @@
             "active_gen": 0,
             "anchor_to": [
                 "aggregated_replay_fitnesss",
-                0.7
+                0.6
             ]
         },
         "num_arcs": {
@@ -143,13 +142,11 @@
             ]
         }
     },
-    "mutation_type": "atomic",
     "use_t_vals": true,
     "prob_remove_arc": [
         0.1,
         0.4
     ],
-    "max_arcs_removed": 1,
     "prob_t_p_arc": [
         0.2,
         0.05
