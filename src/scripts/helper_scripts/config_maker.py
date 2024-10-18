@@ -6,17 +6,18 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QH
                              QScrollArea, QComboBox, QSpinBox, QTextEdit, QInputDialog, QMessageBox,
                              QSplitter, QSizePolicy, QListWidget, QAbstractItemView, QListWidgetItem)
 
+from PyQt6.QtSvgWidgets import QSvgWidget
 from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtGui import QPixmap
-from itertools import product
+from PyQt6.QtGui import QTransform
 import graphviz
 
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Genetic Algorithm Configuration")
-        self.setGeometry(100, 100, 1700, 900)  # Increased initial size
-        self.showMaximized()  # Start the window maximized
+        self.setGeometry(100, 100, 1920, 998)  # Increased initial size
+        self.showMaximized()
+
 
         main_widget = QWidget()
         main_layout = QHBoxLayout()
@@ -64,15 +65,13 @@ class MainWindow(QMainWindow):
         self.save_config_button.clicked.connect(self.save_config)
         config_layout.addWidget(self.save_config_button)
         
-                # Middle section (Section 2)
+        # Middle section (Section 2)
         middle_widget = QWidget()
         middle_layout = QVBoxLayout()
         middle_widget.setLayout(middle_layout)
-        
-        # Tree visualization
-        self.tree_label = QLabel()
-        self.tree_label.setFixedSize(1320,700)
-        middle_layout.addWidget(self.tree_label)
+        self.tree_widget = QSvgWidget()
+        self.tree_widget.setFixedSize(1420,700)
+        middle_layout.addWidget(self.tree_widget)
         
         # Parameters section
         params_widget = QWidget()
@@ -133,7 +132,6 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(main_widget)
         
         self.base_params = {}
-        self.param_changes = {}
         
         # Load default params
         self.load_params("params/default_params.json")
@@ -161,6 +159,7 @@ class MainWindow(QMainWindow):
         
         param_key = QComboBox()
         param_key.addItems(self.get_nested_keys(self.base_params))
+        param_key.activated.connect(self.update_tree)
         param_layout.addWidget(param_key)
         
         param_values = QLineEdit()
@@ -196,7 +195,7 @@ class MainWindow(QMainWindow):
 
         def create_node_label(params, is_leaf=False):
             if is_leaf:
-                label = f"<FONT POINT-SIZE='16'><B>Setup {setup_counter}</B></FONT><BR/>"
+                label = f"<B>Setup {setup_counter}</B><BR/>"
             else:
                 label = ""
             label += "<BR/>".join([f"{k.lstrip("metric_dict.")}: {v}" for k, v in params.items()])
@@ -208,7 +207,7 @@ class MainWindow(QMainWindow):
             if not remaining_params:
                 # This is a leaf node (complete setup)
                 node_id = f"setup_{setup_counter}"
-                dot.node(node_id, create_node_label(current_params, is_leaf=True), shape="box")
+                dot.node(node_id, create_node_label(current_params, is_leaf=True), shape="box", width="0", height="0", fixedsize="false")
                 if parent_id:
                     dot.edge(parent_id, node_id)
                 self.setup_map[setup_counter] = current_params
@@ -222,7 +221,7 @@ class MainWindow(QMainWindow):
                 new_params = {**current_params, current_key: value}
                 node_id = f"node_{'_'.join(map(str, new_params.values()))}"
                 
-                dot.node(node_id, create_node_label({current_key: value}), shape="box")
+                dot.node(node_id, create_node_label({current_key: value}), shape="box", width="0", height="0", fixedsize="false")
 
                 if parent_id:
                     dot.edge(parent_id, node_id)
@@ -237,15 +236,16 @@ class MainWindow(QMainWindow):
         add_nodes({}, param_values, root_id)
 
         # Render the tree
-        dot.attr(size='1320,700')
-        dot.render('tree', format='png', cleanup=True)
-        
+        dot.attr(size='1420,700')
+        dot.attr('node', fontsize='10')
+        dot.render('tree', format='svg', cleanup=True)
+
         # Display the tree
-        pixmap = QPixmap('tree.png')
-        self.tree_label.setPixmap(pixmap.scaled(1320, 700, Qt.AspectRatioMode.KeepAspectRatio))
+        self.tree_widget.load('tree.svg')
 
         # Update checkboxes
         self.update_setup_list()
+
 
     def get_param_values(self):
         param_values = {}
@@ -254,6 +254,7 @@ class MainWindow(QMainWindow):
             key = widget.layout().itemAt(0).widget().currentText()
             values = widget.layout().itemAt(1).widget().text().split(';')
             param_values[key] = values
+        print(param_values)
         return param_values
 
 
@@ -278,6 +279,7 @@ class MainWindow(QMainWindow):
                 keys.append(new_key)
         return keys
     
+
     def save_config(self):
         name, ok = QInputDialog.getText(self, "Save Config", "Enter config name:")
         if ok and name:
@@ -311,13 +313,16 @@ class MainWindow(QMainWindow):
                     }
                     config["setups"].append(setup)
             
+            # write the config file
             with open(f"{config_dir}/{name}.json", 'w') as f:
                 json.dump(config, f, indent=4)
 
-            for i, params in enumerate(self.generate_param_combinations()):
-                with open(f"{config_dir}/setup_{i+1}.json", 'w') as f:
-                    json.dump(params, f, indent=4)
-            
+            # write the param files
+            for i in selected_setups:
+                with open(f"{config_dir}/setup_{i}.json", 'w') as f:
+                    json.dump(self.generate_param_dict(self.setup_map[i]), f, indent=4)
+
+            # write the change file
             with open(f"{config_dir}/param_changes.txt", 'w') as f:
                 f.write(f"Config Description:\n{self.config_description.toPlainText()}\n\n")
                 for setup_num in selected_setups:
@@ -328,30 +333,22 @@ class MainWindow(QMainWindow):
             
             self.show_notification("Config saved successfully!")
     
-    def generate_param_combinations(self):
-        param_values = {}
-        for i in range(self.params_content_layout.count()):
-            widget = self.params_content_layout.itemAt(i).widget()
-            key = widget.layout().itemAt(0).widget().currentText()
-            values = widget.layout().itemAt(1).widget().text().split(';')
-            param_values[key] = values
+    def generate_param_dict(self, param_combo: dict):
+        new_params = self.base_params.copy()
+        for key, value in param_combo.items():
+            parsed_value = json.loads(value)
+            # traverse key path
+            if "." in key:
+                key_path = key.split(".")
+                inner_dict = new_params
+                for key in key_path[:-1]:
+                    inner_dict = inner_dict[key]
+                inner_dict[key_path[-1]] = parsed_value
+            # can assign directly
+            else:
+                new_params[key] = parsed_value
         
-        keys, value_lists = zip(*param_values.items()) if param_values else ([], [])
-        combinations = list(product(*value_lists)) if value_lists else [[]]
-        
-        param_combinations = []
-        self.param_changes = []
-        
-        for combo in combinations:
-            new_params = self.base_params.copy()
-            changes = {}
-            for key, value in zip(keys, combo):
-                nested_set(new_params, key.split('.'), parse_value(value))
-                changes[key] = value
-            param_combinations.append(new_params)
-            self.param_changes.append(changes)
-        
-        return param_combinations
+        return new_params
     
 
     def update_info_box(self):
@@ -374,19 +371,6 @@ class MainWindow(QMainWindow):
         notification.setStandardButtons(QMessageBox.StandardButton.NoButton)
         notification.show()
         QTimer.singleShot(500, notification.accept)
-
-
-def nested_set(dic, keys, value):
-    for key in keys[:-1]:
-        dic = dic.setdefault(key, {})
-    dic[keys[-1]] = value
-
-
-def parse_value(value):
-    try:
-        return json.loads(value)
-    except json.JSONDecodeError:
-        return value
 
 
 if __name__ == "__main__":
