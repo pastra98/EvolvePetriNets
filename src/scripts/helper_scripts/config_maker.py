@@ -70,7 +70,7 @@ class MainWindow(QMainWindow):
         middle_layout = QVBoxLayout()
         middle_widget.setLayout(middle_layout)
         self.tree_widget = QSvgWidget()
-        self.tree_widget.setFixedSize(1420,700)
+        self.tree_widget.setFixedSize(1470,700)
         middle_layout.addWidget(self.tree_widget)
         
         # Parameters section
@@ -236,8 +236,7 @@ class MainWindow(QMainWindow):
         add_nodes({}, param_values, root_id)
 
         # Render the tree
-        dot.attr(size='1420,700')
-        dot.attr('node', fontsize='10')
+        dot.attr(ratio='0.5', size='1470,700')
         dot.render('tree', format='svg', cleanup=True)
 
         # Display the tree
