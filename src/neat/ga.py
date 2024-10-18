@@ -50,8 +50,6 @@ class GeneticAlgorithm:
         self.best_species: Species = None
 
         params.load(params_name)
-        if params.mutation_type == "atomic":
-            params.max_arcs_removed = 1 # bad practice, but I want to ensure this
 
         self.set_initial_pop()
 

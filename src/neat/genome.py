@@ -87,20 +87,16 @@ class GeneticNet:
 # ------------------------------------------------------------------------------
 
     def mutate(self, mutation_rate):
-        """Depending on chosen params, the genome either applies just one or multiple
-        mutations (param: mutation_type)
+        """Ensures a mutation happens, clears cache afterwards
         """
-        if params.mutation_type == "multi":
-            self.multi_mutation(mutation_rate)
-        elif params.mutation_type == "atomic":
-            self.atomic_mutation(mutation_rate)
+        self.atomic_mutation(mutation_rate)
         # remove nodes that are no longer connected
         self.remove_unused_nodes()
-        # clear the cache of methods depend on the genome structure
-        self.clear_cache()
         # if a mutation failed (e.g. no arcs to remove/everything connected, call recursive)
         if not self.my_mutations:
             self.mutate(mutation_rate)
+        # clear the cache of methods depend on the genome structure
+        self.clear_cache()
 
 
     def clear_cache(self):
@@ -111,32 +107,6 @@ class GeneticNet:
         self.build_petri.cache_clear()
         self.get_component_list.cache_clear()
         self.get_unique_component_set.cache_clear()
-
-
-    def multi_mutation(self, mutation_rate):
-        """multiple mutations can occur
-        """
-        try:
-            if rd.random() < params.prob_remove_arc[mutation_rate]:
-                self.remove_arcs(mutation_rate)
-            if rd.random() < params.prob_t_p_arc[mutation_rate]:
-                self.trans_place_arc()
-            if rd.random() < params.prob_p_t_arc[mutation_rate]:
-                self.place_trans_arc()
-            if rd.random() < params.prob_t_t_conn[mutation_rate]:
-                self.trans_trans_conn()
-            if rd.random() < params.prob_new_p[mutation_rate] and len(self.transitions) > 2:
-                self.extend_new_place()
-            if rd.random() < params.prob_new_empty_t[mutation_rate] and len(self.places) > 2:
-                self.extend_new_trans()
-            if rd.random() < params.prob_split_arc[mutation_rate]:
-                self.split_arc()
-            if rd.random() < params.prob_prune_leafs[mutation_rate]:
-                self.prune_leaf()
-            if rd.random() < params.prob_prune_leafs[mutation_rate]:
-                self.flip_arc()
-        except:
-            print(traceback.format_exc())
 
 
     def atomic_mutation(self, mutation_rate):
@@ -435,16 +405,13 @@ class GeneticNet:
         """
         if len(self.arcs) <= ((len(self.places) + len(self.transitions)) / 3):
             return # if the number of arcs is less than third of all nodes, do not remove
-        if not arcs_to_remove: # no arcs to remove specified
-            arcs_to_remove = set()
-            for _ in range(params.max_arcs_removed):
-                # use a set to prevent duplicates
-                arcs_to_remove.add(self.pick_arc())
-            arcs_to_remove = list(arcs_to_remove)
-        # delete arcs in arcs to remove
+        # no arcs to remove specified
+        if not arcs_to_remove: 
+            arcs_to_remove = [self.pick_arc()]
+        # remove arcs
         for a_id in arcs_to_remove:
             del self.arcs[a_id]
-            self.my_mutations.append('removed_an_arc')
+        self.my_mutations.append('removed_an_arc')
 
 
     def flip_arc(self, arc_to_flip=None):

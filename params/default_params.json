@@ -142,13 +142,11 @@
             ]
         }
     },
-    "mutation_type": "atomic",
     "use_t_vals": true,
     "prob_remove_arc": [
         0.1,
         0.4
     ],
-    "max_arcs_removed": 1,
     "prob_t_p_arc": [
         0.2,
         0.05

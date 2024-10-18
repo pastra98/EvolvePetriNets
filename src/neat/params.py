@@ -109,8 +109,6 @@ metric_dict: Dict[str, MetricParams] # metric: MetricParams
 
 
 # ---------- MUTATIONS GENERAL
-mutation_type: str # "multi" / "atomic"
-
 # -------------------- guiding the mutations
 use_t_vals: bool
 
@@ -122,7 +120,6 @@ when atomic mutations are used.
 """
 # arc mutations
 prob_remove_arc: list[float, float]
-max_arcs_removed: int # in case of atomic mutation, this is set automatically to 1
 # Make a new arc
 prob_t_p_arc: list[float, float]
 prob_p_t_arc: list[float, float]
