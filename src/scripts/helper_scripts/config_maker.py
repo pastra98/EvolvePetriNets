@@ -115,6 +115,7 @@ class MainWindow(QMainWindow):
         self.setup_list = QListWidget()
         self.setup_list.setSelectionMode(QAbstractItemView.SelectionMode.MultiSelection)
         setup_list_layout.addWidget(self.setup_list)
+        self.setup_list.itemSelectionChanged.connect(self.update_info_box)
         
         # Set up splitter
         splitter = QSplitter(Qt.Orientation.Horizontal)
@@ -350,7 +351,7 @@ class MainWindow(QMainWindow):
     
 
     def update_info_box(self):
-        num_setups = max(1, len(self.setup_map))
+        num_setups = max(1, len(self.setup_list.selectedItems()))
 
         num_runs = num_setups * self.setup_runs.value()
         total_generations = num_runs * self.stop_after.value()
