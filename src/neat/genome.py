@@ -709,17 +709,21 @@ class GeneticNet:
             # this is the max achievable fitness value, it gets the same transformations
             max_val = 1
             # check if the fitness value should be anchored to another fitness value
-            anchor_metric = self.fitness_metrics.get(metric_params["anchor_to"][0])
-            if anchor_metric and anchor_metric > metric_params["anchor_to"][1]:
-                val = min(anchor_metric, val) # cap to anchor metric
+            anchor_metric, anchor_threshold = metric_params["anchor_to"]
+            if anchor_metric in self.fitness_metrics:
+                anchor_value = self.fitness_metrics[anchor_metric]
+                val = min(anchor_value, val) if anchor_value > anchor_threshold else 0
             # transform the variable (default = 1, so no change)
             pow = metric_params.get("raise_by")
             val, max_val = val ** pow, max_val ** pow
             # apply weight
             weight = metric_params.get("weight")
             val, max_val = val * weight, max_val * weight
+            print(m, val, max_val)
+            print()
             # update the actual and maximum fitness
             fit += val; max_fit += max_val
+        print(fit, max_fit)
         # assign fitness
         self.fitness = fit / max_fit
         return model_eval
