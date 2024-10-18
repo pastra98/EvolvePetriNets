@@ -188,7 +188,8 @@ class MainWindow(QMainWindow):
             return
 
         dot = graphviz.Digraph(comment='Parameter Tree')
-        dot.attr(rankdir='TB')  # Top to Bottom layout
+        # dot.attr(rankdir='TB')  # Top to Bottom layout
+        dot.attr(rankdir='LR')  # Top to Bottom layout
 
         setup_counter = 1
         self.setup_map = {}
@@ -198,7 +199,7 @@ class MainWindow(QMainWindow):
                 label = f"<FONT POINT-SIZE='16'><B>Setup {setup_counter}</B></FONT><BR/>"
             else:
                 label = ""
-            label += "<BR/>".join([f"{k}: {v}" for k, v in params.items()])
+            label += "<BR/>".join([f"{k.lstrip("metric_dict.")}: {v}" for k, v in params.items()])
             return f"<{label}>"
 
         def add_nodes(current_params, remaining_params, parent_id=None):
@@ -230,7 +231,7 @@ class MainWindow(QMainWindow):
 
         # Add root node
         root_id = "root"
-        dot.node(root_id, "base params")
+        dot.node(root_id, "")
 
         # Start the recursion with the root node as parent
         add_nodes({}, param_values, root_id)
