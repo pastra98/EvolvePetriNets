@@ -143,7 +143,7 @@ class MainWindow(QMainWindow):
 
         
     def load_params(self, file_path=None):
-        if file_path is None:
+        if not file_path:
             file_name, _ = QFileDialog.getOpenFileName(self, "Open Params File", "", "JSON Files (*.json)")
         else:
             file_name = file_path
