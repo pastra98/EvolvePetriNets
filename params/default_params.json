@@ -1,5 +1,5 @@
 {
-    "selection_strategy": "truncation",
+    "selection_strategy": "speciation",
     "popsize": 500,
     "n_alpha_genomes": 0,
     "n_inductive_genomes": 0,
@@ -97,12 +97,12 @@
             ]
         },
         "remaining_score": {
-            "weight": 0,
+            "weight": 1,
             "raise_by": 1,
             "active_gen": 0,
             "anchor_to": [
-                "",
-                0.0
+                "aggregated_replay_fitnesss",
+                0.7
             ]
         },
         "token_usage": {
@@ -120,7 +120,7 @@
             "active_gen": 0,
             "anchor_to": [
                 "aggregated_replay_fitnesss",
-                0.7
+                0.6
             ]
         },
         "num_arcs": {
