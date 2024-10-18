@@ -719,11 +719,8 @@ class GeneticNet:
             # apply weight
             weight = metric_params.get("weight")
             val, max_val = val * weight, max_val * weight
-            print(m, val, max_val)
-            print()
             # update the actual and maximum fitness
             fit += val; max_fit += max_val
-        print(fit, max_fit)
         # assign fitness
         self.fitness = fit / max_fit
         return model_eval
