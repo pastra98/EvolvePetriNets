@@ -66,6 +66,7 @@ def get_random_genomes(n_genomes, log, component_tracker):
             for ea in end_act:
                 gen_net.trans_place_arc(ea, "end")
 
+        gen_net.my_mutations = []
         new_genomes.append(gen_net)
 
     return new_genomes
