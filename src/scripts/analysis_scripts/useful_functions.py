@@ -53,6 +53,7 @@ def eval_and_print_metrics(g: genome.GeneticNet, log):
     g.clear_cache()
     g.evaluate_fitness(log)
     pprint(g.fitness_metrics)
+    print("total fitnesss", g.fitness)
 
 def reset_ga():
     neat_modules = [params, genome, initial_population]

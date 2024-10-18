@@ -3,7 +3,8 @@ Used this when implementing token-replay from scratch, to compare with pm4py imp
 Could also be used later for comparing numpy-based implementation to current OOP implementation.
 """
 # %%
-from tool_scripts.analysis_scripts.useful_functions import \
+import scripts.analysis_scripts.useful_functions as uf
+from scripts.analysis_scripts.useful_functions import \
     load_genome, show_genome, get_aligned_traces, get_log_variants, log, reset_ga, \
     eval_and_print_metrics
 
@@ -16,7 +17,8 @@ from pm4py.objects.petri_net.exporter.variants.pnml import export_net
 
 # %%
 reload(genome)
-path = "./tool_scripts/model_analysis/"
+reload(uf)
+path = "scripts/pickled_genomes/"
 alpha_g = load_genome(path + "alpha_bootstrap.pkl")
 inductive_g = load_genome(path + "inductive_bootstrap.pkl")
 # ilp_g = load_genome(path + "inductive_bootstrap.pkl")
