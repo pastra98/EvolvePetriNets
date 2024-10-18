@@ -49,7 +49,6 @@
     "youth_bonus": 1.4,
     "replay_mult": 1.5,
     "missing_penal": 0.4,
-    "remaining_penal": 1,
     "min_tokens_for_replay": 51,
     "metric_dict": {
         "aggregated_replay_fitnesss": {
