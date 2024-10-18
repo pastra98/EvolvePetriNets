@@ -184,8 +184,8 @@ class GeneticNet:
             for p in self.places.values():
                 if p.id not in connected.union({'start'}):
                     suitable_places.append(p.id)
-                if not suitable_places:
-                    return None
+            if not suitable_places:
+                return None
             return rd.choice(suitable_places)
 
         elif type(source) == GPlace:
