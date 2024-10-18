@@ -286,8 +286,6 @@ class MainWindow(QMainWindow):
                 "setups": []
             }
             
-            param_combinations = self.generate_param_combinations()
-
             config_dir = f"configs/{name}"
             os.makedirs(config_dir, exist_ok=True)
             
@@ -316,7 +314,7 @@ class MainWindow(QMainWindow):
             with open(f"{config_dir}/{name}.json", 'w') as f:
                 json.dump(config, f, indent=4)
 
-            for i, params in enumerate(param_combinations):
+            for i, params in enumerate(self.generate_param_combinations()):
                 with open(f"{config_dir}/setup_{i+1}.json", 'w') as f:
                     json.dump(params, f, indent=4)
             
