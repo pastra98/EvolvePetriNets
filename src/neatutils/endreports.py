@@ -45,8 +45,7 @@ def save_report(ga_info: dict, savedir: str) -> None:
         species_stackplot(species_df, species_cmap, savedir)
         plot_species_evolution(species_df, pop_df, gen_info_df, species_cmap, savedir)
         plot_avg_species_fit(species_df, species_cmap, savedir)
-        try: ridgeline_plot(pop_df, species_cmap, savedir)
-        except: print("Ridgeline plot error")
+        # ridgeline_plot(pop_df, species_cmap, savedir)
     
     # save the improvements, species leaders & best genome, delete ga info after
     save_improvements(ga_info["improvements"], savedir)
