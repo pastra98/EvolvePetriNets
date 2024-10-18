@@ -44,8 +44,9 @@ def save_report(ga_info: dict, savedir: str) -> None:
         species_cmap = get_species_color_map(species_df)
         species_stackplot(species_df, species_cmap, savedir)
         plot_species_evolution(species_df, pop_df, gen_info_df, species_cmap, savedir)
-        ridgeline_plot(pop_df, species_cmap, savedir)
         plot_avg_species_fit(species_df, species_cmap, savedir)
+        try: ridgeline_plot(pop_df, species_cmap, savedir)
+        except: print("Ridgeline plot error")
     
     # save the improvements, species leaders & best genome, delete ga info after
     save_improvements(ga_info["improvements"], savedir)
@@ -330,14 +331,14 @@ def mutation_effects_plot(pop_df, savedir: str, max_gen: int = None):
     """
     # Calculate fitness deltas to parents
     df_with_parents = pop_df[pop_df["gen"] > 1].copy()
+    df_with_parents = df_with_parents[df_with_parents["my_mutation"] != ""]  # Exclude empty strings
     fitness_dict = pop_df.set_index('id')['fitness'].to_dict()
     df_with_parents['fitness_difference'] = df_with_parents.apply(
         lambda row: row['fitness'] - fitness_dict[row['parent_id']], axis=1
-        )
+    )
     
-    # Explode the mutations column to get one row per mutation, Group by mutation and calculate statistics
-    df_exploded = df_with_parents.explode('my_mutations')
-    mutation_stats = df_exploded.groupby('my_mutations').agg({
+    # Group by mutation and calculate statistics
+    mutation_stats = df_with_parents.groupby('my_mutation').agg({
         'fitness_difference': [
             'count',
             'min',
@@ -363,7 +364,7 @@ def mutation_effects_plot(pop_df, savedir: str, max_gen: int = None):
     ax1.set_ylabel('Fitness Impact Distribution', color=color)
     ax1.axhline(y=0, color='lightgray', linestyle='--')
     bp = ax1.boxplot(
-        [group['fitness_difference'].values for name, group in df_exploded.groupby('my_mutations')],
+        [group['fitness_difference'].values for name, group in df_with_parents.groupby('my_mutation')],
         patch_artist=True, meanline=True, showmeans=True, showfliers=False
     )
     for box in bp['boxes']:
@@ -384,7 +385,7 @@ def mutation_effects_plot(pop_df, savedir: str, max_gen: int = None):
     
     # Create line chart for mutations over time
     fig, ax = plt.subplots(figsize=(12, 6))
-    for mutation, data in df_exploded.groupby('my_mutations'):
+    for mutation, data in df_with_parents.groupby('my_mutation'):
         impact_by_gen = data.groupby('gen')['fitness_difference'].apply(list).reset_index()
         if max_gen is not None:
             impact_by_gen = impact_by_gen[impact_by_gen['gen'] <= max_gen]
@@ -403,7 +404,6 @@ def mutation_effects_plot(pop_df, savedir: str, max_gen: int = None):
     plt.savefig(f"{savedir}/mutations_over_time.pdf", dpi=300, bbox_inches='tight')
     plt.close(fig)
 
-    
     # Save summary statistics
     mutation_stats.drop('generations', axis=1).to_markdown(f"{savedir}/mutation_effects.txt")
     return mutation_stats
@@ -414,7 +414,7 @@ def best_genome_lineage(best_genomes_df: pd.DataFrame, savedir=str):
     """
     gens = best_genomes_df['gen']
     fitnesses = best_genomes_df['fitness']
-    mutations = best_genomes_df['my_mutations'].apply(lambda x: x[0])
+    mutations = best_genomes_df['my_mutation']
 
     # Generate a color and marker for each mutation type
     unique_mutations = mutations.unique()
@@ -450,7 +450,7 @@ def best_genome_mutation_analysis(best_genomes_df: pd.DataFrame, savedir: str):
     improved the fitness of the best genome
     """
     # filter out mutation frequencies and mean fitness
-    mutations = best_genomes_df['my_mutations'].apply(lambda x: x[0])
+    mutations = best_genomes_df['my_mutation']
     mutation_counts = mutations.value_counts().sort_index()
     mean_fitness_impact = best_genomes_df.groupby(mutations)['fitness'].mean().sort_index()
     mutation_types = mutation_counts.index

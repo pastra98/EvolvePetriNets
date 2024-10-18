@@ -77,7 +77,7 @@ class GeneticNet:
         self.places = places | {"start":GPlace("start"), "end":GPlace("end")}
         self.arcs = arcs
         # track mutations of that genome
-        self.my_mutations = []
+        self.my_mutation = ""
         self.my_components = []
         # reference to the global component tracker
         self.pop_component_tracker = pop_component_tracker
@@ -93,7 +93,7 @@ class GeneticNet:
         # remove nodes that are no longer connected
         self.remove_unused_nodes()
         # if a mutation failed (e.g. no arcs to remove/everything connected, call recursive)
-        if not self.my_mutations:
+        if not self.my_mutation:
             self.mutate(mutation_rate)
         # clear the cache of methods depend on the genome structure
         self.clear_cache()
@@ -267,7 +267,7 @@ class GeneticNet:
             if not trans_id:
                 return # place already connected to all available transitions
         self.add_new_arc(place_id, trans_id)
-        self.my_mutations.append('place_trans_arc')
+        self.my_mutation = 'place_trans_arc'
         return
 
 
@@ -282,7 +282,7 @@ class GeneticNet:
             if not place_id:
                 return # the only available places are already connected
         self.add_new_arc(trans_id, place_id)
-        self.my_mutations.append('trans_place_arc')
+        self.my_mutation = 'trans_place_arc'
         return
 
 
@@ -296,7 +296,7 @@ class GeneticNet:
             self.add_new_arc(trans_id, new_place_id)
         else: # p -> t
             self.add_new_arc(new_place_id, trans_id)
-        self.my_mutations.append('extend_new_place')
+        self.my_mutation = 'extend_new_place'
         return
 
 
@@ -317,7 +317,7 @@ class GeneticNet:
             self.add_new_arc(new_trans_id, place_id)
         else: # p -> t
             self.add_new_arc(place_id, new_trans_id)
-        self.my_mutations.append('extend_new_trans')
+        self.my_mutation = 'extend_new_trans'
         return 
 
 
@@ -330,7 +330,7 @@ class GeneticNet:
         new_place_id = self.add_new_place()
         self.add_new_arc(source_id, new_place_id)
         self.add_new_arc(new_place_id, target_id)
-        self.my_mutations.append('trans_trans_conn')
+        self.my_mutation = 'trans_trans_conn'
         return 
 
 
@@ -360,7 +360,7 @@ class GeneticNet:
             self.add_new_arc(new_place_id, target.id)
         # insert new arcs into genome, delete old one
         del self.arcs[arc_to_split.id]
-        self.my_mutations.append('split_arc')
+        self.my_mutation = 'split_arc'
         return
 
 
@@ -396,7 +396,7 @@ class GeneticNet:
         else:
             del self.transitions[leaf_id]
 
-        self.my_mutations.append("pruned_leaf")
+        self.my_mutation = "pruned_leaf"
         return
 
 
@@ -411,7 +411,7 @@ class GeneticNet:
         # remove arcs
         for a_id in arcs_to_remove:
             del self.arcs[a_id]
-        self.my_mutations.append('removed_an_arc')
+        self.my_mutation = 'removed_an_arc'
 
 
     def flip_arc(self, arc_to_flip=None):
@@ -431,7 +431,7 @@ class GeneticNet:
             arc_to_flip = self.arcs[self.pick_arc(filter_out=fo_list)]
         self.add_new_arc(arc_to_flip.target_id, arc_to_flip.source_id)
         del self.arcs[arc_to_flip.id]
-        self.my_mutations.append('flipped_an_arc')
+        self.my_mutation = 'flipped_an_arc'
 
 # ------------------------------------------------------------------------------
 # REPRODUCTION RELATED STUFF ---------------------------------------------------
@@ -505,7 +505,7 @@ class GeneticNet:
         # lastly, check if the offspring has no arcs (edgecase when self is single(start/end) component genome)
         if not baby.arcs:
             return 
-        baby.my_mutations = ["crossover"] # replace all mutations with just crossover
+        baby.my_mutation = "crossover" # replace prev mutation with just crossover
         baby.clear_cache()
         return baby
 
