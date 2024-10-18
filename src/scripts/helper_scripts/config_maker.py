@@ -254,7 +254,6 @@ class MainWindow(QMainWindow):
             key = widget.layout().itemAt(0).widget().currentText()
             values = widget.layout().itemAt(1).widget().text().split(';')
             param_values[key] = values
-        print(param_values)
         return param_values
 
 
