@@ -316,9 +316,10 @@ class Petri:
 
 
     def _num_arcs(self):
-        """just 1 divided by number of arcs
+        """Just the number of transitions divided by the number of arcs, capped to 0-1
         """
-        return 1 / sum([len(t.inputs) + len(t.outputs) for t in self.transitions.values()])
+        n_arcs = sum([len(t.inputs) + len(t.outputs) for t in self.transitions.values()])
+        return min(len(self.transitions) / n_arcs, 1)
 
 
     def _trans_place_ratio(self):
