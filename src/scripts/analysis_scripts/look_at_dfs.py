@@ -5,6 +5,10 @@ test implementing new plots before they are integrated into the endreports modul
 Eventually this file should not mirror anything that is already implemented in
 endreports, i.e. it serves as temporary testing ground and holds unused/abandoned
 visualizations
+
+Additional responsibility: testing out stuff for getting reports from setups,
+combining the data of many runs (potentially using polars instead of pandas),
+and pushing all that data through visualization functions.
 """
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -205,6 +209,22 @@ data_fp = "C:/Users/pauls/Documents/GitHubRepos/EvolvePetriNets/results/data/spe
 pop_df = pd.read_feather(data_fp + "/population.feather")
 plt.scatter(pop_df["gen"], pop_df["fitness"], s=10, color='grey', alpha=0.5)
 show_fitness_scatter(df_f, title="speciation")
+
+# %%
+"""
+################################################################################
+####################### WORKING WITH SETUP DATA ################################
+################################################################################
+"""
+
+
+
+
+
+
+
+
+
 
 # %%
 """

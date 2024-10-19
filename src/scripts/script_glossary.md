@@ -16,6 +16,7 @@ Here I plan to keep track about all the ^^temporary scripts and notebooks I made
 
 **purpose:**
 * Purpose of this script is to have a space where I can work with run data, and test implementing new plots before they are integrated into the endreports module Nothing that is in here should not be implemented in endreports at some point, except for the tests at the bottom of the file There may be some visualizations such as fitness scatterplot, spawn-rank histogram that will be included in some analysis, but not part of endreports.
+* Additional purpose is testing out setup reports for now
 
 ### Plotting average compatibility scores per generation
 **path:**
