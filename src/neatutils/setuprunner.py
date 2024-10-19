@@ -7,20 +7,20 @@ from neatutils import neatlogger as nl
 from neat import ga
 
 def run_setup(run_nr, main_logger, setup, results_path) -> dict:
+    """Runs a given setup
+    """
+
+    # Check if the path for the setup has already been made, if not make it and copy params
     setup_path = f"{results_path}/{setup['setupname']}"
-    try:
+    if not os.path.exists(setup_path):
         os.makedirs(setup_path)
-    except:
-        pass # folder has already been made for this setup
+        shutil.copy(setup["parampath"], f"{setup_path}/{setup["setupname"]}_params.json")
 
     # create a dir for the current run, along with subdir for reports
     run_start = datetime.datetime.now()
     run_name = f"{run_nr}_{nl.fs_compatible_time(run_start)}"
     run_dir = f"{setup_path}/{run_name}"
     os.makedirs(run_dir)
-
-    # save params
-    shutil.copy(setup["parampath"], f"{run_dir}/{run_name}_params.json")
 
     # setup run_logger, use setup config to determine if send to console
     run_logger = nl.get_logger(run_dir, run_name, setup["send_gen_info_to_console"])
