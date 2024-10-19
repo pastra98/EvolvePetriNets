@@ -33,8 +33,8 @@ class MainWindow(QMainWindow):
         config_layout.addWidget(QLabel("Log Path:"))
         config_layout.addWidget(self.logpath)
         
-        self.serialize_pop = QCheckBox("Serialize Population")
-        config_layout.addWidget(self.serialize_pop)
+        self.save_plots = QCheckBox("Save Plots")
+        config_layout.addWidget(self.save_plots)
         
         self.time_execution = QCheckBox("Time Execution")
         config_layout.addWidget(self.time_execution)
@@ -299,7 +299,7 @@ class MainWindow(QMainWindow):
                         "parampath": f"{config_dir}/setup_{setup_num}.json",
                         "logpath": self.logpath.text(),
                         "ga_kwargs": {
-                            "is_pop_serialized": self.serialize_pop.isChecked(),
+                            "is_pop_serialized": True,
                             "is_timed": self.time_execution.isChecked()
                         },
                         "stop_cond": {
@@ -308,7 +308,8 @@ class MainWindow(QMainWindow):
                         },
                         "n_runs": self.setup_runs.value(),
                         "send_gen_info_to_console": False,
-                        "is_profiled": False
+                        "is_profiled": False,
+                        "save_plots": self.save_plots.isChecked()
                     }
                     config["setups"].append(setup)
             
