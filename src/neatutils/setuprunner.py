@@ -12,9 +12,11 @@ def run_setup(run_nr, main_logger, setup, results_path) -> dict:
 
     # Check if the path for the setup has already been made, if not make it and copy params
     setup_path = f"{results_path}/{setup['setupname']}"
-    if not os.path.exists(setup_path):
+    try: # rare case where setups finish at exact same time can lead to bug, thats why I simply do this
         os.makedirs(setup_path)
         shutil.copy(setup["parampath"], f"{setup_path}/{setup["setupname"]}_params.json")
+    except:
+        pass
 
     # create a dir for the current run, along with subdir for reports
     run_start = datetime.datetime.now()
@@ -52,7 +54,7 @@ def run_setup(run_nr, main_logger, setup, results_path) -> dict:
 
     # if run successfull, save endreports
     if not "EXCEPTION" in run_result:
-        er.save_report(run_result, f"{run_dir}")
+        er.save_report(run_result, f"{run_dir}", save_plots=setup["save_plots"])
         main_logger.info(f"reports saved at:\n{run_dir}")
 
     gc.collect()

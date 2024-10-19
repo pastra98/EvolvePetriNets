@@ -18,7 +18,7 @@ from neat.genome import GeneticNet
 FSIZE = (10, 5)
 
 
-def save_report(ga_info: dict, savedir: str) -> None:
+def save_report(ga_info: dict, savedir: str, save_plots: bool) -> None:
     """saves some plots in the specified dir
     """
     matplotlib.use('Agg')
@@ -26,52 +26,53 @@ def save_report(ga_info: dict, savedir: str) -> None:
     # save run report
     run_report(ga_info, savedir=savedir)
 
+    # -------- saving data
+    os.makedirs(f"{savedir}/data")
+    # pickle component tracker
+    pickle_object(ga_info["component_dict"], "component_dict", f"{savedir}/data")
     # get the full history df, create the dataframes and save them
     full_history = ga_info["history"]
-    os.makedirs(f"{savedir}/data")
-
+    # save the dataframes that don't contain species
     pop_df = get_population_df(full_history)
     pop_df.to_feather(f"{savedir}/data/population.feather")
     gen_info_df = get_gen_info_df(full_history)
     gen_info_df.to_feather(f"{savedir}/data/gen_info.feather")
-
+    mutation_stats_df = get_mutation_stats_df(pop_df)
+    mutation_stats_df.to_feather(f"{savedir}/data/mutation_stats_df.feather")
+    # save the improvements, species leaders & best genome, delete ga info after
+    save_improvements(ga_info["improvements"], savedir)
+    save_genome_gviz(ga_info["best_genome"], savedir, name_prefix="best_genome")
+    pickle_object(ga_info["best_genome"], "best_genome", savedir)
+    # check if there are species, if yes - save the species df
     use_species = "species" in full_history[1]
     if use_species:
         species_df = get_species_df(full_history)
         species_df.to_feather(f"{savedir}/data/species.feather")
         save_species_leaders(ga_info["species_leaders"], savedir)
-        # plot the species
-        species_cmap = get_species_color_map(species_df)
-        species_stackplot(species_df, species_cmap, savedir)
-        plot_species_evolution(species_df, pop_df, gen_info_df, species_cmap, savedir)
-        plot_avg_species_fit(species_df, species_cmap, savedir)
-        # ridgeline_plot(pop_df, species_cmap, savedir)
-    
-    # save the improvements, species leaders & best genome, delete ga info after
-    save_improvements(ga_info["improvements"], savedir)
-    save_genome_gviz(ga_info["best_genome"], savedir, name_prefix="best_genome")
-    pickle_genome(ga_info["best_genome"], "best_genome", savedir)
 
-    # make the plots
-    time_stackplot(gen_info_df, savedir)
-    fitness_plot(gen_info_df, use_species, savedir)
-    components_plot(gen_info_df, savedir)
-    unique_components(pop_df, savedir)
-    metrics_plot(pop_df, savedir)
-    mutation_stats = mutation_effects_plot(pop_df, savedir)
-    mutation_stats.to_feather(f"{savedir}/data/mutation_stats.feather")
 
-    # analysis of best genome mutation lineage
-    best_genomes = filter_best_genomes(gen_info_df, pop_df)
-    best_genome_lineage(best_genomes, savedir)
-    best_genome_mutation_analysis(best_genomes, savedir)
-
-    # pickle component tracker
-    save_component_dict(ga_info["component_dict"], f"{savedir}/data/component_dict.pkl.gz")
-
-    # close all plots and free memory
-    plt.close("all")
-    gc.collect()
+    # -------- saving plots
+    if save_plots:
+        time_stackplot(gen_info_df, savedir)
+        fitness_plot(gen_info_df, use_species, savedir)
+        components_plot(gen_info_df, savedir)
+        unique_components(pop_df, savedir)
+        metrics_plot(pop_df, savedir)
+        mutation_effects_plot(pop_df, mutation_stats_df, savedir)
+        # analysis of best genome mutation lineage
+        best_genomes = filter_best_genomes(gen_info_df, pop_df)
+        best_genome_lineage(best_genomes, savedir)
+        best_genome_mutation_analysis(best_genomes, savedir)
+        # species plots if use_species
+        if use_species:
+            species_cmap = get_species_color_map(species_df)
+            species_stackplot(species_df, species_cmap, savedir)
+            plot_species_evolution(species_df, pop_df, gen_info_df, species_cmap, savedir)
+            plot_avg_species_fit(species_df, species_cmap, savedir)
+            ridgeline_plot(pop_df, species_cmap, savedir)
+        # close all plots and free memory
+        plt.close("all")
+        gc.collect()
 
 
 def run_report(ga_info, savedir: str) -> None:
@@ -101,9 +102,17 @@ def get_population_df(full_history: dict):
         for g in info_d["population"]:
             l.append(g | {"gen": gen})
     df = pd.DataFrame(l)
-    # expand the fitness metrics to columns
+    # expand the fitness metrics to columns, combine the original df with the metrics
     metrics = pd.json_normalize(df['fitness_metrics']).add_prefix("metric_")
-    return pd.concat([df.drop(columns=['fitness_metrics']), metrics], axis=1)
+    df = pd.concat([df.drop(columns=['fitness_metrics']), metrics], axis=1)
+    # Calculate fitness deltas to parents for all rows
+    fitness_dict = df.set_index('id')['fitness'].to_dict()
+    df['fitness_difference'] = df.apply(
+        lambda row: row['fitness'] - fitness_dict.get(row['parent_id'], row['fitness'])
+        if row['gen'] > 1 and row['my_mutation'] != "" else 0,
+        axis=1
+    )
+    return df
 
 
 def get_gen_info_df(full_history: dict):
@@ -141,19 +150,16 @@ def save_species_leaders(leaders: list[GeneticNet], savedir: str):
         save_genome_gviz(g, f"{savedir}/leaders", name_prefix=f"species_{g.species_id}")
 
 
-def pickle_genome(genome: GeneticNet, name: str, savedir: str):
+def pickle_object(thing, name: str, savedir: str, use_compression=True):
     """Pickle the full GeneticNet to disk
     """
-    genome.clear_cache()
-    with open(f"{savedir}/{name}.pkl", "wb") as f:
-        pickle.dump(genome, f)
-
-
-def save_component_dict(component_dict: dict, fpath: str):
-    """Pickle the component dictionary with max compression
-    """
-    with gzip.open(fpath, 'wb') as f:
-        pickle.dump(component_dict, f, protocol=pickle.HIGHEST_PROTOCOL)
+    fp = f"{savedir}/{name}.pkl"
+    if use_compression:
+        with gzip.open(fp + ".gz", "wb") as f:
+            pickle.dump(thing, f, protocol=pickle.HIGHEST_PROTOCOL)
+    else:
+        with open(fp, "wb") as f:
+            pickle.dump(thing, f)
 
 # ---------- DF FILTERING HELPER FUNC
 
@@ -316,28 +322,12 @@ def metrics_plot(pop_df: pd.DataFrame, savedir: str):
 
 # ----- MUTATION PLOTS
 
-def mutation_effects_plot(pop_df, savedir: str, max_gen: int = None):
+def get_mutation_stats_df(pop_df):
+    """Calculates fitness deltas between parents and offspring, assigns it to mutations
     """
-    Generate visualizations for mutation effects using pandas operations:
-    1. Boxplot of fitness impacts with relative frequency on secondary axis
-    2. Line chart of mutation impact per generation (up to max_gen if specified)
-
-    Args:
-    max_gen (int, optional): Maximum generation to include in the line plot. If None, include all generations.
-
-    Returns:
-    mutations effect summary df
-    """
-    # Calculate fitness deltas to parents
-    df_with_parents = pop_df[pop_df["gen"] > 1].copy()
-    df_with_parents = df_with_parents[df_with_parents["my_mutation"] != ""]  # Exclude empty strings
-    fitness_dict = pop_df.set_index('id')['fitness'].to_dict()
-    df_with_parents['fitness_difference'] = df_with_parents.apply(
-        lambda row: row['fitness'] - fitness_dict[row['parent_id']], axis=1
-    )
-    
     # Group by mutation and calculate statistics
-    mutation_stats = df_with_parents.groupby('my_mutation').agg({
+    filtered_pop_df = pop_df[(pop_df["gen"] > 1) & (pop_df["my_mutation"] != "")]
+    mutation_stats_df = filtered_pop_df.groupby('my_mutation').agg({
         'fitness_difference': [
             'count',
             'min',
@@ -349,34 +339,54 @@ def mutation_effects_plot(pop_df, savedir: str, max_gen: int = None):
         ],
         'gen': 'unique'
     })
-    mutation_stats.columns = ['frequency', 'min', '25%', 'median', '75%', 'max', 'mean', 'generations']
-    mutation_stats = mutation_stats.sort_index()
-    
+    mutation_stats_df.columns = ['frequency', 'min', '25%', 'median', '75%', 'max', 'mean', 'generations']
+    mutation_stats_df = mutation_stats_df.sort_index()
     # Calculate relative frequencies
-    total_mutations = mutation_stats['frequency'].sum()
-    mutation_stats['relative_frequency'] = mutation_stats['frequency'] / total_mutations
+    total_mutations = mutation_stats_df['frequency'].sum()
+    mutation_stats_df['relative_frequency'] = mutation_stats_df['frequency'] / total_mutations
+    return mutation_stats_df
 
+
+def mutation_effects_plot(pop_df, mutation_stats_df, savedir: str, max_gen: int = None):
+    """
+    Generate visualizations for mutation effects using pandas operations:
+    1. Boxplot of fitness impacts with relative frequency on secondary axis
+    2. Line chart of mutation impact per generation (up to max_gen if specified)
+    """
     # Create boxplot with relative frequencies on secondary axis
     fig, ax1 = plt.subplots(figsize=(12, 6))
     color = 'tab:blue'
     ax1.set_xlabel('Mutation')
     ax1.set_ylabel('Fitness Impact Distribution', color=color)
     ax1.axhline(y=0, color='lightgray', linestyle='--')
-    bp = ax1.boxplot(
-        [group['fitness_difference'].values for name, group in df_with_parents.groupby('my_mutation')],
-        patch_artist=True, meanline=True, showmeans=True, showfliers=False
-    )
-    for box in bp['boxes']:
-        box.set(color=color, linewidth=2)
-        box.set(facecolor='lightblue')
-    ax1.set_xticks(range(1, len(mutation_stats) + 1))
-    ax1.set_xticklabels(mutation_stats.index, rotation=45, ha='right')
+    # map the dataframe values to a dict that can be read as boxplot data
+    boxplot_data = [
+        {
+            'med': row['median'],
+            'q1': row['25%'],
+            'q3': row['75%'],
+            'whislo': row['min'],
+            'whishi': row['max'],
+            'mean': row['mean']
+        }
+        for _, row in mutation_stats_df.iterrows()
+    ]
+    # make the boxplot
+    bp = ax1.bxp(boxplot_data, patch_artist=True, meanline=True, showmeans=True, showfliers=False)
+    for element in ['boxes', 'means', 'medians', 'whiskers']:
+        plt.setp(bp[element], color=color, linewidth=2)
+    for patch in bp['boxes']:
+        patch.set_facecolor('lightblue')
+    ax1.set_xticks(range(1, len(mutation_stats_df) + 1))
+    ax1.set_xticklabels(mutation_stats_df.index, rotation=45, ha='right')
     ax1.tick_params(axis='y', labelcolor=color)
+    # add the relative frequencies
     ax2 = ax1.twinx()
     color = 'tab:red'
     ax2.set_ylabel('Relative Frequency', color=color)
-    ax2.plot(range(1, len(mutation_stats) + 1), mutation_stats['relative_frequency'], color=color, marker='o', linestyle='-')
+    ax2.plot(range(1, len(mutation_stats_df) + 1), mutation_stats_df['relative_frequency'], color=color, marker='o', linestyle='-')
     ax2.tick_params(axis='y', labelcolor=color)
+    # finish up the plot
     plt.title('Fitness Impact Distribution and Relative Frequency of Each Mutation')
     fig.tight_layout()
     fig.savefig(f"{savedir}/mutation_analysis.pdf", dpi=300)
@@ -384,7 +394,7 @@ def mutation_effects_plot(pop_df, savedir: str, max_gen: int = None):
     
     # Create line chart for mutations over time
     fig, ax = plt.subplots(figsize=(12, 6))
-    for mutation, data in df_with_parents.groupby('my_mutation'):
+    for mutation, data in pop_df.groupby('my_mutation'):
         impact_by_gen = data.groupby('gen')['fitness_difference'].apply(list).reset_index()
         if max_gen is not None:
             impact_by_gen = impact_by_gen[impact_by_gen['gen'] <= max_gen]
@@ -396,16 +406,11 @@ def mutation_effects_plot(pop_df, savedir: str, max_gen: int = None):
         title += f' (up to gen {max_gen})'
         ax.set_xlim(right=max_gen)
     ax.set_title(title)
-    
-    # Add legend with adjusted layout
+    # finish up the plot
     ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left', borderaxespad=0.)
     plt.tight_layout()
     plt.savefig(f"{savedir}/mutations_over_time.pdf", dpi=300, bbox_inches='tight')
     plt.close(fig)
-
-    # Save summary statistics
-    mutation_stats.drop('generations', axis=1).to_markdown(f"{savedir}/mutation_effects.txt")
-    return mutation_stats
 
 
 def best_genome_lineage(best_genomes_df: pd.DataFrame, savedir=str):
