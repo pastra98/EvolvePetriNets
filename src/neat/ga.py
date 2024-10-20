@@ -235,13 +235,17 @@ class GeneticAlgorithm:
         """ 
         # remove all species that won't go into next gen after evaluation
         self.species = self.surviving_species
+        # list for all new species added in this iteration
+        new_species: List[Species] = []
 
         # get the crossover spawns
         crossover_g = []
         if self.curr_gen >= params.start_crossover:
             n_crossover = int(params.popsize * params.pop_perc_crossover)
-            crossover_g = self.get_crossover_spawns(n_crossover)
+            crossover_g, crossover_s = self.get_crossover_spawns(n_crossover)
+            new_species += crossover_s
         self.num_crossover = len(crossover_g)
+        # if there were new species made during crossover, assign them to new species list
 
         # get elite spawns
         elite_g = []
@@ -254,7 +258,6 @@ class GeneticAlgorithm:
         
         # get the remaining asex spawns
         self.num_asex = params.popsize - self.num_crossover - self.num_elite
-        new_species: List[Species] = []
         asex_g: List[GeneticNet] = []
         for s in self.species: # species already sorted by fitness due to eval
             # calc remaining spawns, break if no spawns left
@@ -335,7 +338,7 @@ class GeneticAlgorithm:
 
     def get_crossover_spawns(self, num_to_spawn: int) -> list:
         # tournament selection approach
-        new_genomes = []
+        new_genomes, new_species = [], []
 
         while len(new_genomes) < num_to_spawn:
             tournament = rd.sample(self.population, params.tournament_size)
@@ -345,10 +348,13 @@ class GeneticAlgorithm:
             if baby:
                 new_genomes.append(baby)
                 if params.selection_strategy == "speciation":
-                    mom_species = next(s for s in self.species if s.name == mom.species_id)
-                    mom_species.add_member(baby)
+                    baby_species = self.find_species(baby, self.species + new_species)
+                    if not baby_species:
+                        baby_species = self.get_fresh_species(baby)
+                        new_species.append(baby_species)
+                    baby_species.add_member(baby)
 
-        return new_genomes
+        return new_genomes, new_species
 
 
     def get_more_mutated_leaders(self, num_to_spawn) -> list:
@@ -448,7 +454,7 @@ class GeneticAlgorithm:
             if i == n_elites - 1: break
 
         # crossover spawns, using speciation method (so truncation not active here)
-        crossover_spawns = self.get_crossover_spawns(n_crossover)
+        crossover_spawns, _ = self.get_crossover_spawns(n_crossover)
 
         # asex spawns - with mutation
         asex_spawns = []
