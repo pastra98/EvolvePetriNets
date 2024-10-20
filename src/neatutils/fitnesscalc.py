@@ -121,7 +121,8 @@ class Petri:
             "over_enabled_trans": self._over_enabled_transitions(replay),
             "num_arcs": self._num_arcs(),
             "trans_by_places": self._trans_place_ratio(),
-            "remaining_score": self._remaining_score(replay)
+            "remaining_score": self._remaining_score(replay),
+            "sink_score": self._sink_score(replay)
         }
         return {
             "replay": replay,
@@ -165,10 +166,11 @@ class Petri:
             c += quality[0]; p += quality[1]; m += quality[2]
             enabled_t = [t_id for t_id, t in self.transitions.items() if t.is_enabled()]
             replay.append((task, quality, enabled_t))
-        # at the end of the replay, count the missing
+        # at the end of the replay, count the remaining as well as tokens in the sink
         r = sum([p.n_tokens for p_id, p in self.places.items() if p_id != "end"])
+        s = self.places["end"].n_tokens
         return {"replay": replay, "consumed": c, "produced": p,
-                "missing": m, "remaining": r}
+                "missing": m, "remaining": r, "sink": s}
 
 
     def _try_enable_trans_through_hidden(self, trans: Transition):
@@ -367,6 +369,26 @@ class Petri:
                     enabled_by_hiddens.clear() # reset enabled_by_hiddens
 
         return 1 / max(enabled_too_much, 1) # if none were enabled too much, perfect score
+
+
+    def _sink_score(self, replay):
+        """Only considers traces where tokens even reached the sink. For these
+        traces, there is a penalty for every token -1 in the sink. Idea is to
+        penalize models for moving too many tokens into the sink (as they don't
+        count towards the remaining score)
+        """
+        in_sink, n_valid = 0, 0
+        for trace in replay:
+            s = trace["sink"]
+            if s > 0:
+                n_valid += 1
+                in_sink += s
+
+        if n_valid > 0:
+            perc_valid = n_valid / len(replay)
+            sink_score = n_valid / in_sink
+            return sink_score * perc_valid
+        return 0
 
 # ---------- GENERALIZATION
 
