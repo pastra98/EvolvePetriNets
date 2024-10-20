@@ -39,8 +39,7 @@ def save_report(ga_info: dict, savedir: str, save_plots: bool) -> None:
     gen_info_df.to_feather(f"{savedir}/data/gen_info.feather")
     mutation_stats_df = get_mutation_stats_df(pop_df)
     mutation_stats_df.to_feather(f"{savedir}/data/mutation_stats_df.feather")
-    # save the improvements, species leaders & best genome, delete ga info after
-    save_improvements(ga_info["improvements"], savedir)
+    # save species leader gviz
     save_genome_gviz(ga_info["best_genome"], savedir, name_prefix="best_genome")
     pickle_object(ga_info["best_genome"], "best_genome", savedir)
     # check if there are species, if yes - save the species df
@@ -48,13 +47,13 @@ def save_report(ga_info: dict, savedir: str, save_plots: bool) -> None:
     if use_species:
         species_df = get_species_df(full_history)
         species_df.to_feather(f"{savedir}/data/species.feather")
-        save_species_leaders(ga_info["species_leaders"], savedir)
-    # clear out the garbage
-    del ga_info; gc.collect()
 
 
     # -------- saving plots
     if save_plots:
+        # save the improvements
+        save_improvements(ga_info["improvements"], savedir)
+        # other plots
         time_stackplot(gen_info_df, savedir)
         fitness_plot(gen_info_df, use_species, savedir)
         components_plot(gen_info_df, savedir)
@@ -67,6 +66,9 @@ def save_report(ga_info: dict, savedir: str, save_plots: bool) -> None:
         best_genome_mutation_analysis(best_genomes, savedir)
         # species plots if use_species
         if use_species:
+            # save species leaders
+            save_species_leaders(ga_info["species_leaders"], savedir)
+            # save other plots
             species_cmap = get_species_color_map(species_df)
             species_stackplot(species_df, species_cmap, savedir)
             plot_avg_species_fit(species_df, species_cmap, savedir)
@@ -74,7 +76,7 @@ def save_report(ga_info: dict, savedir: str, save_plots: bool) -> None:
             ridgeline_plot(pop_df, species_cmap, savedir)
         # close all plots and free memory
         plt.close("all")
-        gc.collect()
+        del ga_info; gc.collect()
 
 
 def run_report(ga_info, savedir: str) -> None:
