@@ -10,6 +10,7 @@ from PyQt6.QtSvgWidgets import QSvgWidget
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QTransform
 import graphviz
+import shutil
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -331,6 +332,9 @@ class MainWindow(QMainWindow):
                         f.write(f"  {key}: {value}\n")
                     f.write("\n")
             
+            # move the tree into config dir
+            shutil.move("./tree.svg", f"{config_dir}/tree.svg")
+
             self.show_notification("Config saved successfully!")
     
     def generate_param_dict(self, param_combo: dict):
