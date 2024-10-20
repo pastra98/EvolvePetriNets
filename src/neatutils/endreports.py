@@ -72,8 +72,10 @@ def save_report(ga_info: dict, savedir: str, save_plots: bool) -> None:
             species_cmap = get_species_color_map(species_df)
             species_stackplot(species_df, species_cmap, savedir)
             plot_avg_species_fit(species_df, species_cmap, savedir)
-            plot_species_evolution(species_df, pop_df, gen_info_df, species_cmap, savedir)
-            ridgeline_plot(pop_df, species_cmap, savedir)
+            try:
+                plot_species_evolution(species_df, pop_df, gen_info_df, species_cmap, savedir)
+                ridgeline_plot(pop_df, species_cmap, savedir)
+            except: pass
         # close all plots and free memory
         plt.close("all")
         del ga_info; gc.collect()
