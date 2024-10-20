@@ -49,6 +49,8 @@ def save_report(ga_info: dict, savedir: str, save_plots: bool) -> None:
         species_df = get_species_df(full_history)
         species_df.to_feather(f"{savedir}/data/species.feather")
         save_species_leaders(ga_info["species_leaders"], savedir)
+    # clear out the garbage
+    del ga_info; gc.collect()
 
 
     # -------- saving plots
@@ -67,8 +69,8 @@ def save_report(ga_info: dict, savedir: str, save_plots: bool) -> None:
         if use_species:
             species_cmap = get_species_color_map(species_df)
             species_stackplot(species_df, species_cmap, savedir)
-            plot_species_evolution(species_df, pop_df, gen_info_df, species_cmap, savedir)
             plot_avg_species_fit(species_df, species_cmap, savedir)
+            plot_species_evolution(species_df, pop_df, gen_info_df, species_cmap, savedir)
             ridgeline_plot(pop_df, species_cmap, savedir)
         # close all plots and free memory
         plt.close("all")
