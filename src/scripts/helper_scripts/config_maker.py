@@ -333,7 +333,7 @@ class MainWindow(QMainWindow):
                     f.write("\n")
             
             # move the tree into config dir
-            shutil.move("./tree.svg", f"{config_dir}/tree.svg")
+            shutil.copy("./tree.svg", f"{config_dir}/tree.svg")
 
             self.show_notification("Config saved successfully!")
     
