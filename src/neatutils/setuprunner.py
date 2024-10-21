@@ -62,6 +62,7 @@ def run_setup(run_nr, main_logger, setup, results_path) -> dict:
         "setupname": setup['setupname'],
         "run_nr": run_nr,
         "max_fitness": run_result["best_genome"].fitness if not "EXCEPTION" in run_result else None,
+        "num_components": run_result["total_components"] if not "EXCEPTION" in run_result else None,
         "Exceptions": "EXCEPTION" in run_result
     }
 
