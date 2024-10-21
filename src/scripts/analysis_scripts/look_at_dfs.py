@@ -280,3 +280,121 @@ summary_df_fp = "C:/Users/pauls/Documents/GitHubRepos/EvolvePetriNets/results/da
 summary_df = pd.read_feather(summary_df_fp)
 
 summary_df["max_fitness"].plot(kind="hist", bins=50)
+
+# %%
+"""
+--------------------------------------------------------------------------------
+--- comparing pandas vs polars speed
+--------------------------------------------------------------------------------
+"""
+import polars as pl
+import pandas as pd
+import json
+import sys
+import time
+
+
+fh_path = "C:/Users/pauls/Documents/GitHubRepos/EvolvePetriNets/analysis/data/sink_score_num_arcs/data/setup_4/20_10-21-2024_12-51-56/20_10-21-2024_12-51-56_full_history.json"
+with open(fh_path) as f:
+    fh = json.load(f)
+
+
+# the pandas pop df creation:
+def pandas_get_population_df(full_history: dict):
+    l = []
+    for gen, info_d in full_history.items():
+        for g in info_d["population"]:
+            l.append(g | {"gen": gen})
+    df = pd.DataFrame(l)
+    # expand the fitness metrics to columns, combine the original df with the metrics
+    metrics = pd.json_normalize(df['fitness_metrics']).add_prefix("metric_")
+    df = pd.concat([df.drop(columns=['fitness_metrics']), metrics], axis=1)
+    df['gen'] = df['gen'].astype(int)
+    # Calculate fitness deltas to parents for all rows
+    fitness_dict = df.set_index('id')['fitness'].to_dict()
+    df['fitness_difference'] = df.apply(
+        lambda row: row['fitness'] - fitness_dict.get(row['parent_id'], row['fitness'])
+        if row['gen'] > 1 and row['my_mutation'] != "" else 0,
+        axis=1
+    )
+    return df
+
+
+# the polars pop df creation:
+def polars_get_population_df(full_history: dict):
+    # Define the schema
+    schema = {
+        "id": pl.Utf8,
+        "parent_id": pl.Utf8,
+        "species_id": pl.Utf8,
+        "fitness": pl.Float64,
+        "my_mutation": pl.Utf8,
+        "my_components": pl.List(pl.Utf8),
+        "gen": pl.Int64
+    }
+    # get the genome info that is not nested
+    pop_df = pl.DataFrame([
+        {**genome, "gen": gen}
+        for gen, info in full_history.items()
+        for genome in info["population"]
+    ], schema=schema)
+    # get the nested fitness metrics into their own df and append them to original df
+    metrics_df = pl.DataFrame([
+        genome["fitness_metrics"]
+        for info in full_history.values()
+        for genome in info["population"]
+    ])
+    metrics_df = metrics_df.rename({col: f"metric_{col}" for col in metrics_df.columns})
+    pop_df = pop_df.hstack(metrics_df)
+    # Calculate fitness deltas by self joining rows with their parents
+    parent_df = pop_df.select(["id", "gen", "fitness"]).rename({
+        "id": "parent_id",
+        "gen": "parent_gen",
+        "fitness": "parent_fitness"
+    })
+    pop_df = pop_df.with_columns([
+        (pl.col("gen") - 1).alias("parent_gen")
+    ]).join(
+        parent_df,
+        on=["parent_id", "parent_gen"],
+        how="left"
+    )
+    pop_df = pop_df.with_columns([
+        pl.when(pl.col("gen") > 1)
+        .then(pl.col("fitness") - pl.col("parent_fitness"))
+        .otherwise(0)
+        .alias("fitness_difference")
+    ])
+    pop_df = pop_df.drop(["parent_gen", "parent_fitness"])
+    return pop_df
+
+# --------------- TESTING FUNCTIONS --------------- 
+
+
+# Function to get the size of an object
+def get_size(obj):
+    return sys.getsizeof(obj)
+
+# Function to measure execution time
+def measure_time(func, *args, **kwargs):
+    start_time = time.time()
+    result = func(*args, **kwargs)
+    end_time = time.time()
+    elapsed_time = end_time - start_time
+    return result, elapsed_time
+
+# size of original dict
+print(f"Size of original dict: {get_size(fh)} bytes\n")
+
+# ---------------- PANDAS ---------------- 
+pandabear, elapsed_time = measure_time(pandas_get_population_df, fh)
+size_of_pandabear = get_size(pandabear)
+
+print(f"Pandas Time taken: {elapsed_time} seconds")
+print(f"Size of pandas DataFrame: {size_of_pandabear} bytes\n")
+
+# ---------------- POLARS ---------------- 
+polarbear, elapsed_time = measure_time(polars_get_population_df, fh)
+
+print(f"Polars Time taken: {elapsed_time} seconds")
+print(f"Size of polars DataFrame: {polarbear.estimated_size()} bytes\n")
