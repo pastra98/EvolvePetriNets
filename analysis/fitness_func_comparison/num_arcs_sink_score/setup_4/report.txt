@@ -1,0 +1,20 @@
+Best fitness:
+0.9414809474205083
+Best metrics:
+{
+    "aggregated_replay_fitnesss": 1.0,
+    "io_connectedness": 0.6666666666666666,
+    "mean_by_max": 0.4523809523809524,
+    "trans_by_tasks": 1.0,
+    "precision": 0.011904761904761904,
+    "token_usage": 1.0,
+    "over_enabled_trans": 1.0,
+    "num_arcs": 0.42105263157894735,
+    "trans_by_places": 1,
+    "remaining_score": 1.0,
+    "sink_score": 1.0
+}
+Total components discovered:
+1971
+Duration of run:
+0:02:06.692685
