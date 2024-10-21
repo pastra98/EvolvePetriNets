@@ -9,6 +9,7 @@ import pickle
 import gzip
 import os
 
+import polars as pl
 import pandas as pd
 import numpy as np
 
@@ -34,11 +35,11 @@ def save_report(ga_info: dict, savedir: str, save_plots: bool) -> None:
     full_history = ga_info["history"]
     # save the dataframes that don't contain species
     pop_df = get_population_df(full_history)
-    pop_df.to_feather(f"{savedir}/data/population.feather")
+    pop_df.write_ipc(f"{savedir}/data/population.feather")
     gen_info_df = get_gen_info_df(full_history)
-    gen_info_df.to_feather(f"{savedir}/data/gen_info.feather")
+    gen_info_df.write_ipc(f"{savedir}/data/gen_info.feather")
     mutation_stats_df = get_mutation_stats_df(pop_df)
-    mutation_stats_df.to_feather(f"{savedir}/data/mutation_stats_df.feather")
+    mutation_stats_df.write_ipc(f"{savedir}/data/mutation_stats_df.feather")
     # save species leader gviz
     save_genome_gviz(ga_info["best_genome"], savedir, name_prefix="best_genome")
     pickle_object(ga_info["best_genome"], "best_genome", savedir)
@@ -46,8 +47,17 @@ def save_report(ga_info: dict, savedir: str, save_plots: bool) -> None:
     use_species = "species" in full_history[1]
     if use_species:
         species_df = get_species_df(full_history)
-        species_df.to_feather(f"{savedir}/data/species.feather")
+        species_df.write_ipc(f"{savedir}/data/species.feather")
 
+
+    # -------- temporary supershitty lazy hack to not have to modify plotting funcs
+    pop_df = pop_df.to_pandas()
+    gen_info_df = gen_info_df.to_pandas()
+    mutation_stats_df = mutation_stats_df.to_pandas()
+    if use_species:
+        species_df = species_df.to_pandas()
+    gc.collect()
+    # -------- temporary supershitty lazy hack to not have to modify plotting funcs
 
     # -------- saving plots
     if save_plots:
@@ -95,41 +105,89 @@ def run_report(ga_info, savedir: str) -> None:
 # ---------- CONVERT TO DATAFRAMES
 
 def get_species_df(full_history: dict):
-    l = []
-    for gen, info_d in full_history.items():
-        for s in info_d["species"]:
-            l.append(s | {"gen": gen})
-    return pd.DataFrame(l)
+    return pl.DataFrame([
+        s | {"gen": gen}
+        for gen, info_d in full_history.items()
+        for s in info_d["species"]
+    ])
 
 
 def get_population_df(full_history: dict):
-    l = []
-    for gen, info_d in full_history.items():
-        for g in info_d["population"]:
-            l.append(g | {"gen": gen})
-    df = pd.DataFrame(l)
-    # expand the fitness metrics to columns, combine the original df with the metrics
-    metrics = pd.json_normalize(df['fitness_metrics']).add_prefix("metric_")
-    df = pd.concat([df.drop(columns=['fitness_metrics']), metrics], axis=1)
-    # Calculate fitness deltas to parents for all rows
-    fitness_dict = df.set_index('id')['fitness'].to_dict()
-    df['fitness_difference'] = df.apply(
-        lambda row: row['fitness'] - fitness_dict.get(row['parent_id'], row['fitness'])
-        if row['gen'] > 1 and row['my_mutation'] != "" else 0,
-        axis=1
+    # Define the schema
+    schema = {
+        "id": pl.Utf8,
+        "parent_id": pl.Utf8,
+        "species_id": pl.Utf8,
+        "fitness": pl.Float64,
+        "my_mutation": pl.Utf8,
+        "my_components": pl.List(pl.Utf8),
+        "gen": pl.Int64
+    }
+    # get the genome info that is not nested
+    pop_df = pl.DataFrame([
+        {**genome, "gen": gen}
+        for gen, info in full_history.items()
+        for genome in info["population"]
+    ], schema=schema)
+    # get the nested fitness metrics into their own df and append them to original df
+    metrics_df = pl.DataFrame([
+        genome["fitness_metrics"]
+        for info in full_history.values()
+        for genome in info["population"]
+    ])
+    metrics_df = metrics_df.rename({col: f"metric_{col}" for col in metrics_df.columns})
+    pop_df = pop_df.hstack(metrics_df)
+    # Calculate fitness deltas by self joining rows with their parents
+    parent_df = pop_df.select(["id", "gen", "fitness"]).rename({
+        "id": "parent_id",
+        "gen": "parent_gen",
+        "fitness": "parent_fitness"
+    })
+    pop_df = pop_df.with_columns([
+        (pl.col("gen") - 1).alias("parent_gen")
+    ]).join(
+        parent_df,
+        on=["parent_id", "parent_gen"],
+        how="left"
     )
-    return df
+    pop_df = pop_df.with_columns([
+        pl.when(pl.col("gen") > 1)
+        .then(pl.col("fitness") - pl.col("parent_fitness"))
+        .otherwise(0)
+        .alias("fitness_difference")
+    ])
+    pop_df = pop_df.drop(["parent_gen", "parent_fitness"])
+    return pop_df
 
 
 def get_gen_info_df(full_history: dict):
-    l = []
-    excludes = ["species", "population"] # exclude the lists
-    for gen, info_d in full_history.items():
-        filtered_info_d = {k: v for k, v in info_d.items() if k not in excludes}
-        l.append(filtered_info_d | {"gen": gen})
-    df = pd.DataFrame(l)
-    df.set_index("gen")
-    return df
+    excludes = ["species", "population"]  # exclude the lists
+    return pl.DataFrame([
+        {k: v for k, v in info_d.items() if k not in excludes} | {"gen": gen}
+        for gen, info_d in full_history.items()
+    ]).with_columns(pl.col("gen").cast(pl.Int64))
+
+
+def get_mutation_stats_df(pop_df: pl.DataFrame):
+    return (
+        pop_df
+        .filter((pl.col("gen") > 1) & (pl.col("my_mutation") != ""))
+        .group_by("my_mutation")
+        .agg([
+            pl.count().alias("frequency"),
+            pl.col("fitness_difference").min().alias("min"),
+            pl.col("fitness_difference").quantile(0.25).alias("25%"),
+            pl.col("fitness_difference").median().alias("median"),
+            pl.col("fitness_difference").quantile(0.75).alias("75%"),
+            pl.col("fitness_difference").max().alias("max"),
+            pl.col("fitness_difference").mean().alias("mean"),
+            pl.col("gen").unique().alias("generations")
+        ])
+        .with_columns([
+            (pl.col("frequency") / pl.col("frequency").sum()).alias("relative_frequency")
+        ])
+        .sort("my_mutation")
+    )
 
 # ---------- SERIALIZATION
 
@@ -327,31 +385,6 @@ def metrics_plot(pop_df: pd.DataFrame, savedir: str):
     plot_metrics(df_avg, 'Average Population Metrics Over Generations')
 
 # ----- MUTATION PLOTS
-
-def get_mutation_stats_df(pop_df):
-    """Calculates fitness deltas between parents and offspring, assigns it to mutations
-    """
-    # Group by mutation and calculate statistics
-    filtered_pop_df = pop_df[(pop_df["gen"] > 1) & (pop_df["my_mutation"] != "")]
-    mutation_stats_df = filtered_pop_df.groupby('my_mutation').agg({
-        'fitness_difference': [
-            'count',
-            'min',
-            lambda x: x.quantile(0.25),
-            'median',
-            lambda x: x.quantile(0.75),
-            'max',
-            'mean'
-        ],
-        'gen': 'unique'
-    })
-    mutation_stats_df.columns = ['frequency', 'min', '25%', 'median', '75%', 'max', 'mean', 'generations']
-    mutation_stats_df = mutation_stats_df.sort_index()
-    # Calculate relative frequencies
-    total_mutations = mutation_stats_df['frequency'].sum()
-    mutation_stats_df['relative_frequency'] = mutation_stats_df['frequency'] / total_mutations
-    return mutation_stats_df
-
 
 def mutation_effects_plot(pop_df, mutation_stats_df, savedir: str, max_gen: int = None):
     """
