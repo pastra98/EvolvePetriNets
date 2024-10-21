@@ -1,5 +1,5 @@
 {
-    "selection_strategy": "speciation",
+    "selection_strategy": "truncation",
     "popsize": 500,
     "n_alpha_genomes": 0,
     "n_inductive_genomes": 0,
@@ -31,12 +31,12 @@
         0.0
     ],
     "pop_perc_crossover": 0.3,
-    "start_crossover": 15,
+    "start_crossover": 10,
     "pop_perc_elite": 0.05,
     "spawn_cutoff": 0.2,
-    "species_boundary": 0.8,
+    "species_boundary": 0.95,
     "compat_to_multiple": true,
-    "species_component_pool_size": 3,
+    "species_component_pool_size": 20,
     "tournament_size": 10,
     "enough_gens_to_change_things": 5,
     "update_species_rep": true,
@@ -44,15 +44,15 @@
     "selection_threshold": 30,
     "elitism": true,
     "allowed_gens_no_improvement": 99999,
-    "old_age": 99999,
-    "old_penalty": 0.8,
+    "old_age": 10,
+    "old_penalty": 1.0,
     "youth_bonus": 1.4,
     "replay_mult": 1.5,
     "missing_penal": 0.4,
     "min_tokens_for_replay": 51,
     "metric_dict": {
         "aggregated_replay_fitnesss": {
-            "weight": 1,
+            "weight": 2,
             "raise_by": 1,
             "active_gen": 0,
             "anchor_to": [
@@ -124,12 +124,12 @@
             ]
         },
         "num_arcs": {
-            "weight": 0,
+            "weight": 1,
             "raise_by": 1,
             "active_gen": 0,
             "anchor_to": [
-                "",
-                0.0
+                "aggregated_replay_fitnesss",
+                0.8
             ]
         },
         "trans_by_places": {
@@ -139,6 +139,15 @@
             "anchor_to": [
                 "",
                 0.0
+            ]
+        },
+        "sink_score": {
+            "weight": 1,
+            "raise_by": 1,
+            "active_gen": 0,
+            "anchor_to": [
+                "aggregated_replay_fitnesss",
+                0.8
             ]
         }
     },
