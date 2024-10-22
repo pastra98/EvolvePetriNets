@@ -162,10 +162,23 @@ def get_population_df(full_history: dict):
 
 def get_gen_info_df(full_history: dict):
     excludes = ["species", "population"]  # exclude the lists
-    return pl.DataFrame([
-        {k: v for k, v in info_d.items() if k not in excludes} | {"gen": gen}
-        for gen, info_d in full_history.items()
-    ]).with_columns(pl.col("gen").cast(pl.Int64))
+    rows = []
+    for gen, info_d in full_history.items():
+        row = {k: v for k, v in info_d.items() if k not in excludes}
+        row["gen"] = gen
+        try:
+            times = row.pop("times")
+        except:
+            print("wtf")
+        row["time_pop_update"] = times.get("pop_update")
+        row["time_evaluate_curr_generation"] = times.get("evaluate_curr_generation")
+        rows.append(row)
+    # Create DataFrame and cast generation column to Int64
+    return pl.DataFrame(rows).with_columns([
+        pl.col("gen").cast(pl.Int64),
+        pl.col("time_pop_update").fill_null(0)
+        ])
+
 
 
 def get_mutation_stats_df(pop_df: pl.DataFrame):
@@ -250,12 +263,11 @@ def filter_best_genomes(gen_info_df, pop_df):
 def time_stackplot(gen_info_df: pd.DataFrame, savedir: str):
     """Stackplot of evaluation and pop update times
     """
-    times_df = pd.DataFrame(gen_info_df["times"].tolist(), index=gen_info_df.index)
     plt.figure(figsize=FSIZE)
     plt.stackplot(
-        times_df.index,
-        times_df["evaluate_curr_generation"],
-        times_df["pop_update"],
+        gen_info_df.index,
+        gen_info_df["time_evaluate_curr_generation"],
+        gen_info_df["time_pop_update"],
         labels=["Evaluate Current Generation", "Population Update"]
         )
     plt.legend(frameon=False)
