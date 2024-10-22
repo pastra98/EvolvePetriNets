@@ -398,22 +398,22 @@ class GeneticAlgorithm:
 
         # determine number of spawns
         if self.curr_gen >= params.start_crossover:
-            n_crossover = int(params.popsize * params.pop_perc_crossover)
+            self.num_crossover = int(params.popsize * params.pop_perc_crossover)
         else:
-            n_crossover = 0
-        n_elites = int(params.popsize * params.pop_perc_elite)
-        n_asex = params.popsize - n_elites - n_crossover
+            self.num_crossover = 0
+        self.num_elite = int(params.popsize * params.pop_perc_elite)
+        self.num_asex = params.popsize - self.num_elite - self.num_crossover
 
         # elite spawns - without mutation
         elite_spawns = []
         for i, g in enumerate(self.population):
             new_elite = g.clone() # append unmutated top g
             elite_spawns.append(new_elite)
-            if i == n_elites - 1: break
+            if i == self.num_elite - 1: break
 
         # crossover spawns - without mutation
         crossover_spawns = []
-        while len(crossover_spawns) < n_crossover:
+        while len(crossover_spawns) < self.num_crossover:
             # those should be from the previous gen - which they are??
             p1 = roulette_select(self.population, probabilities)
             p2 = roulette_select(self.population, probabilities)
@@ -423,7 +423,7 @@ class GeneticAlgorithm:
 
         # asex spawns - with mutation
         asex_spawns = []
-        for _ in range(n_asex):
+        for _ in range(self.num_asex):
             p = roulette_select(self.population, probabilities)
             new_g = p.clone()
             new_g.mutate(0)
@@ -438,11 +438,11 @@ class GeneticAlgorithm:
         Makes no effort at maintaining diversity
         """ 
         if self.curr_gen >= params.start_crossover:
-            n_crossover = int(params.popsize * params.pop_perc_crossover)
+            self.num_crossover = int(params.popsize * params.pop_perc_crossover)
         else:
-            n_crossover = 0
-        n_elites = int(params.popsize * params.pop_perc_elite)
-        n_asex = params.popsize - n_elites - n_crossover
+            self.num_crossover = 0
+        self.num_elite = int(params.popsize * params.pop_perc_elite)
+        self.num_asex = params.popsize - self.num_elite - self.num_crossover
 
         pool = self.population[:int(params.popsize*params.spawn_cutoff)]
 
@@ -451,14 +451,14 @@ class GeneticAlgorithm:
         for i, g in enumerate(self.population):
             new_elite = g.clone() # append unmutated top g
             elite_spawns.append(new_elite)
-            if i == n_elites - 1: break
+            if i == self.num_elite - 1: break
 
         # crossover spawns, using speciation method (so truncation not active here)
-        crossover_spawns, _ = self.get_crossover_spawns(n_crossover)
+        crossover_spawns, _ = self.get_crossover_spawns(self.num_crossover)
 
         # asex spawns - with mutation
         asex_spawns = []
-        for i in range(n_asex):
+        for i in range(self.num_asex):
             i = i % len(pool)
             new_g = pool[i].clone()
             new_g.mutate(0)
