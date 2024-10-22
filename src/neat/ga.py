@@ -543,7 +543,7 @@ def compute_t(inc, pop_fit_vals, pop_len, pop_sum, pop_df):
     inc_sum, inc_len = inc.sum(), len(inc)
     inc_avg_fit = inc_sum / inc_len
     exc_len = pop_len - inc_len
-    exc_avg_fit = (pop_sum - inc_sum) / exc_len
+    exc_avg_fit = (pop_sum - inc_sum) / max(exc_len, 1) # exc len can sometimes be 0
     mean_diff = inc_avg_fit - exc_avg_fit
 
     inc_df, exc_df = inc_len-1, exc_len-1
