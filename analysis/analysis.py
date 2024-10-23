@@ -57,79 +57,56 @@
 
 # %%
 import polars as pl
-import pandas as pd
 import matplotlib.pyplot as plt
-import matplotlib
-import pandas as pd
-import numpy as np
-from statistics import fmean
-from math import ceil
-import pickle, gzip
 from importlib import reload
 import neatutils.endreports as er
+
+import scripts.helper_scripts.setup_analysis as sa
 
 
 # %% [markdown]
 # ## Fitness ~ Components Scatter
 
 # %%
+# testing setup analysis
+# fitness & components scatterplot
 
-def get_mapped_setupname_df(df, setup_map):
-    renamed_df = df.copy()
-    renamed_df["setupname"] = renamed_df["setupname"].apply(
-        lambda x: setup_map.get(int(x.split('_')[1]), x)
-        )
-    return renamed_df
-
-def create_scatter_plot(df, setup_map=None):
-
-    # If a setup_map is provided, rename the setupname column values
-    if setup_map:
-        df = get_mapped_setupname_df(df, setup_map)
-
-    # Create a new figure and axis
-    fig, ax = plt.subplots(figsize=(12, 8))
-    # Get unique setupnames for colors
-    setupnames = df['setupname'].unique()
-    colors = plt.cm.rainbow(np.linspace(0, 1, len(setupnames)))
-    # Plot each setupname with a different color
-    for setupname, color in zip(setupnames, colors):
-        mask = df['setupname'] == setupname
-        setup_data = df.loc[mask]
-        
-        # Scatter plot for individual points
-        ax.scatter(setup_data['num_components'], 
-                   setup_data['max_fitness'],
-                   c=[color], 
-                   label=setupname,
-                   alpha=0.7)
-        # Calculate and plot mean without adding to legend
-        mean_components = setup_data['num_components'].mean()
-        mean_fitness = setup_data['max_fitness'].mean()
-        ax.scatter(mean_components, mean_fitness, 
-                   c=[color], marker='X', s=200, edgecolors='black', linewidth=2)
-    # Set labels and title
-    ax.set_xlabel('Number of Components')
-    ax.set_ylabel('Max Fitness')
-    ax.set_title('Max Fitness vs Number of Components (with Setup Means)')
-    # Add legend
-    ax.legend()
-    # Add a text annotation explaining the 'X' markers
-    ax.text(0.95, 0.05, "'X' markers represent setup means", 
-            transform=ax.transAxes, ha='right', va='bottom', 
-            bbox=dict(facecolor='white', edgecolor='gray', alpha=0.8))
-    # Show the plot
-    plt.tight_layout()
-    plt.show()
-
-
-df = pd.read_feather("../analysis/data/setup_reports_test/data/final_report_df.feather")
-setup_map={1: "speciation", 2: "roulette", 3: "truncation"}
-create_scatter_plot(df, setup_map)
+summary_df = pl.read_ipc("../analysis/data/setup_reports_test/execution_data/final_report_df.feather")
+sa.components_fitness_scatter(summary_df)
 
 # %%
-# total components
 
+res = sa.exec_results_crawler("../analysis/data/testing_truncation")
+
+# TODO: generalized plotting func
+search = {
+    "spawn_cutoff_10%": {"spawn_cutoff": 0.1},
+    "spawn_cutoff_25%": {"spawn_cutoff": 0.25},
+    "spawn_cutoff_50%": {"spawn_cutoff": 0.50},
+    "spawn_cutoff_75%": {"spawn_cutoff": 0.75},
+}
+
+# sa.search_and_aggregate_param_results(res, {"all": {}}) # this would aggregate all dataframes
+
+plt_layout = [["spawn_cutoff_10%", "spawn_cutoff_25%", "spawn_cutoff_50%", "spawn_cutoff_75%"]]
+
+data_sources = sa.search_and_aggregate_param_results(res, search)
+
+# y_ax = "num_total_components"
+# optional
+# x_ax = "gen"
+# title = "Title"
+# subplt_titles = []
+
+sa.plot_data(plt_layout, data_sources, "num_total_components")
+sa.plot_data(plt_layout, data_sources, "best_genome_fitness")
+sa.plot_data(plt_layout, data_sources, "best_genome_fitness")
+
+print(res["setups"][1]["gen_info_agg"].columns)
+
+
+
+# %%
 
 # %%
 # unique components
@@ -156,6 +133,7 @@ def plot_mean_fitness_diff(pop_df: pl.DataFrame):
     plt.grid(True)
     plt.show()
 
-# TODO: make this work with multiple runs
 
-plot_mean_fitness_diff(pop_df)
+# TODO: make this work with multiple runs
+test_pop_df = pl.read_ipc("../analysis/data/testing_truncation/execution_data/setup_1/1_10-21-2024_21-17-27/data/population.feather")
+plot_mean_fitness_diff(test_pop_df)
