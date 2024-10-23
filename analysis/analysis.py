@@ -12,11 +12,13 @@
 # ## Plots I want this to work on
 """
 [ ] Time plot?
-[ ] Fitness_plot
-[ ] Total components?
+[x] Fitness_plot
+    [ ] comparing best vs. avg vs best species (needs to be only done once)
+[x] Total components?
 [ ] Unique components per generation
 [ ] Mutation boxplot effects
 [ ] fitness Metrics plots
+
 [ ] Mutation lineplots
 [ ] Average metrics?
 [ ] Number species
@@ -40,9 +42,13 @@
 [ ] ... check the onenote
 """
 
-# ## not implemented yet
+# ## Interesting one-off analysis
 """
-[ ] ... check the onenote
+[ ] Mutation lineage for a selected run
+[ ] Component similarity drift
+[ ] Fitness of components plotting
+        - Look at the components in the fittest genome at the end, plot their t-values
+        obtained from the component dict over the generations
 """
 
 # ## Those can only be copied from a run
@@ -57,28 +63,24 @@
 
 # %%
 import polars as pl
-import matplotlib.pyplot as plt
 from importlib import reload
 import neatutils.endreports as er
-
 import scripts.helper_scripts.setup_analysis as sa
 
 
 # %% [markdown]
 # ## Fitness ~ Components Scatter
 
-# %%
-# testing setup analysis
-# fitness & components scatterplot
-
 summary_df = pl.read_ipc("../analysis/data/setup_reports_test/execution_data/final_report_df.feather")
 sa.components_fitness_scatter(summary_df)
 
 # %%
+reload(sa)
+
+
 
 res = sa.exec_results_crawler("../analysis/data/testing_truncation")
 
-# TODO: generalized plotting func
 search = {
     "spawn_cutoff_10%": {"spawn_cutoff": 0.1},
     "spawn_cutoff_25%": {"spawn_cutoff": 0.25},
@@ -86,21 +88,16 @@ search = {
     "spawn_cutoff_75%": {"spawn_cutoff": 0.75},
 }
 
-# sa.search_and_aggregate_param_results(res, {"all": {}}) # this would aggregate all dataframes
 
 plt_layout = [["spawn_cutoff_10%", "spawn_cutoff_25%", "spawn_cutoff_50%", "spawn_cutoff_75%"]]
-
 data_sources = sa.search_and_aggregate_param_results(res, search)
 
-# y_ax = "num_total_components"
-# optional
-# x_ax = "gen"
-# title = "Title"
-# subplt_titles = []
+sa.generalized_lineplot(plt_layout, data_sources, "num_total_components")
+sa.generalized_lineplot(plt_layout, data_sources, "best_genome_fitness")
+sa.generalized_lineplot(plt_layout, data_sources, "avg_pop_fitness")
+sa.generalized_lineplot(plt_layout, data_sources, "num_unique_components")
 
-sa.plot_data(plt_layout, data_sources, "num_total_components")
-sa.plot_data(plt_layout, data_sources, "best_genome_fitness")
-sa.plot_data(plt_layout, data_sources, "best_genome_fitness")
+sa.generalized_barplot(plt_layout, data_sources, "num_total_components")
 
 print(res["setups"][1]["gen_info_agg"].columns)
 
@@ -110,4 +107,3 @@ print(res["setups"][1]["gen_info_agg"].columns)
 
 # %%
 # unique components
-

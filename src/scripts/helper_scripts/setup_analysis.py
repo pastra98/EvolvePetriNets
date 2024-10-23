@@ -4,10 +4,19 @@ import numpy as np
 import json
 from pathlib import Path
 from typing import Dict, List, Optional
+import gzip
+import pickle
+from tqdm import tqdm
 
 ################################################################################
 #################### PROCESSING AND COMBINING DATAFRAMES #######################
 ################################################################################
+
+# -------------------- GEN INFO DF
+
+def load_compressed_pickle(filename):
+    with gzip.open(filename, 'rb') as f:
+        return pickle.load(f)
 
 # -------------------- GEN INFO DF
 
@@ -19,6 +28,7 @@ def combine_and_aggregate_geninfo_dataframes(dataframes, use_species=False):
     # Columns to aggregate
     agg_columns = [
         "num_total_components",
+        "num_unique_components",
         "best_genome_fitness",
         "avg_pop_fitness",
         "time_evaluate_curr_generation",
@@ -36,6 +46,22 @@ def combine_and_aggregate_geninfo_dataframes(dataframes, use_species=False):
     ]).sort("gen")
     
     return result_df
+
+# -------------------- COMPONENTS DICT
+
+def count_unique_components(component_dict, max_gen):
+    """Count the number of unique components per generation from a component dictionary.
+    """
+    gen_counts = {gen: 0 for gen in range(1, max_gen + 1)}
+    # Count components for each generation
+    for component_data in component_dict.values():
+        for gen in component_data["fitnesses"].keys():
+            gen_counts[gen] += 1
+    
+    return  pl.DataFrame({
+        "gen": list(gen_counts.keys()),
+        "num_unique_components": list(gen_counts.values())
+    }).sort("gen")
 
 # -------------------- RESULTS DF
 
@@ -99,7 +125,8 @@ def exec_results_crawler(root_path: str) -> dict:
     
     # Process each setup directory
     execution_data_path = root_path / "execution_data"
-    for setup_dir in execution_data_path.iterdir():
+    # for setup_dir in execution_data_path.iterdir():
+    for setup_dir in tqdm(execution_data_path.iterdir(), desc="Processing setup directories"):
         # Check if directory name matches setup pattern
         if setup_dir.is_dir() and setup_dir.name.startswith("setup_"):
             try:
@@ -125,11 +152,17 @@ def exec_results_crawler(root_path: str) -> dict:
                 # Process each run directory
                 for run_dir in setup_dir.iterdir():
                     if run_dir.is_dir():
+                        # load the gen info df
                         gen_info_path = run_dir / "data" / "gen_info.feather"
                         if gen_info_path.exists():
-                            agg_gen_info.append(pl.read_ipc(gen_info_path))
+                            gen_info_df = pl.read_ipc(gen_info_path)
+                        # load and add the component data of that run to the df
+                        cdict = load_compressed_pickle(run_dir / "data" / "component_dict.pkl.gz")
+                        gen_info_df = gen_info_df.join(count_unique_components(cdict, gen_info_df["gen"].max()), "gen")
+                        # append to aggregation list
+                        agg_gen_info.append(gen_info_df)
 
-                execution_results['setups'][setup_num]['gen_info_agg'] = combine_and_aggregate_geninfo_dataframes(agg_gen_info)
+                execution_results['setups'][setup_num]['gen_info_agg'] = combine_and_aggregate_geninfo_dataframes(agg_gen_info, is_speciation)
                 
             except (ValueError, IndexError) as e:
                 print(f"Error processing directory {setup_dir}: {e}")
@@ -177,7 +210,7 @@ def search_and_aggregate_param_results(res_dict: dict, search_dict: dict):
     return agg_dict
 
 ################################################################################
-#################### PLOTTING FUNCTIONS ########################################
+#################### AGGREGATED PLOTTING FUNCTIONS #############################
 ################################################################################
 
 def components_fitness_scatter(df: pl.DataFrame, setup_map: dict = None) -> None:
@@ -315,7 +348,7 @@ def generalized_lineplot(
     
     # Set main title
     if title is None:
-        title = f"{y_ax} by {x_ax}"
+        title = f"{y_ax.replace("_", " ")} by {x_ax}"
     fig.suptitle(title, fontsize=14, y=1.02)
     
     # Create plots
@@ -354,3 +387,106 @@ def generalized_lineplot(
     # Adjust layout to prevent overlap
     plt.tight_layout()
 
+
+def generalized_barplot(
+    plt_layout: List[List[str]],
+    data_sources: Dict[str, pl.DataFrame],
+    y_ax: str,
+    gen: int = -1,
+    title: Optional[str] = None,
+    group_titles: Optional[List[str]] = None,
+    figsize: tuple[int, int] = (12, 6)
+) -> None:
+    """
+    Create a grouped bar plot where each group contains multiple bars.
+    
+    Parameters:
+    -----------
+    plt_layout : List[List[str]]
+        List of lists where each inner list represents a group of bars to be plotted together.
+    data_sources : Dict[str, pl.DataFrame]
+        Dictionary mapping data source names to polars DataFrames.
+    y_ax : str
+        Column name to plot as bar heights.
+    gen : int, optional
+        Generation number to plot. If -1 (default), uses the last generation.
+    title : str, optional
+        Plot title. If None, uses f"{y_ax} at generation {gen}"
+    group_titles : List[str], optional
+        Labels for each group of bars. Must match length of plt_layout.
+    figsize : tuple[int, int], optional
+        Figure size in inches. Defaults to (12, 6).
+    """
+    # Create figure and axis
+    fig, ax = plt.subplots(figsize=figsize, layout='constrained')
+    
+    # Set main title
+    if title is None:
+        generation = gen if gen != -1 else "final generation"
+        title = f"{y_ax.replace('_', ' ')} at {generation}"
+    ax.set_title(title)
+    
+    # Calculate number of groups and bars
+    num_groups = len(plt_layout)
+    max_bars = max(len(group) for group in plt_layout)
+    
+    # Set up bar width and positions
+    bar_width = 0.8 / max_bars
+    x = np.arange(num_groups)
+    
+    # Plot each set of bars
+    for bar_idx in range(max_bars):
+        values = []
+        labels = []
+        
+        # Collect values for this set of bars
+        for group_idx, group in enumerate(plt_layout):
+            if bar_idx < len(group):
+                data_key = group[bar_idx]
+                if data_key not in data_sources:
+                    raise ValueError(f"Data source '{data_key}' not found in data_sources")
+                
+                df = data_sources[data_key]
+                
+                # Get the correct generation
+                if gen == -1:
+                    target_gen = df['gen'].max()
+                else:
+                    target_gen = gen
+                
+                # Get the value for the specified generation
+                value = df.filter(pl.col('gen') == target_gen)[y_ax].item()
+                values.append(value)
+                labels.append(data_key)
+            else:
+                values.append(0)  # Add placeholder for missing bars
+                labels.append("")
+        
+        # Plot bars for this set
+        offset = bar_width * bar_idx
+        rects = ax.bar(x + offset, values, bar_width, 
+                      label=f"Bar Set {bar_idx + 1}")
+        
+        # Add value labels on bars
+        for rect, label, value in zip(rects, labels, values):
+            if value > 0:  # Only label non-zero bars
+                ax.text(rect.get_x() + rect.get_width() / 2., rect.get_height() - (rect.get_height() * 0.05),
+                        f'{label}\n{value:.0f}',
+                        ha='center', va='top', color='black')
+    
+    # Customize the plot
+    ax.set_ylabel(y_ax.replace('_', ' '))
+    if group_titles:
+        ax.set_xticks(x + bar_width * (max_bars - 1) / 2)
+        ax.set_xticklabels(group_titles)
+    else:
+        ax.set_xticks(x + bar_width * (max_bars - 1) / 2)
+        ax.set_xticklabels([f"Group {i+1}" for i in range(num_groups)])
+    
+    ax.grid(True, axis='y', linestyle='--', alpha=0.7)
+    
+    return fig
+
+################################################################################
+#################### ONE-OFF PLOTTING FUNCTIONS ################################
+################################################################################
