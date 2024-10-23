@@ -111,29 +111,3 @@ print(res["setups"][1]["gen_info_agg"].columns)
 # %%
 # unique components
 
-
-# %%
-# # Plotting the mean fitness diff
-import matplotlib.pyplot as plt
-
-# Group by generation and calculate the mean fitness difference
-def plot_mean_fitness_diff(pop_df: pl.DataFrame):
-    # calculate the mean fitness difference
-    avg_mean_diff = pop_df.filter(
-        pl.col("gen") > 1
-        ).group_by("gen").agg(
-            pl.col("fitness_difference").mean().alias("mean_fitness_difference")
-            ).sort("gen")
-    # Plot the mean fitness difference over generations
-    plt.figure(figsize=(10, 6))
-    plt.plot(avg_mean_diff["gen"], avg_mean_diff["mean_fitness_difference"])
-    plt.xlabel("Generation")
-    plt.ylabel("Mean Fitness Difference")
-    plt.title("Mean Fitness Difference Over Generations")
-    plt.grid(True)
-    plt.show()
-
-
-# TODO: make this work with multiple runs
-test_pop_df = pl.read_ipc("../analysis/data/testing_truncation/execution_data/setup_1/1_10-21-2024_21-17-27/data/population.feather")
-plot_mean_fitness_diff(test_pop_df)
