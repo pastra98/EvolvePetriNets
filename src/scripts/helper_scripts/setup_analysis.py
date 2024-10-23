@@ -29,6 +29,9 @@ def combine_and_aggregate_geninfo_dataframes(dataframes, use_species=False):
     agg_columns = [
         "num_total_components",
         "num_unique_components",
+        "num_crossover",
+        "num_elite",
+        "num_asex",
         "best_genome_fitness",
         "avg_pop_fitness",
         "time_evaluate_curr_generation",
@@ -89,7 +92,12 @@ def get_mapped_setupname_df(df, setup_map):
 #################### CRAWLING THE RESULTS ######################################
 ################################################################################
 
-def exec_results_crawler(root_path: str) -> dict:
+def exec_results_crawler(
+        root_path: str,
+        save_dfs = True, # TODO: implement this
+        count_components = True,
+        calculate_spawnranks = True # TODO: implement this
+    ) -> dict:
     """
     Process execution data from a directory structure containing genetic algorithm runs.
     
@@ -115,6 +123,10 @@ def exec_results_crawler(root_path: str) -> dict:
     
     # Convert string path to Path object
     root_path = Path(root_path)
+
+    # load max gen, assumes that all runs have same num of gens & stop_cond == "gen"
+    with open(root_path / f"{root_path.name}.json") as f:
+        maxgen = json.load(f)["setups"][0]["stop_cond"]["val"]
     
     # Load final report
     final_report_path = root_path / "execution_data" / "final_report_df.feather"
@@ -157,8 +169,12 @@ def exec_results_crawler(root_path: str) -> dict:
                         if gen_info_path.exists():
                             gen_info_df = pl.read_ipc(gen_info_path)
                         # load and add the component data of that run to the df
-                        cdict = load_compressed_pickle(run_dir / "data" / "component_dict.pkl.gz")
-                        gen_info_df = gen_info_df.join(count_unique_components(cdict, gen_info_df["gen"].max()), "gen")
+                        if count_components:
+                            cdict = load_compressed_pickle(run_dir / "data" / "component_dict.pkl.gz")
+                            gen_info_df = gen_info_df.join(count_unique_components(cdict, maxgen), "gen")
+                        # add the spawnranks
+                        if calculate_spawnranks:
+                            pass
                         # append to aggregation list
                         agg_gen_info.append(gen_info_df)
 
