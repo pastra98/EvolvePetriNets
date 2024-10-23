@@ -5,98 +5,11 @@ import json
 from pathlib import Path
 from typing import Dict, List, Optional
 
-def get_mapped_setupname_df(df, setup_map):
-    """
-    Accepts a dictionary that maps setup_{i} name to a name specified in setup_map.
+################################################################################
+#################### PROCESSING AND COMBINING DATAFRAMES #######################
+################################################################################
 
-    Args:
-        setup_map (dict): A dictionary that maps an integer key to a new setup name.
-                          The setup_map looks like this: {i: "new_setup_name"}
-
-    Returns:
-        dict: A dictionary with the updated setup names.
-    """
-    # renamed_df = df.copy()
-    # renamed_df["setupname"] = renamed_df["setupname"].apply(
-    #     lambda x: setup_map.get(int(x.split('_')[1]), x)
-    #     )
-
-    return df.with_columns([
-        pl.col("setupname").map_elements(
-            lambda x: setup_map.get(
-                int(x.split('_')[1]), 
-                x
-            )
-        ).alias("setupname")
-    ])
-
-def components_fitness_scatter(df: pl.DataFrame, setup_map: dict = None) -> None:
-    """
-    Accepts a results DataFrame and visualizes all runs on a scatterplot: 
-    fitness ~ num_components, with the mean of each setup marked by a cross.
-    
-    Args:
-        df (pl.DataFrame): Input Polars DataFrame containing results
-        setup_map (dict, optional): Dictionary mapping setup numbers to new names
-    """
-    # If a setup_map is provided, rename the setupname column values
-    if setup_map:
-        df = get_mapped_setupname_df(df, setup_map)
-    
-    # Create a new figure and axis
-    fig, ax = plt.subplots(figsize=(12, 8))
-    
-    # Get unique setupnames for colors
-    setupnames = df.get_column("setupname").unique().to_list()
-    colors = plt.cm.rainbow(np.linspace(0, 1, len(setupnames)))
-    
-    # Plot each setupname with a different color
-    for setupname, color in zip(setupnames, colors):
-        # Filter data for current setup
-        setup_data = df.filter(pl.col("setupname") == setupname)
-        
-        # Convert to numpy arrays for plotting
-        components = setup_data.get_column("num_components").to_numpy()
-        fitness = setup_data.get_column("max_fitness").to_numpy()
-        
-        # Scatter plot for individual points
-        ax.scatter(components, 
-                  fitness,
-                  c=[color], 
-                  label=setupname,
-                  alpha=0.7)
-        
-        # Calculate and plot mean without adding to legend
-        mean_components = float(setup_data.select(pl.col("num_components").mean()).item())
-        mean_fitness = float(setup_data.select(pl.col("max_fitness").mean()).item())
-        ax.scatter(mean_components, 
-                  mean_fitness, 
-                  c=[color], 
-                  marker='X', 
-                  s=200, 
-                  edgecolors='black', 
-                  linewidth=2)
-    
-    # Set labels and title
-    ax.set_xlabel('Number of Components')
-    ax.set_ylabel('Max Fitness')
-    ax.set_title('Max Fitness vs Number of Components (with Setup Means)')
-    
-    # Add legend
-    ax.legend()
-    
-    # Add a text annotation explaining the 'X' markers
-    ax.text(0.95, 0.05, 
-            "'X' markers represent setup means", 
-            transform=ax.transAxes, 
-            ha='right', 
-            va='bottom', 
-            bbox=dict(facecolor='white', edgecolor='gray', alpha=0.8))
-    
-    # Show the plot
-    plt.tight_layout()
-    plt.show()
-
+# -------------------- GEN INFO DF
 
 def combine_and_aggregate_geninfo_dataframes(dataframes, use_species=False):
     """
@@ -123,6 +36,32 @@ def combine_and_aggregate_geninfo_dataframes(dataframes, use_species=False):
     ]).sort("gen")
     
     return result_df
+
+# -------------------- RESULTS DF
+
+def get_mapped_setupname_df(df, setup_map):
+    """
+    Accepts a dictionary that maps setup_{i} name to a name specified in setup_map.
+
+    Args:
+        setup_map (dict): A dictionary that maps an integer key to a new setup name.
+                          The setup_map looks like this: {i: "new_setup_name"}
+
+    Returns:
+        dict: A dictionary with the updated setup names.
+    """
+    return df.with_columns([
+        pl.col("setupname").map_elements(
+            lambda x: setup_map.get(
+                int(x.split('_')[1]), 
+                x
+            )
+        ).alias("setupname")
+    ])
+
+################################################################################
+#################### CRAWLING THE RESULTS ######################################
+################################################################################
 
 def exec_results_crawler(root_path: str) -> dict:
     """
@@ -229,7 +168,6 @@ def search_and_aggregate_param_results(res_dict: dict, search_dict: dict):
     for setup_name, setup in res_dict["setups"].items():
         for search_name, search_params in search_dict.items():
             if contains_params(search_params, setup["params"]):
-                print("isin")
                 agg_dict.setdefault(search_name, []).append(setup["gen_info_agg"])
     
     for search_name, dfs in agg_dict.items():
@@ -237,6 +175,77 @@ def search_and_aggregate_param_results(res_dict: dict, search_dict: dict):
         agg_dict[search_name] = agg_df
                 
     return agg_dict
+
+################################################################################
+#################### PLOTTING FUNCTIONS ########################################
+################################################################################
+
+def components_fitness_scatter(df: pl.DataFrame, setup_map: dict = None) -> None:
+    """
+    Accepts a results DataFrame and visualizes all runs on a scatterplot: 
+    fitness ~ num_components, with the mean of each setup marked by a cross.
+    
+    Args:
+        df (pl.DataFrame): Input Polars DataFrame containing results
+        setup_map (dict, optional): Dictionary mapping setup numbers to new names
+    """
+    # If a setup_map is provided, rename the setupname column values
+    if setup_map:
+        df = get_mapped_setupname_df(df, setup_map)
+    
+    # Create a new figure and axis
+    fig, ax = plt.subplots(figsize=(12, 8))
+    
+    # Get unique setupnames for colors
+    setupnames = df.get_column("setupname").unique().to_list()
+    colors = plt.cm.rainbow(np.linspace(0, 1, len(setupnames)))
+    
+    # Plot each setupname with a different color
+    for setupname, color in zip(setupnames, colors):
+        # Filter data for current setup
+        setup_data = df.filter(pl.col("setupname") == setupname)
+        
+        # Convert to numpy arrays for plotting
+        components = setup_data.get_column("num_components").to_numpy()
+        fitness = setup_data.get_column("max_fitness").to_numpy()
+        
+        # Scatter plot for individual points
+        ax.scatter(components, 
+                  fitness,
+                  c=[color], 
+                  label=setupname,
+                  alpha=0.7)
+        
+        # Calculate and plot mean without adding to legend
+        mean_components = float(setup_data.select(pl.col("num_components").mean()).item())
+        mean_fitness = float(setup_data.select(pl.col("max_fitness").mean()).item())
+        ax.scatter(mean_components, 
+                  mean_fitness, 
+                  c=[color], 
+                  marker='X', 
+                  s=200, 
+                  edgecolors='black', 
+                  linewidth=2)
+    
+    # Set labels and title
+    ax.set_xlabel('Number of Components')
+    ax.set_ylabel('Max Fitness')
+    ax.set_title('Max Fitness vs Number of Components (with Setup Means)')
+    
+    # Add legend
+    ax.legend()
+    
+    # Add a text annotation explaining the 'X' markers
+    ax.text(0.95, 0.05, 
+            "'X' markers represent setup means", 
+            transform=ax.transAxes, 
+            ha='right', 
+            va='bottom', 
+            bbox=dict(facecolor='white', edgecolor='gray', alpha=0.8))
+    
+    # Show the plot
+    plt.tight_layout()
+    plt.show()
 
 
 def create_subplot_grid(num_plots: int) -> tuple[int, int]:
@@ -252,7 +261,7 @@ def create_subplot_grid(num_plots: int) -> tuple[int, int]:
         return 2, 2
 
 
-def plot_data(
+def generalized_lineplot(
     plt_layout: List[List[str]],
     data_sources: Dict[str, pl.DataFrame],
     y_ax: str,
@@ -344,3 +353,4 @@ def plot_data(
     
     # Adjust layout to prevent overlap
     plt.tight_layout()
+
