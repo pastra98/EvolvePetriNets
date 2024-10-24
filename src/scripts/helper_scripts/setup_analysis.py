@@ -143,13 +143,16 @@ def get_mapped_setupname_df(df, setup_map):
 
 def exec_results_crawler(
         root_path: str,
-        save_dfs = True, # TODO: implement this
+        save_dfs = True,
+        force_recalculation = False,
     ) -> dict:
     """
     Process execution data from a directory structure containing genetic algorithm runs.
     
     Args:
         root_path (str): Path to the root directory containing execution_data
+        save_dfs (bool): Whether to save aggregated results to disk
+        force_recalculation (bool): If True, recalculate all aggregations even if cached results exist
         
     Returns:
         dict: Dictionary containing processed execution data with structure:
@@ -184,7 +187,6 @@ def exec_results_crawler(
     
     # Process each setup directory
     execution_data_path = root_path / "execution_data"
-    # for setup_dir in execution_data_path.iterdir():
     for setup_dir in tqdm(execution_data_path.iterdir(), desc="Processing setup directories"):
         # Check if directory name matches setup pattern
         if setup_dir.is_dir() and setup_dir.name.startswith("setup_"):
@@ -201,41 +203,86 @@ def exec_results_crawler(
                     params = json.load(f)
                 setup_aggregation['params'] = params
 
-                # Check for speciation strategy and popsize
-                is_speciation = params.get('selection_strategy') == 'speciation'
-                popsize = params.get('popsize')
-
-
-                agg_gen_info = []
-                agg_mutation_stats = []
-                agg_spawn_ranks = []
+                # Check for cached results
+                aggregated_runs_dir = setup_dir / "aggregated_runs"
+                cache_exists = aggregated_runs_dir.exists()
                 
-                # Process each run directory
-                for run_dir in setup_dir.iterdir():
-                    if run_dir.is_dir():
-                        data_dir = run_dir / "data"
-                        # load the gen_info and mutation_stats dfs
-                        gen_info_df = pl.read_ipc(data_dir / "gen_info.feather")
-                        mutation_stats_df = pl.read_ipc(data_dir / "mutation_stats_df.feather")
-                        # load and add the component data of that run to the df
-                        cdict = load_compressed_pickle(data_dir / "component_dict.pkl.gz")
-                        gen_info_df = gen_info_df.join(count_unique_components(cdict, maxgen), "gen")
-                        # fetch data from pop df, calculate spawn ranks
-                        pop_df = pl.read_ipc(data_dir / "population.feather")
-                        agg_spawn_ranks.append(analyze_spawns_by_fitness_rank(pop_df, popsize, maxgen))
-                        # calculate mean metrics and join to gen info df
-                        mean_metrics = pop_df.group_by('gen').agg([pl.col('^metric_.*$').mean()])
-                        gen_info_df = gen_info_df.join(mean_metrics, "gen")
-                        # calculate mutation stats and join them
-                        mutation_stats = get_mutation_stats_expanded(pop_df)
-                        gen_info_df = gen_info_df.join(mutation_stats, "gen")
-                        # append to aggregation list
-                        agg_gen_info.append(gen_info_df)
-                        agg_mutation_stats.append(mutation_stats_df)
+                if cache_exists and not force_recalculation:
+                    try:
+                        print(f"\nFound cached results for {setup_dir.name}")
+                        # Load cached results
+                        setup_aggregation['gen_info_agg'] = pl.read_ipc(
+                            aggregated_runs_dir / "gen_info_agg.feather"
+                        )
+                        setup_aggregation['mutation_stats_agg'] = pl.read_ipc(
+                            aggregated_runs_dir / "mutation_stats_agg.feather"
+                        )
+                        with open(aggregated_runs_dir / "spawn_rank_agg.json", 'r') as f:
+                            setup_aggregation['spawn_rank_agg'] = json.load(f)
+                        
+                        print(f"Successfully loaded cached results for {setup_dir.name}")
+                        
+                    except Exception as e:
+                        print(f"Error loading cached results for {setup_dir.name}: {e}")
+                        print("Falling back to recalculation...")
+                        force_recalculation = True  # Force recalculation for this setup
+                
+                if not cache_exists or force_recalculation:
+                    # Check for speciation strategy and popsize
+                    is_speciation = params.get('selection_strategy') == 'speciation'
+                    popsize = params.get('popsize')
 
-                setup_aggregation['gen_info_agg'] = aggregate_geninfo_dataframes(agg_gen_info)
-                setup_aggregation['mutation_stats_agg'] = aggregate_mutation_dataframes(agg_mutation_stats)
-                setup_aggregation['spawn_rank_agg'] = aggregate_spawn_ranks(agg_spawn_ranks)
+                    agg_gen_info = []
+                    agg_mutation_stats = []
+                    agg_spawn_ranks = []
+                    
+                    # Process each run directory
+                    for run_dir in setup_dir.iterdir():
+                        if run_dir.is_dir():
+                            data_dir = run_dir / "data"
+                            # load the gen_info and mutation_stats dfs
+                            gen_info_df = pl.read_ipc(data_dir / "gen_info.feather")
+                            mutation_stats_df = pl.read_ipc(data_dir / "mutation_stats_df.feather")
+                            # load and add the component data of that run to the df
+                            cdict = load_compressed_pickle(data_dir / "component_dict.pkl.gz")
+                            gen_info_df = gen_info_df.join(count_unique_components(cdict, maxgen), "gen")
+                            # fetch data from pop df, calculate spawn ranks
+                            pop_df = pl.read_ipc(data_dir / "population.feather")
+                            agg_spawn_ranks.append(analyze_spawns_by_fitness_rank(pop_df, popsize, maxgen))
+                            # calculate mean metrics and join to gen info df
+                            mean_metrics = pop_df.group_by('gen').agg([pl.col('^metric_.*$').mean()])
+                            gen_info_df = gen_info_df.join(mean_metrics, "gen")
+                            # calculate mutation stats and join them
+                            mutation_stats = get_mutation_stats_expanded(pop_df)
+                            gen_info_df = gen_info_df.join(mutation_stats, "gen")
+                            # append to aggregation list
+                            agg_gen_info.append(gen_info_df)
+                            agg_mutation_stats.append(mutation_stats_df)
+
+                    setup_aggregation['gen_info_agg'] = aggregate_geninfo_dataframes(agg_gen_info)
+                    setup_aggregation['mutation_stats_agg'] = aggregate_mutation_dataframes(agg_mutation_stats)
+                    setup_aggregation['spawn_rank_agg'] = aggregate_spawn_ranks(agg_spawn_ranks)
+
+                    # Save aggregated results if requested
+                    if save_dfs:
+                        try:
+                            # Create aggregated_runs directory if it doesn't exist
+                            aggregated_runs_dir.mkdir(exist_ok=True)
+                            
+                            # Save the aggregated results
+                            setup_aggregation['gen_info_agg'].write_ipc(
+                                aggregated_runs_dir / "gen_info_agg.feather"
+                            )
+                            setup_aggregation['mutation_stats_agg'].write_ipc(
+                                aggregated_runs_dir / "mutation_stats_agg.feather"
+                            )
+                            with open(aggregated_runs_dir / "spawn_rank_agg.json", 'w') as f:
+                                json.dump(setup_aggregation['spawn_rank_agg'], f)
+                                
+                            print(f"\nSaved aggregated results for {setup_dir.name}")
+                            
+                        except Exception as e:
+                            print(f"Error saving aggregated results for {setup_dir.name}: {e}")
 
                 execution_results['setups'][setup_num] = setup_aggregation
                 
