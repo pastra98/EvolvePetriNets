@@ -13,7 +13,7 @@ and pushing all that data through visualization functions.
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib
-import pandas as pd
+import polars as pl
 import numpy as np
 from statistics import fmean
 from math import ceil
@@ -25,12 +25,14 @@ def load_component_dict(filename):
     with gzip.open(filename, 'rb') as f:
         return pickle.load(f)
 
-data_fp = "C:/Users/pauls/Documents/GitHubRepos/EvolvePetriNets/results/data/avg_fit_plot_new_pop_df_10-08-2024_14-07-58/whatever/4_10-08-2024_14-08-02/data"
+data_fp = "C:/Users/pauls/Documents/GitHubRepos/EvolvePetriNets/analysis/data/testing_truncation/execution_data/setup_32/20_10-21-2024_22-50-31/data"
 # data_fp = "C:/Users/pauls/Documents/GitHubRepos/EvolvePetriNets/results/data/intra_s_truncation_s_cutoff_005_10-08-2024_13-36-59/whatever/4_10-08-2024_13-37-05/data"
 
-gen_info_df = pd.read_feather(data_fp + "/gen_info.feather")
-pop_df = pd.read_feather(data_fp + "/population.feather")
-species_df = pd.read_feather(data_fp + "/species.feather")
+gen_info_df = pl.read_ipc(data_fp + "/gen_info.feather")
+gen_info_df_pd = gen_info_df.to_pandas()
+pop_df = pl.read_ipc(data_fp + "/population.feather")
+pop_df_pd = pop_df.to_pandas()
+# species_df = pl.read_ipc(data_fp + "/species.feather").to_pandas()
 component_dict = load_component_dict(data_fp + "/component_dict.pkl.gz")
 
 savedir = data_fp
@@ -50,7 +52,6 @@ FSIZE = (10, 5)
 import seaborn as sns
 import matplotlib.pyplot as plt
 from collections import Counter
-import pandas as pd
 
 # Assuming filtered is already defined
 filtered = pop_df[pop_df["gen"] == 300]
@@ -96,36 +97,47 @@ plt.show()
 --------------------------------------------------------------------------------
 """
 
-def analyze_offspring_distribution(pop_df, popsize=500):
-    # Initialize rank_spawns dictionary
-    max_gen = pop_df['gen'].max()
-
-    # this does not work for species, because they might not exist in a given generation
-
-    rank_spawns = {i: 0 for i in range(1, popsize+1)}
+def analyze_spawns_by_fitness_rank(pop_df, popsize=500):
+    """
+    Analyzes how many offspring each fitness rank produces across generations.
     
-    for gen in range(2, max_gen + 1):
-        # Get previous generation's genomes
-        prev_gen = pop_df[pop_df['gen'] == gen - 1]
+    Args:
+        pop_df: Polars DataFrame containing genetic algorithm data
+        popsize: Size of population per generation (default: 500)
+    
+    Returns:
+        dict: Mapping of fitness ranks to total number of offspring spawned
+    """
+    # Initialize dictionary for ranks 1 to popsize
+    rank_spawns = {rank: 0 for rank in range(1, popsize + 1)}
+    
+    # Get unique generations
+    generations = sorted(pop_df['gen'].unique().to_list())
+    
+    # Process each generation after the first
+    for gen in generations[1:]:
+        prev_gen_df = pop_df.filter(pl.col('gen') == gen - 1)
         
-        # Sort previous generation by fitness and create rank dictionary
-        prev_gen_sorted = prev_gen.sort_values('fitness', ascending=False)
-        previous_parents = dict(zip(prev_gen_sorted['id'], range(1, len(prev_gen_sorted) + 1)))
+        # Sort previous generation by fitness and create rank mapping
+        sorted_prev = prev_gen_df.sort('fitness', descending=True)
+        previous_parents = dict(zip(sorted_prev['id'], range(1, len(sorted_prev) + 1)))
         
-        # Get current generation
-        curr_gen = pop_df[pop_df['gen'] == gen]
+        # Get current generation's data and count offspring per parent
+        parent_counts = (
+            pop_df
+            .filter(pl.col('gen') == gen)
+            .group_by('parent_id')
+            .agg(pl.len().alias('spawn_count'))
+        )
         
-        # Count offspring for each parent
-        offspring_counts = curr_gen['parent_id'].value_counts()
-        
-        # Map parent ranks to offspring counts
-        for parent_id, count in offspring_counts.items():
-            if parent_id in previous_parents:
-                rank = previous_parents[parent_id]
-                if rank <= 500:
-                    rank_spawns[rank] += count
+        # Map parent ranks to spawn counts
+        for row in parent_counts.iter_rows():
+            parent_id, spawn_count = row
+            parent_rank = previous_parents[parent_id]
+            rank_spawns[parent_rank] += spawn_count
     
     return rank_spawns
+
 
 def plot_offspring_distribution(rank_spawns):
     ranks = list(rank_spawns.keys())
