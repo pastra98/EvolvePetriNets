@@ -69,6 +69,7 @@ def analyze_spawns_by_fitness_rank(pop_df, popsize, maxgen):
     
     return rank_spawns
 
+
 def aggregate_spawn_ranks(rank_dicts_list):
     """
     Calculates the average spawn count for each rank across multiple rank dictionaries.
@@ -83,6 +84,19 @@ def aggregate_spawn_ranks(rank_dicts_list):
             sum_dict[rank].append(count)
     # Calculate averages
     return {rank: np.mean(counts) for rank, counts in sum_dict.items()}
+
+
+def get_mutation_stats_expanded(pop_df):
+    return pop_df.filter(pl.col("my_mutation")!="").group_by(
+        ["gen", "my_mutation"]).agg([
+            pl.col("fitness_difference").mean().alias("mean_fitness_difference"),
+            pl.col("fitness_difference").max().alias("max_fitness_difference"),
+            pl.col("my_mutation").len().alias("frequency"),
+        ]).pivot(
+            index="gen",
+            on="my_mutation",
+            values=["mean_fitness_difference", "max_fitness_difference", "frequency"]
+        ).fill_null(0).pipe(lambda df: df.select(sorted(df.columns)))
 
 
 # -------------------- COMPONENTS DICT
@@ -130,8 +144,6 @@ def get_mapped_setupname_df(df, setup_map):
 def exec_results_crawler(
         root_path: str,
         save_dfs = True, # TODO: implement this
-        count_components = True,
-        calculate_spawnranks = True
     ) -> dict:
     """
     Process execution data from a directory structure containing genetic algorithm runs.
@@ -206,13 +218,17 @@ def exec_results_crawler(
                         gen_info_df = pl.read_ipc(data_dir / "gen_info.feather")
                         mutation_stats_df = pl.read_ipc(data_dir / "mutation_stats_df.feather")
                         # load and add the component data of that run to the df
-                        if count_components:
-                            cdict = load_compressed_pickle(data_dir / "component_dict.pkl.gz")
-                            gen_info_df = gen_info_df.join(count_unique_components(cdict, maxgen), "gen")
-                        # add the spawnranks
-                        if calculate_spawnranks:
-                            pop_df = pl.read_ipc(data_dir / "population.feather")
-                            agg_spawn_ranks.append(analyze_spawns_by_fitness_rank(pop_df, popsize, maxgen))
+                        cdict = load_compressed_pickle(data_dir / "component_dict.pkl.gz")
+                        gen_info_df = gen_info_df.join(count_unique_components(cdict, maxgen), "gen")
+                        # fetch data from pop df, calculate spawn ranks
+                        pop_df = pl.read_ipc(data_dir / "population.feather")
+                        agg_spawn_ranks.append(analyze_spawns_by_fitness_rank(pop_df, popsize, maxgen))
+                        # calculate mean metrics and join to gen info df
+                        mean_metrics = pop_df.group_by('gen').agg([pl.col('^metric_.*$').mean()])
+                        gen_info_df = gen_info_df.join(mean_metrics, "gen")
+                        # calculate mutation stats and join them
+                        mutation_stats = get_mutation_stats_expanded(pop_df)
+                        gen_info_df = gen_info_df.join(mutation_stats, "gen")
                         # append to aggregation list
                         agg_gen_info.append(gen_info_df)
                         agg_mutation_stats.append(mutation_stats_df)
