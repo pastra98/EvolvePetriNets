@@ -12,43 +12,78 @@ from tqdm import tqdm
 #################### PROCESSING AND COMBINING DATAFRAMES #######################
 ################################################################################
 
-# -------------------- GEN INFO DF
+# -------------------- PICKLED FILES (E.G. COMPONENT DICT)
 
 def load_compressed_pickle(filename):
     with gzip.open(filename, 'rb') as f:
         return pickle.load(f)
 
-# -------------------- GEN INFO DF
+# -------------------- GEN INFO & MUTATION DF
 
-def combine_and_aggregate_geninfo_dataframes(dataframes, use_species=False):
-    """
-    Combines and aggregates the avg of two gen_info dataframes, with an optional
-    arg if species columns should be included in the aggregation
-    """
-    # Columns to aggregate
-    agg_columns = [
-        "num_total_components",
-        "num_unique_components",
-        "num_crossover",
-        "num_elite",
-        "num_asex",
-        "best_genome_fitness",
-        "avg_pop_fitness",
-        "time_evaluate_curr_generation",
-        "time_pop_update"
-    ] 
-    if use_species:
-        agg_columns += ["num_total_species", "best_species_avg_fitness"]
-    
-    # Concatenate all dataframes vertically
+def aggregate_dataframes(dataframes, grouper, exclude_cols, sortbygen=False):
     combined_df = pl.concat(dataframes)
+    aggregated = combined_df.group_by(grouper).agg([
+        pl.exclude(exclude_cols).mean()
+    ])
+    if sortbygen: aggregated = aggregated.sort("gen")
+    return aggregated
+
+def aggregate_geninfo_dataframes(dataframes):
+    return aggregate_dataframes(dataframes, "gen", ["best_genome"], True)
+
+def aggregate_mutation_dataframes(dataframes):
+    return aggregate_dataframes(dataframes, "my_mutation", ["generations"])
+
+# -------------------- POP DF
+def analyze_spawns_by_fitness_rank(pop_df, popsize, maxgen):
+    """
+    Analyzes how many offspring each fitness rank produces across generations.
     
-    # Group by 'gen' and calculate mean for specified columns
-    result_df = combined_df.group_by("gen").agg([
-        pl.col(col).mean().alias(f"{col}") for col in agg_columns
-    ]).sort("gen")
+    Args:
+        pop_df: Polars DataFrame containing genetic algorithm data
+        popsize: Size of population per generation (default: 500)
     
-    return result_df
+    Returns:
+        dict: Mapping of fitness ranks to total number of offspring spawned
+    """
+    rank_spawns = {rank: 0 for rank in range(1, popsize + 1)}
+    
+    for gen in range(2, maxgen + 1):
+        prev_gen_df = pop_df.filter(pl.col('gen') == gen - 1)
+        sorted_prev = prev_gen_df.sort('fitness', descending=True)
+        previous_parents = dict(zip(sorted_prev['id'], range(1, len(sorted_prev) + 1)))
+        
+        # Get current generation's data and count offspring per parent
+        parent_counts = (
+            pop_df
+            .filter(pl.col('gen') == gen)
+            .group_by('parent_id')
+            .agg(pl.len().alias('spawn_count'))
+        )
+        
+        # Map parent ranks to spawn counts
+        for row in parent_counts.iter_rows():
+            parent_id, spawn_count = row
+            parent_rank = previous_parents[parent_id]
+            rank_spawns[parent_rank] += spawn_count
+    
+    return rank_spawns
+
+def aggregate_spawn_ranks(rank_dicts_list):
+    """
+    Calculates the average spawn count for each rank across multiple rank dictionaries.
+    """
+    # Initialize dictionary to store sums
+    sum_dict = {}
+    # Sum up values for each rank
+    for rank_dict in rank_dicts_list:
+        for rank, count in rank_dict.items():
+            if rank not in sum_dict:
+                sum_dict[rank] = []
+            sum_dict[rank].append(count)
+    # Calculate averages
+    return {rank: np.mean(counts) for rank, counts in sum_dict.items()}
+
 
 # -------------------- COMPONENTS DICT
 
@@ -96,7 +131,7 @@ def exec_results_crawler(
         root_path: str,
         save_dfs = True, # TODO: implement this
         count_components = True,
-        calculate_spawnranks = True # TODO: implement this
+        calculate_spawnranks = True
     ) -> dict:
     """
     Process execution data from a directory structure containing genetic algorithm runs.
@@ -146,39 +181,47 @@ def exec_results_crawler(
                 setup_num = int(setup_dir.name.split("_")[1])
                 
                 # Initialize setup in results
-                execution_results['setups'][setup_num] = {}
+                setup_aggregation = {}
                 
                 # Load setup parameters
                 params_path = setup_dir / f"{setup_dir.name}_params.json"
                 with open(params_path) as f:
                     params = json.load(f)
-                execution_results['setups'][setup_num]['params'] = params
-                
-                # Check for speciation strategy
-                is_speciation = params.get('selection_strategy') == 'speciation'
+                setup_aggregation['params'] = params
 
-                execution_results['setups'][setup_num]['is_speciation'] = is_speciation
+                # Check for speciation strategy and popsize
+                is_speciation = params.get('selection_strategy') == 'speciation'
+                popsize = params.get('popsize')
+
 
                 agg_gen_info = []
+                agg_mutation_stats = []
+                agg_spawn_ranks = []
                 
                 # Process each run directory
                 for run_dir in setup_dir.iterdir():
                     if run_dir.is_dir():
-                        # load the gen info df
-                        gen_info_path = run_dir / "data" / "gen_info.feather"
-                        if gen_info_path.exists():
-                            gen_info_df = pl.read_ipc(gen_info_path)
+                        data_dir = run_dir / "data"
+                        # load the gen_info and mutation_stats dfs
+                        gen_info_df = pl.read_ipc(data_dir / "gen_info.feather")
+                        mutation_stats_df = pl.read_ipc(data_dir / "mutation_stats_df.feather")
                         # load and add the component data of that run to the df
                         if count_components:
-                            cdict = load_compressed_pickle(run_dir / "data" / "component_dict.pkl.gz")
+                            cdict = load_compressed_pickle(data_dir / "component_dict.pkl.gz")
                             gen_info_df = gen_info_df.join(count_unique_components(cdict, maxgen), "gen")
                         # add the spawnranks
                         if calculate_spawnranks:
-                            pass
+                            pop_df = pl.read_ipc(data_dir / "population.feather")
+                            agg_spawn_ranks.append(analyze_spawns_by_fitness_rank(pop_df, popsize, maxgen))
                         # append to aggregation list
                         agg_gen_info.append(gen_info_df)
+                        agg_mutation_stats.append(mutation_stats_df)
 
-                execution_results['setups'][setup_num]['gen_info_agg'] = combine_and_aggregate_geninfo_dataframes(agg_gen_info, is_speciation)
+                setup_aggregation['gen_info_agg'] = aggregate_geninfo_dataframes(agg_gen_info)
+                setup_aggregation['mutation_stats_agg'] = aggregate_mutation_dataframes(agg_mutation_stats)
+                setup_aggregation['spawn_rank_agg'] = aggregate_spawn_ranks(agg_spawn_ranks)
+
+                execution_results['setups'][setup_num] = setup_aggregation
                 
             except (ValueError, IndexError) as e:
                 print(f"Error processing directory {setup_dir}: {e}")
@@ -220,7 +263,7 @@ def search_and_aggregate_param_results(res_dict: dict, search_dict: dict):
                 agg_dict.setdefault(search_name, []).append(setup["gen_info_agg"])
     
     for search_name, dfs in agg_dict.items():
-        agg_df = combine_and_aggregate_geninfo_dataframes(dfs)
+        agg_df = aggregate_geninfo_dataframes(dfs)
         agg_dict[search_name] = agg_df
                 
     return agg_dict
@@ -412,7 +455,7 @@ def generalized_barplot(
     title: Optional[str] = None,
     group_titles: Optional[List[str]] = None,
     figsize: tuple[int, int] = (12, 6)
-) -> None:
+    ) -> None:
     """
     Create a grouped bar plot where each group contains multiple bars.
     
@@ -506,3 +549,20 @@ def generalized_barplot(
 ################################################################################
 #################### ONE-OFF PLOTTING FUNCTIONS ################################
 ################################################################################
+
+def plot_offspring_distribution(rank_spawns):
+    """Creates a histogram of spawn counts by fitness rank.
+    """
+    ranks = list(rank_spawns.keys())
+    spawn_counts = list(rank_spawns.values())
+    
+    plt.figure(figsize=(12, 6))
+    plt.bar(ranks, spawn_counts, width=1)
+    plt.xlabel('Fitness Rank of Parent')
+    plt.ylabel('Number of Offspring')
+    plt.title('Distribution of Offspring by Parent Fitness Rank')
+    plt.xlim(0, 500)
+    # plt.yscale('log')
+    plt.grid(True, which="both", ls="-", alpha=0.2)
+    plt.tight_layout()
+    plt.show()
