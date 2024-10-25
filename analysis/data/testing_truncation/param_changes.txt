@@ -193,3 +193,23 @@ Setup 32:
   pop_perc_elite: 0.1
   pop_perc_crossover: 0.4
 
+Setup 33:
+  selection_strategy: "truncation"
+  spawn_cutoff: 0.1
+  pop_perc_crossover: 0
+
+Setup 34:
+  selection_strategy: "truncation"
+  spawn_cutoff: 0.25
+  pop_perc_crossover: 0
+
+Setup 35:
+  selection_strategy: "truncation"
+  spawn_cutoff: 0.5
+  pop_perc_crossover: 0
+
+Setup 36:
+  selection_strategy: "truncation"
+  spawn_cutoff: 0.75
+  pop_perc_crossover: 0
+

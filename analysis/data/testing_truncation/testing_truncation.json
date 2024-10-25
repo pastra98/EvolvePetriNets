@@ -5,10 +5,6 @@
             "setupname": "setup_1",
             "parampath": "configs/testing_truncation/setup_1.json",
             "logpath": "pm_data/running_example.xes",
-            "ga_kwargs": {
-                "is_pop_serialized": true,
-                "is_timed": false
-            },
             "stop_cond": {
                 "var": "gen",
                 "val": 500
@@ -22,10 +18,6 @@
             "setupname": "setup_2",
             "parampath": "configs/testing_truncation/setup_2.json",
             "logpath": "pm_data/running_example.xes",
-            "ga_kwargs": {
-                "is_pop_serialized": true,
-                "is_timed": false
-            },
             "stop_cond": {
                 "var": "gen",
                 "val": 500
@@ -39,10 +31,6 @@
             "setupname": "setup_3",
             "parampath": "configs/testing_truncation/setup_3.json",
             "logpath": "pm_data/running_example.xes",
-            "ga_kwargs": {
-                "is_pop_serialized": true,
-                "is_timed": false
-            },
             "stop_cond": {
                 "var": "gen",
                 "val": 500
@@ -56,10 +44,6 @@
             "setupname": "setup_4",
             "parampath": "configs/testing_truncation/setup_4.json",
             "logpath": "pm_data/running_example.xes",
-            "ga_kwargs": {
-                "is_pop_serialized": true,
-                "is_timed": false
-            },
             "stop_cond": {
                 "var": "gen",
                 "val": 500
@@ -73,10 +57,6 @@
             "setupname": "setup_5",
             "parampath": "configs/testing_truncation/setup_5.json",
             "logpath": "pm_data/running_example.xes",
-            "ga_kwargs": {
-                "is_pop_serialized": true,
-                "is_timed": false
-            },
             "stop_cond": {
                 "var": "gen",
                 "val": 500
@@ -90,10 +70,6 @@
             "setupname": "setup_6",
             "parampath": "configs/testing_truncation/setup_6.json",
             "logpath": "pm_data/running_example.xes",
-            "ga_kwargs": {
-                "is_pop_serialized": true,
-                "is_timed": false
-            },
             "stop_cond": {
                 "var": "gen",
                 "val": 500
@@ -107,10 +83,6 @@
             "setupname": "setup_7",
             "parampath": "configs/testing_truncation/setup_7.json",
             "logpath": "pm_data/running_example.xes",
-            "ga_kwargs": {
-                "is_pop_serialized": true,
-                "is_timed": false
-            },
             "stop_cond": {
                 "var": "gen",
                 "val": 500
@@ -124,10 +96,6 @@
             "setupname": "setup_8",
             "parampath": "configs/testing_truncation/setup_8.json",
             "logpath": "pm_data/running_example.xes",
-            "ga_kwargs": {
-                "is_pop_serialized": true,
-                "is_timed": false
-            },
             "stop_cond": {
                 "var": "gen",
                 "val": 500
@@ -141,10 +109,6 @@
             "setupname": "setup_9",
             "parampath": "configs/testing_truncation/setup_9.json",
             "logpath": "pm_data/running_example.xes",
-            "ga_kwargs": {
-                "is_pop_serialized": true,
-                "is_timed": false
-            },
             "stop_cond": {
                 "var": "gen",
                 "val": 500
@@ -158,10 +122,6 @@
             "setupname": "setup_10",
             "parampath": "configs/testing_truncation/setup_10.json",
             "logpath": "pm_data/running_example.xes",
-            "ga_kwargs": {
-                "is_pop_serialized": true,
-                "is_timed": false
-            },
             "stop_cond": {
                 "var": "gen",
                 "val": 500
@@ -175,10 +135,6 @@
             "setupname": "setup_11",
             "parampath": "configs/testing_truncation/setup_11.json",
             "logpath": "pm_data/running_example.xes",
-            "ga_kwargs": {
-                "is_pop_serialized": true,
-                "is_timed": false
-            },
             "stop_cond": {
                 "var": "gen",
                 "val": 500
@@ -192,10 +148,6 @@
             "setupname": "setup_12",
             "parampath": "configs/testing_truncation/setup_12.json",
             "logpath": "pm_data/running_example.xes",
-            "ga_kwargs": {
-                "is_pop_serialized": true,
-                "is_timed": false
-            },
             "stop_cond": {
                 "var": "gen",
                 "val": 500
@@ -209,10 +161,6 @@
             "setupname": "setup_13",
             "parampath": "configs/testing_truncation/setup_13.json",
             "logpath": "pm_data/running_example.xes",
-            "ga_kwargs": {
-                "is_pop_serialized": true,
-                "is_timed": false
-            },
             "stop_cond": {
                 "var": "gen",
                 "val": 500
@@ -226,10 +174,6 @@
             "setupname": "setup_14",
             "parampath": "configs/testing_truncation/setup_14.json",
             "logpath": "pm_data/running_example.xes",
-            "ga_kwargs": {
-                "is_pop_serialized": true,
-                "is_timed": false
-            },
             "stop_cond": {
                 "var": "gen",
                 "val": 500
@@ -243,10 +187,6 @@
             "setupname": "setup_15",
             "parampath": "configs/testing_truncation/setup_15.json",
             "logpath": "pm_data/running_example.xes",
-            "ga_kwargs": {
-                "is_pop_serialized": true,
-                "is_timed": false
-            },
             "stop_cond": {
                 "var": "gen",
                 "val": 500
@@ -260,10 +200,6 @@
             "setupname": "setup_16",
             "parampath": "configs/testing_truncation/setup_16.json",
             "logpath": "pm_data/running_example.xes",
-            "ga_kwargs": {
-                "is_pop_serialized": true,
-                "is_timed": false
-            },
             "stop_cond": {
                 "var": "gen",
                 "val": 500
@@ -277,10 +213,6 @@
             "setupname": "setup_17",
             "parampath": "configs/testing_truncation/setup_17.json",
             "logpath": "pm_data/running_example.xes",
-            "ga_kwargs": {
-                "is_pop_serialized": true,
-                "is_timed": false
-            },
             "stop_cond": {
                 "var": "gen",
                 "val": 500
@@ -294,10 +226,6 @@
             "setupname": "setup_18",
             "parampath": "configs/testing_truncation/setup_18.json",
             "logpath": "pm_data/running_example.xes",
-            "ga_kwargs": {
-                "is_pop_serialized": true,
-                "is_timed": false
-            },
             "stop_cond": {
                 "var": "gen",
                 "val": 500
@@ -311,10 +239,6 @@
             "setupname": "setup_19",
             "parampath": "configs/testing_truncation/setup_19.json",
             "logpath": "pm_data/running_example.xes",
-            "ga_kwargs": {
-                "is_pop_serialized": true,
-                "is_timed": false
-            },
             "stop_cond": {
                 "var": "gen",
                 "val": 500
@@ -328,10 +252,6 @@
             "setupname": "setup_20",
             "parampath": "configs/testing_truncation/setup_20.json",
             "logpath": "pm_data/running_example.xes",
-            "ga_kwargs": {
-                "is_pop_serialized": true,
-                "is_timed": false
-            },
             "stop_cond": {
                 "var": "gen",
                 "val": 500
@@ -345,10 +265,6 @@
             "setupname": "setup_21",
             "parampath": "configs/testing_truncation/setup_21.json",
             "logpath": "pm_data/running_example.xes",
-            "ga_kwargs": {
-                "is_pop_serialized": true,
-                "is_timed": false
-            },
             "stop_cond": {
                 "var": "gen",
                 "val": 500
@@ -362,10 +278,6 @@
             "setupname": "setup_22",
             "parampath": "configs/testing_truncation/setup_22.json",
             "logpath": "pm_data/running_example.xes",
-            "ga_kwargs": {
-                "is_pop_serialized": true,
-                "is_timed": false
-            },
             "stop_cond": {
                 "var": "gen",
                 "val": 500
@@ -379,10 +291,6 @@
             "setupname": "setup_23",
             "parampath": "configs/testing_truncation/setup_23.json",
             "logpath": "pm_data/running_example.xes",
-            "ga_kwargs": {
-                "is_pop_serialized": true,
-                "is_timed": false
-            },
             "stop_cond": {
                 "var": "gen",
                 "val": 500
@@ -396,10 +304,6 @@
             "setupname": "setup_24",
             "parampath": "configs/testing_truncation/setup_24.json",
             "logpath": "pm_data/running_example.xes",
-            "ga_kwargs": {
-                "is_pop_serialized": true,
-                "is_timed": false
-            },
             "stop_cond": {
                 "var": "gen",
                 "val": 500
@@ -413,10 +317,6 @@
             "setupname": "setup_25",
             "parampath": "configs/testing_truncation/setup_25.json",
             "logpath": "pm_data/running_example.xes",
-            "ga_kwargs": {
-                "is_pop_serialized": true,
-                "is_timed": false
-            },
             "stop_cond": {
                 "var": "gen",
                 "val": 500
@@ -430,10 +330,6 @@
             "setupname": "setup_26",
             "parampath": "configs/testing_truncation/setup_26.json",
             "logpath": "pm_data/running_example.xes",
-            "ga_kwargs": {
-                "is_pop_serialized": true,
-                "is_timed": false
-            },
             "stop_cond": {
                 "var": "gen",
                 "val": 500
@@ -447,10 +343,6 @@
             "setupname": "setup_27",
             "parampath": "configs/testing_truncation/setup_27.json",
             "logpath": "pm_data/running_example.xes",
-            "ga_kwargs": {
-                "is_pop_serialized": true,
-                "is_timed": false
-            },
             "stop_cond": {
                 "var": "gen",
                 "val": 500
@@ -464,10 +356,6 @@
             "setupname": "setup_28",
             "parampath": "configs/testing_truncation/setup_28.json",
             "logpath": "pm_data/running_example.xes",
-            "ga_kwargs": {
-                "is_pop_serialized": true,
-                "is_timed": false
-            },
             "stop_cond": {
                 "var": "gen",
                 "val": 500
@@ -481,10 +369,6 @@
             "setupname": "setup_29",
             "parampath": "configs/testing_truncation/setup_29.json",
             "logpath": "pm_data/running_example.xes",
-            "ga_kwargs": {
-                "is_pop_serialized": true,
-                "is_timed": false
-            },
             "stop_cond": {
                 "var": "gen",
                 "val": 500
@@ -498,10 +382,6 @@
             "setupname": "setup_30",
             "parampath": "configs/testing_truncation/setup_30.json",
             "logpath": "pm_data/running_example.xes",
-            "ga_kwargs": {
-                "is_pop_serialized": true,
-                "is_timed": false
-            },
             "stop_cond": {
                 "var": "gen",
                 "val": 500
@@ -515,10 +395,6 @@
             "setupname": "setup_31",
             "parampath": "configs/testing_truncation/setup_31.json",
             "logpath": "pm_data/running_example.xes",
-            "ga_kwargs": {
-                "is_pop_serialized": true,
-                "is_timed": false
-            },
             "stop_cond": {
                 "var": "gen",
                 "val": 500
@@ -532,10 +408,58 @@
             "setupname": "setup_32",
             "parampath": "configs/testing_truncation/setup_32.json",
             "logpath": "pm_data/running_example.xes",
-            "ga_kwargs": {
-                "is_pop_serialized": true,
-                "is_timed": false
+            "stop_cond": {
+                "var": "gen",
+                "val": 500
             },
+            "n_runs": 20,
+            "send_gen_info_to_console": false,
+            "is_profiled": false,
+            "save_plots": false
+        },
+        {
+            "setupname": "setup_33",
+            "parampath": "configs/testing_truncation/setup_33.json",
+            "logpath": "pm_data/running_example.xes",
+            "stop_cond": {
+                "var": "gen",
+                "val": 500
+            },
+            "n_runs": 20,
+            "send_gen_info_to_console": false,
+            "is_profiled": false,
+            "save_plots": false
+        },
+        {
+            "setupname": "setup_34",
+            "parampath": "configs/testing_truncation/setup_34.json",
+            "logpath": "pm_data/running_example.xes",
+            "stop_cond": {
+                "var": "gen",
+                "val": 500
+            },
+            "n_runs": 20,
+            "send_gen_info_to_console": false,
+            "is_profiled": false,
+            "save_plots": false
+        },
+        {
+            "setupname": "setup_35",
+            "parampath": "configs/testing_truncation/setup_35.json",
+            "logpath": "pm_data/running_example.xes",
+            "stop_cond": {
+                "var": "gen",
+                "val": 500
+            },
+            "n_runs": 20,
+            "send_gen_info_to_console": false,
+            "is_profiled": false,
+            "save_plots": false
+        },
+        {
+            "setupname": "setup_36",
+            "parampath": "configs/testing_truncation/setup_36.json",
+            "logpath": "pm_data/running_example.xes",
             "stop_cond": {
                 "var": "gen",
                 "val": 500
