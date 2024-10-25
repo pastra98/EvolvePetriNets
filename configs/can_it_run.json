@@ -5,10 +5,6 @@
             "setupname": "whatever",
             "parampath": "params/testing/test_params.json",
             "logpath": "pm_data/running_example.xes",
-            "ga_kwargs": {
-                "is_pop_serialized": true,
-                "is_timed": true
-            },
             "stop_cond": {
                 "var": "gen",
                 "val": 10
@@ -22,10 +18,6 @@
             "setupname": "whatever2",
             "parampath": "params/testing/test_params.json",
             "logpath": "pm_data/running_example.xes",
-            "ga_kwargs": {
-                "is_pop_serialized": true,
-                "is_timed": true
-            },
             "stop_cond": {
                 "var": "gen",
                 "val": 10

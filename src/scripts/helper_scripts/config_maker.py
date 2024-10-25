@@ -37,9 +37,6 @@ class MainWindow(QMainWindow):
         self.save_plots = QCheckBox("Save Plots")
         config_layout.addWidget(self.save_plots)
         
-        self.time_execution = QCheckBox("Time Execution")
-        config_layout.addWidget(self.time_execution)
-        
         self.stop_after = QSpinBox()
         self.stop_after.setRange(1, 10000)
         self.stop_after.setValue(500)
@@ -50,7 +47,7 @@ class MainWindow(QMainWindow):
         self.setup_map = {}
         self.setup_runs = QSpinBox()
         self.setup_runs.setRange(1, 1000)
-        self.setup_runs.setValue(4)
+        self.setup_runs.setValue(20)
         self.setup_runs.valueChanged.connect(self.update_info_box)
         config_layout.addWidget(QLabel("Number of Setup Runs:"))
         config_layout.addWidget(self.setup_runs)
@@ -299,10 +296,6 @@ class MainWindow(QMainWindow):
                         "setupname": f"setup_{setup_num}",
                         "parampath": f"{config_dir}/setup_{setup_num}.json",
                         "logpath": self.logpath.text(),
-                        "ga_kwargs": {
-                            "is_pop_serialized": True,
-                            "is_timed": self.time_execution.isChecked()
-                        },
                         "stop_cond": {
                             "var": "gen",
                             "val": self.stop_after.value()
