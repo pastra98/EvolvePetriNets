@@ -159,8 +159,13 @@ def exec_results_crawler(
             {
                 'final_report': polars.DataFrame,
                 'setups': {
-                    1: {'params': dict, ...},
-                    2: {'params': dict, ...},
+                    1: {
+                        'params': dict,
+                        'gen_info_agg': pl.DataFrame,
+                        'mutation_stats_agg': pl.DataFrame,
+                        'spawn_rank_agg': dict
+                        }
+                    2: {...},
                     ...
                 }
             }
@@ -423,7 +428,8 @@ def generalized_lineplot(
     x_ax: str = "gen",
     title: Optional[str] = None,
     subplt_titles: Optional[List[str]] = None,
-    figsize: tuple[int, int] = (12, 8)
+    figsize: tuple[int, int] = (12, 8),
+    legend_loc = "lower right"
     ) -> None:
     """
     Create a dynamic multi-subplot figure with line plots.
@@ -499,7 +505,7 @@ def generalized_lineplot(
         # Add labels and legend
         ax.set_xlabel(x_ax)
         ax.set_ylabel(y_ax)
-        ax.legend(loc='lower right')
+        ax.legend(loc=legend_loc)
         ax.grid(True, linestyle='--', alpha=0.7)
     
     # Hide empty subplots if any
@@ -508,6 +514,7 @@ def generalized_lineplot(
     
     # Adjust layout to prevent overlap
     plt.tight_layout()
+    return fig
 
 
 def generalized_barplot(
@@ -517,7 +524,9 @@ def generalized_barplot(
     gen: int = -1,
     title: Optional[str] = None,
     group_titles: Optional[List[str]] = None,
-    figsize: tuple[int, int] = (12, 6)
+    figsize: tuple[int, int] = (12, 6),
+    label_lambda = lambda l: l,
+    label_rot = 90
     ) -> None:
     """
     Create a grouped bar plot where each group contains multiple bars.
@@ -593,8 +602,8 @@ def generalized_barplot(
         for rect, label, value in zip(rects, labels, values):
             if value > 0:  # Only label non-zero bars
                 ax.text(rect.get_x() + rect.get_width() / 2., rect.get_height() - (rect.get_height() * 0.05),
-                        f'{label}\n{value:.0f}',
-                        ha='center', va='top', color='black')
+                        label_lambda(f'{label}\n{value:.0f}'),
+                        ha='center', va='top', color='black', rotation=label_rot)
     
     # Customize the plot
     ax.set_ylabel(y_ax.replace('_', ' '))
@@ -608,6 +617,109 @@ def generalized_barplot(
     ax.grid(True, axis='y', linestyle='--', alpha=0.7)
     
     return fig
+
+
+import polars as pl
+from sklearn.linear_model import LinearRegression
+from sklearn.preprocessing import StandardScaler
+import numpy as np
+import scipy
+
+def run_regression(results_dict: dict, predictors: list):
+    """
+    Perform linear regression analysis to study parameter impacts on num_components and max_fitness.
+    
+    Args:
+        results_dict (dict): Dictionary containing execution results from exec_crawler
+        predictors (list): List of parameter names to use as predictors in regression
+        
+    Returns:
+        dict: Dictionary containing regression results for each target variable
+    """
+    # Extract the results dataframe
+    results_df = results_dict['final_report']
+    
+    # Create new dataframe with setup numbers
+    df = results_df.with_columns(
+        setup_num=pl.col('setupname').str.extract(r'setup_(\d+)').cast(pl.Int32)
+    )
+    
+    # Add predictor columns from params
+    for predictor in predictors:
+        # Create a mapping of setup numbers to parameter values
+        param_values = {
+            setup_num: setup_data['params'].get(predictor)
+            for setup_num, setup_data in results_dict['setups'].items()
+        }
+        
+        # Convert param_values to a list maintaining order
+        param_series = [param_values.get(i) for i in df['setup_num']]
+        
+        # Add the column to the dataframe
+        df = df.with_columns(pl.Series(predictor, param_series))
+    
+    # Prepare data for regression
+    X = df.select(predictors).to_numpy()
+    targets = ["num_components", "max_fitness"]
+    
+    # Initialize scaler
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X)
+    
+    # Store regression results
+    regression_results = {}
+    
+    # Perform regression for each target
+    for target in targets:
+        y = df.select(target).to_numpy().ravel()
+        
+        # Fit regression model
+        model = LinearRegression()
+        model.fit(X_scaled, y)
+        
+        # Calculate R-squared and adjusted R-squared
+        r2 = model.score(X_scaled, y)
+        n = X.shape[0]  # number of observations
+        p = X.shape[1]  # number of predictors
+        adjusted_r2 = 1 - (1 - r2) * (n - 1) / (n - p - 1)
+        
+        # Calculate p-values
+        n = X.shape[0]
+        p = X.shape[1]
+        dof = n - p - 1  # degrees of freedom
+        mse = np.sum((y - model.predict(X_scaled)) ** 2) / dof  # mean squared error
+        var_b = mse * np.linalg.inv(np.dot(X_scaled.T, X_scaled)).diagonal()
+        sd_b = np.sqrt(var_b)
+        t_stat = model.coef_ / sd_b
+        p_values = 2 * (1 - scipy.stats.t.cdf(np.abs(t_stat), dof))
+        
+        # Store results
+        regression_results[target] = {
+            'model': model,
+            'coefficients': dict(zip(predictors, model.coef_)),
+            'intercept': model.intercept_,
+            'r2': r2,
+            'adjusted_r2': adjusted_r2,
+            'p_values': dict(zip(predictors, p_values)),
+            'feature_importance': dict(zip(
+                predictors,
+                np.abs(model.coef_ * np.std(X, axis=0))  # standardized coefficients
+            ))
+        }
+        
+        # Print summary
+        print(f"\nRegression Results for {target}")
+        print("-" * 50)
+        print(f"R-squared: {r2:.4f}")
+        print(f"Adjusted R-squared: {adjusted_r2:.4f}")
+        print("\nStandardized Coefficients:")
+        for pred, coef, p_val in zip(predictors, model.coef_, p_values):
+            print(f"{pred:20} {coef:10.4f} (p={p_val:.4f})")
+            
+    # Add the processed dataframe to the results
+    regression_results['processed_df'] = df
+    
+    return regression_results
 
 ################################################################################
 #################### ONE-OFF PLOTTING FUNCTIONS ################################
