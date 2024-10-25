@@ -1,0 +1,12 @@
+Config Description:
+very basic test (no special parameters) for just getting some data for the setup reports
+
+Setup 1:
+  selection_strategy: "speciation"
+
+Setup 2:
+  selection_strategy: "roulette"
+
+Setup 3:
+  selection_strategy: "truncation"
+

@@ -1,0 +1,43 @@
+Config Description:
+A test with all the relevant roulette parameters (start crossover not touched)
+
+Setup 1:
+  selection_strategy: "roulette"
+  pop_perc_elite: 0.05
+  pop_perc_crossover: 0.1
+
+Setup 2:
+  selection_strategy: "roulette"
+  pop_perc_elite: 0.05
+  pop_perc_crossover: 0.2
+
+Setup 3:
+  selection_strategy: "roulette"
+  pop_perc_elite: 0.05
+  pop_perc_crossover: 0.3
+
+Setup 4:
+  selection_strategy: "roulette"
+  pop_perc_elite: 0.05
+  pop_perc_crossover: 0.4
+
+Setup 5:
+  selection_strategy: "roulette"
+  pop_perc_elite: 0.1
+  pop_perc_crossover: 0.1
+
+Setup 6:
+  selection_strategy: "roulette"
+  pop_perc_elite: 0.1
+  pop_perc_crossover: 0.2
+
+Setup 7:
+  selection_strategy: "roulette"
+  pop_perc_elite: 0.1
+  pop_perc_crossover: 0.3
+
+Setup 8:
+  selection_strategy: "roulette"
+  pop_perc_elite: 0.1
+  pop_perc_crossover: 0.4
+

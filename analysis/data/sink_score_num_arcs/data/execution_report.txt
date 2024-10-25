@@ -1,0 +1,28 @@
+times:
+start: 2024-10-21 12:36:43.229369
+end: 2024-10-21 12:54:10.871642
+duration: 0:17:27.642273
+
+sorted by fitness:
+   setupname  run_nr  max_fitness  num_components  Exceptions
+0    setup_1       1     1.000000            1671       False
+1    setup_1       2     1.000000            1575       False
+15   setup_1      16     1.000000            1859       False
+14   setup_1      15     1.000000            1723       False
+12   setup_1      13     1.000000            1850       False
+..       ...     ...          ...             ...         ...
+41   setup_3       2     0.724771            1736       False
+57   setup_3      18     0.723082            1429       False
+29   setup_2      10     0.629873            1951       False
+65   setup_4       6     0.480142            1528       False
+52   setup_3      13     0.218903            2077       False
+
+[80 rows x 5 columns]
+report grouped by setup:
+          max_fitness                                                                      
+                count      mean       std       min       25%       50%       75%       max
+setupname                                                                                  
+setup_1          20.0  0.945049  0.072216  0.787116  0.906104  1.000000  1.000000  1.000000
+setup_2          20.0  0.900451  0.093537  0.629873  0.862436  0.906141  1.000000  1.000000
+setup_3          20.0  0.804602  0.162913  0.218903  0.732090  0.842161  0.930666  0.933333
+setup_4          20.0  0.846640  0.109684  0.480142  0.782156  0.868560  0.932772  0.941481

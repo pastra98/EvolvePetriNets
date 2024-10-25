@@ -1,0 +1,195 @@
+Config Description:
+The idea of this is to get enough data about truncation selection to be able to test roulette selection next
+
+Setup 1:
+  selection_strategy: "truncation"
+  spawn_cutoff: 0.1
+  pop_perc_elite: 0.05
+  pop_perc_crossover: 0.1
+
+Setup 2:
+  selection_strategy: "truncation"
+  spawn_cutoff: 0.1
+  pop_perc_elite: 0.05
+  pop_perc_crossover: 0.2
+
+Setup 3:
+  selection_strategy: "truncation"
+  spawn_cutoff: 0.1
+  pop_perc_elite: 0.05
+  pop_perc_crossover: 0.3
+
+Setup 4:
+  selection_strategy: "truncation"
+  spawn_cutoff: 0.1
+  pop_perc_elite: 0.05
+  pop_perc_crossover: 0.4
+
+Setup 5:
+  selection_strategy: "truncation"
+  spawn_cutoff: 0.1
+  pop_perc_elite: 0.1
+  pop_perc_crossover: 0.1
+
+Setup 6:
+  selection_strategy: "truncation"
+  spawn_cutoff: 0.1
+  pop_perc_elite: 0.1
+  pop_perc_crossover: 0.2
+
+Setup 7:
+  selection_strategy: "truncation"
+  spawn_cutoff: 0.1
+  pop_perc_elite: 0.1
+  pop_perc_crossover: 0.3
+
+Setup 8:
+  selection_strategy: "truncation"
+  spawn_cutoff: 0.1
+  pop_perc_elite: 0.1
+  pop_perc_crossover: 0.4
+
+Setup 9:
+  selection_strategy: "truncation"
+  spawn_cutoff: 0.25
+  pop_perc_elite: 0.05
+  pop_perc_crossover: 0.1
+
+Setup 10:
+  selection_strategy: "truncation"
+  spawn_cutoff: 0.25
+  pop_perc_elite: 0.05
+  pop_perc_crossover: 0.2
+
+Setup 11:
+  selection_strategy: "truncation"
+  spawn_cutoff: 0.25
+  pop_perc_elite: 0.05
+  pop_perc_crossover: 0.3
+
+Setup 12:
+  selection_strategy: "truncation"
+  spawn_cutoff: 0.25
+  pop_perc_elite: 0.05
+  pop_perc_crossover: 0.4
+
+Setup 13:
+  selection_strategy: "truncation"
+  spawn_cutoff: 0.25
+  pop_perc_elite: 0.1
+  pop_perc_crossover: 0.1
+
+Setup 14:
+  selection_strategy: "truncation"
+  spawn_cutoff: 0.25
+  pop_perc_elite: 0.1
+  pop_perc_crossover: 0.2
+
+Setup 15:
+  selection_strategy: "truncation"
+  spawn_cutoff: 0.25
+  pop_perc_elite: 0.1
+  pop_perc_crossover: 0.3
+
+Setup 16:
+  selection_strategy: "truncation"
+  spawn_cutoff: 0.25
+  pop_perc_elite: 0.1
+  pop_perc_crossover: 0.4
+
+Setup 17:
+  selection_strategy: "truncation"
+  spawn_cutoff: 0.5
+  pop_perc_elite: 0.05
+  pop_perc_crossover: 0.1
+
+Setup 18:
+  selection_strategy: "truncation"
+  spawn_cutoff: 0.5
+  pop_perc_elite: 0.05
+  pop_perc_crossover: 0.2
+
+Setup 19:
+  selection_strategy: "truncation"
+  spawn_cutoff: 0.5
+  pop_perc_elite: 0.05
+  pop_perc_crossover: 0.3
+
+Setup 20:
+  selection_strategy: "truncation"
+  spawn_cutoff: 0.5
+  pop_perc_elite: 0.05
+  pop_perc_crossover: 0.4
+
+Setup 21:
+  selection_strategy: "truncation"
+  spawn_cutoff: 0.5
+  pop_perc_elite: 0.1
+  pop_perc_crossover: 0.1
+
+Setup 22:
+  selection_strategy: "truncation"
+  spawn_cutoff: 0.5
+  pop_perc_elite: 0.1
+  pop_perc_crossover: 0.2
+
+Setup 23:
+  selection_strategy: "truncation"
+  spawn_cutoff: 0.5
+  pop_perc_elite: 0.1
+  pop_perc_crossover: 0.3
+
+Setup 24:
+  selection_strategy: "truncation"
+  spawn_cutoff: 0.5
+  pop_perc_elite: 0.1
+  pop_perc_crossover: 0.4
+
+Setup 25:
+  selection_strategy: "truncation"
+  spawn_cutoff: 0.75
+  pop_perc_elite: 0.05
+  pop_perc_crossover: 0.1
+
+Setup 26:
+  selection_strategy: "truncation"
+  spawn_cutoff: 0.75
+  pop_perc_elite: 0.05
+  pop_perc_crossover: 0.2
+
+Setup 27:
+  selection_strategy: "truncation"
+  spawn_cutoff: 0.75
+  pop_perc_elite: 0.05
+  pop_perc_crossover: 0.3
+
+Setup 28:
+  selection_strategy: "truncation"
+  spawn_cutoff: 0.75
+  pop_perc_elite: 0.05
+  pop_perc_crossover: 0.4
+
+Setup 29:
+  selection_strategy: "truncation"
+  spawn_cutoff: 0.75
+  pop_perc_elite: 0.1
+  pop_perc_crossover: 0.1
+
+Setup 30:
+  selection_strategy: "truncation"
+  spawn_cutoff: 0.75
+  pop_perc_elite: 0.1
+  pop_perc_crossover: 0.2
+
+Setup 31:
+  selection_strategy: "truncation"
+  spawn_cutoff: 0.75
+  pop_perc_elite: 0.1
+  pop_perc_crossover: 0.3
+
+Setup 32:
+  selection_strategy: "truncation"
+  spawn_cutoff: 0.75
+  pop_perc_elite: 0.1
+  pop_perc_crossover: 0.4
+

@@ -1,0 +1,23 @@
+Config Description:
+testing combinations of sinkscore & num arcs for the quality of their best models
+
+Setup 1:
+  selection_strategy: "truncation"
+  metric_dict.num_arcs.weight: 0
+  metric_dict.sink_score.weight: 0
+
+Setup 2:
+  selection_strategy: "truncation"
+  metric_dict.num_arcs.weight: 0
+  metric_dict.sink_score.weight: 1
+
+Setup 3:
+  selection_strategy: "truncation"
+  metric_dict.num_arcs.weight: 1
+  metric_dict.sink_score.weight: 0
+
+Setup 4:
+  selection_strategy: "truncation"
+  metric_dict.num_arcs.weight: 1
+  metric_dict.sink_score.weight: 1
+

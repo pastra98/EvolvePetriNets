@@ -1,0 +1,56 @@
+{
+    "name": "setup_reports_test",
+    "setups": [
+        {
+            "setupname": "setup_1",
+            "parampath": "configs/setup_reports_test/setup_1.json",
+            "logpath": "pm_data/running_example.xes",
+            "ga_kwargs": {
+                "is_pop_serialized": true,
+                "is_timed": false
+            },
+            "stop_cond": {
+                "var": "gen",
+                "val": 500
+            },
+            "n_runs": 4,
+            "send_gen_info_to_console": false,
+            "is_profiled": false,
+            "save_plots": false
+        },
+        {
+            "setupname": "setup_2",
+            "parampath": "configs/setup_reports_test/setup_2.json",
+            "logpath": "pm_data/running_example.xes",
+            "ga_kwargs": {
+                "is_pop_serialized": true,
+                "is_timed": false
+            },
+            "stop_cond": {
+                "var": "gen",
+                "val": 500
+            },
+            "n_runs": 4,
+            "send_gen_info_to_console": false,
+            "is_profiled": false,
+            "save_plots": false
+        },
+        {
+            "setupname": "setup_3",
+            "parampath": "configs/setup_reports_test/setup_3.json",
+            "logpath": "pm_data/running_example.xes",
+            "ga_kwargs": {
+                "is_pop_serialized": true,
+                "is_timed": false
+            },
+            "stop_cond": {
+                "var": "gen",
+                "val": 500
+            },
+            "n_runs": 4,
+            "send_gen_info_to_console": false,
+            "is_profiled": false,
+            "save_plots": false
+        }
+    ]
+}
