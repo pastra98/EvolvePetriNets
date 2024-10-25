@@ -21,7 +21,12 @@ def load_compressed_pickle(filename):
 # -------------------- GEN INFO & MUTATION DF
 
 def aggregate_dataframes(dataframes, grouper, exclude_cols, sortbygen=False):
-    combined_df = pl.concat(dataframes)
+    try:
+        combined_df = pl.concat(dataframes)
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        print("this was most likely because there are missing columns in one of the dataframes, will use diagonal join")
+        combined_df = pl.concat(dataframes, how="diagonal")
     aggregated = combined_df.group_by(grouper).agg([
         pl.exclude(exclude_cols).mean()
     ])
