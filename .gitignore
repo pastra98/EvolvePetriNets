@@ -1,5 +1,4 @@
 # TODO: analysis data will be uploaded as archive later
-analysis/data
 configs
 tree.svg
 
@@ -8,6 +7,15 @@ results/data
 pm_data/
 results/old_results_used_in_analysis
 results/runs_that_did_it
+
+# only track configs, params and execution reports in the analysis/data folder
+*.feather
+report.txt
+*spawn_ranks.json
+*.pkl.gz
+best_genome_id-*
+*.log
+*_full_history.json
 
 # don't save compiled modules
 *.pyc
