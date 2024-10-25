@@ -16,6 +16,7 @@ report.txt
 best_genome_id-*
 *.log
 *_full_history.json
+spawn_rank_agg.json
 
 # don't save compiled modules
 *.pyc
