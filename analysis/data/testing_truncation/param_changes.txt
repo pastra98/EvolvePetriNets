@@ -196,20 +196,48 @@ Setup 32:
 Setup 33:
   selection_strategy: "truncation"
   spawn_cutoff: 0.1
+  pop_perc_elite: 0.05
   pop_perc_crossover: 0
 
 Setup 34:
   selection_strategy: "truncation"
   spawn_cutoff: 0.25
+  pop_perc_elite: 0.05
   pop_perc_crossover: 0
 
 Setup 35:
   selection_strategy: "truncation"
   spawn_cutoff: 0.5
+  pop_perc_elite: 0.05
   pop_perc_crossover: 0
 
 Setup 36:
   selection_strategy: "truncation"
   spawn_cutoff: 0.75
+  pop_perc_elite: 0.05
+  pop_perc_crossover: 0
+
+Setup 37:
+  selection_strategy: "truncation"
+  spawn_cutoff: 0.1
+  pop_perc_elite: 0.1
+  pop_perc_crossover: 0
+
+Setup 38:
+  selection_strategy: "truncation"
+  spawn_cutoff: 0.2
+  pop_perc_elite: 0.1
+  pop_perc_crossover: 0
+
+Setup 39:
+  selection_strategy: "truncation"
+  spawn_cutoff: 0.3
+  pop_perc_elite: 0.1
+  pop_perc_crossover: 0
+
+Setup 40:
+  selection_strategy: "truncation"
+  spawn_cutoff: 0.4
+  pop_perc_elite: 0.1
   pop_perc_crossover: 0
 
