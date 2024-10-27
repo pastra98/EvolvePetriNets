@@ -142,6 +142,17 @@ def get_mapped_setupname_df(df, setup_map):
         ).alias("setupname")
     ])
 
+def get_best_setups(final_report_df: pl.DataFrame, setup_map: dict = None) -> pl.DataFrame:
+    """Simply returns the aggregated setups sorted by mean max fitness"""
+    if setup_map:
+        final_report_df = get_mapped_setupname_df(final_report_df, setup_map)
+    return final_report_df.group_by("setupname").agg(
+        pl.col("max_fitness").mean().alias("mean_fitness"),
+        pl.col("max_fitness").max().alias("max_fitness"),
+        pl.col("max_fitness").median().alias("median_fitness"),
+        pl.col("max_fitness").std().alias("std_fitness"),
+    ).sort("mean_fitness", descending=True)
+
 ################################################################################
 #################### CRAWLING THE RESULTS ######################################
 ################################################################################
@@ -306,6 +317,17 @@ def exec_results_crawler(
     return execution_results
 
 
+def search_setups(res_dict: dict, search_dict: dict):
+    contains_params = lambda d1, d2: all(k in d2 and d2[k] == v for k, v in d1.items())
+    search_res = {}
+    # key: params to search, value: group to put it in
+    for setup_name, setup in res_dict["setups"].items():
+        for search_name, search_params in search_dict.items():
+            if contains_params(search_params, setup["params"]):
+                search_res.setdefault(search_name, []).append(setup_name)
+    return search_res
+
+
 def search_and_aggregate_param_results(res_dict: dict, search_dict: dict):
     """
     Filters a results dict returned by exec_results_crawler() for specific params.
@@ -326,16 +348,14 @@ def search_and_aggregate_param_results(res_dict: dict, search_dict: dict):
         }
             
     """
-    contains_params = lambda d1, d2: all(k in d2 and d2[k] == v for k, v in d1.items())
+    search_res = search_setups(res_dict, search_dict)
+
     # aggregation results
     agg_dict = {}
-    # key: params to search, value: group to put it in
-    for setup_name, setup in res_dict["setups"].items():
-        for search_name, search_params in search_dict.items():
-            if contains_params(search_params, setup["params"]):
-                agg_dict.setdefault(search_name, []).append(setup["gen_info_agg"])
-    
-    for search_name, dfs in agg_dict.items():
+    for search_name, setups in search_res.items():
+        dfs = []
+        for setup in setups:
+            dfs.append(res_dict["setups"][setup]["gen_info_agg"])
         agg_df = aggregate_geninfo_dataframes(dfs)
         agg_dict[search_name] = agg_df
                 
