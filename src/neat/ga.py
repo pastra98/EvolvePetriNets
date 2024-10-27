@@ -342,7 +342,7 @@ class GeneticAlgorithm:
 
         while len(new_genomes) < num_to_spawn:
             tournament = rd.sample(self.population, params.tournament_size)
-            tournament.sort(key=lambda g: g.fitness)
+            tournament.sort(key=lambda g: g.fitness, reverse=True)
             mom, dad = tournament[0], tournament[1]
             baby = mom.crossover(dad)
             if baby:
@@ -386,6 +386,17 @@ class GeneticAlgorithm:
 
 # ROULETTE ---------------------------------------------------------------------
 
+    def get_elite_spawns(self, num_to_spawn):
+        """perform roulette wheel selection
+        """ 
+        elite_spawns = []
+        for i, g in enumerate(self.population):
+            new_elite = g.clone() # append unmutated top g
+            elite_spawns.append(new_elite)
+            if i == num_to_spawn - 1: break
+        return elite_spawns
+
+
     def roulette_pop_update(self) -> None:
         """perform roulette wheel selection
         """ 
@@ -405,11 +416,7 @@ class GeneticAlgorithm:
         self.num_asex = params.popsize - self.num_elite - self.num_crossover
 
         # elite spawns - without mutation
-        elite_spawns = []
-        for i, g in enumerate(self.population):
-            new_elite = g.clone() # append unmutated top g
-            elite_spawns.append(new_elite)
-            if i == self.num_elite - 1: break
+        elite_spawns = self.get_elite_spawns(self.num_elite)
 
         # crossover spawns - without mutation
         crossover_spawns = []
@@ -447,11 +454,7 @@ class GeneticAlgorithm:
         pool = self.population[:int(params.popsize*params.spawn_cutoff)]
 
         # elite spawns - without mutation
-        elite_spawns = []
-        for i, g in enumerate(self.population):
-            new_elite = g.clone() # append unmutated top g
-            elite_spawns.append(new_elite)
-            if i == self.num_elite - 1: break
+        elite_spawns = self.get_elite_spawns(self.num_elite)
 
         # crossover spawns, using speciation method (so truncation not active here)
         crossover_spawns, _ = self.get_crossover_spawns(self.num_crossover)
