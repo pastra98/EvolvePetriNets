@@ -30,9 +30,9 @@
         0.0,
         0.0
     ],
-    "pop_perc_crossover": 0.1,
+    "pop_perc_crossover": 0.4,
     "start_crossover": 10,
-    "pop_perc_elite": 0.1,
+    "pop_perc_elite": 0.05,
     "spawn_cutoff": 0.2,
     "species_boundary": 0.95,
     "compat_to_multiple": true,
