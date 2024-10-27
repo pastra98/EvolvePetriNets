@@ -1,1 +1,0 @@
-I initially tested this without 0% crossover, the no crossover runs (33-40) were added in later and the config was extended, as were the param changes file. The final report was also updated by concatenating the results. Tree was also updated (tree with everything, old one is still just tree), but setup number do not match, so don't use it!
