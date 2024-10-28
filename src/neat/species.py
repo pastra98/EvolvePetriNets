@@ -2,6 +2,7 @@ import random as rd
 from neat import params
 from neat.genome import GeneticNet
 from typing import List
+from math import ceil
 
 class Species:
     def __init__(self, name: str, founder: GeneticNet) -> None:
@@ -67,7 +68,7 @@ class Species:
             # pool is a reference to the new members of the last gen
             # If a species reaches selection_threshold, not every member gets in the pool
             if len(self.members) > params.selection_threshold:
-                self.pool = self.members[:int(len(self.members)*params.spawn_cutoff)]
+                self.pool = self.members[:ceil(len(self.members)*params.spawn_cutoff)] # ensure that even super-small species get spawns when using threshold
             else:
                 self.pool = self.members
             # calculate the average fitness and adjusted fitness of this species
