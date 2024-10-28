@@ -750,7 +750,7 @@ def run_regression(results_dict: dict, predictors: list):
 #################### ONE-OFF PLOTTING FUNCTIONS ################################
 ################################################################################
 
-def plot_offspring_distribution(rank_spawns):
+def plot_offspring_distribution(rank_spawns, title='Distribution of Offspring by Parent Fitness Rank'):
     """Creates a histogram of spawn counts by fitness rank.
     """
     ranks = list(rank_spawns.keys())
@@ -760,9 +760,10 @@ def plot_offspring_distribution(rank_spawns):
     plt.bar(ranks, spawn_counts, width=1)
     plt.xlabel('Fitness Rank of Parent')
     plt.ylabel('Number of Offspring')
-    plt.title('Distribution of Offspring by Parent Fitness Rank')
+    plt.title(title)
     plt.xlim(0, 500)
     # plt.yscale('log')
+    plt.xticks(range(-1, len(rank_spawns)-1, 50))
     plt.grid(True, which="both", ls="-", alpha=0.2)
     plt.tight_layout()
     plt.show()
