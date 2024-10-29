@@ -34,7 +34,7 @@ def aggregate_dataframes(dataframes, grouper, exclude_cols, sortbygen=False):
     return aggregated
 
 def aggregate_geninfo_dataframes(dataframes):
-    return aggregate_dataframes(dataframes, "gen", ["best_genome"], True)
+    return aggregate_dataframes(dataframes, "gen", ["best_genome", "best_species"], True)
 
 def aggregate_mutation_dataframes(dataframes):
     return aggregate_dataframes(dataframes, "my_mutation", ["generations"])
