@@ -404,6 +404,7 @@ def mutation_effects_plot(pop_df, mutation_stats_df, savedir: str, max_gen: int 
     1. Boxplot of fitness impacts with relative frequency on secondary axis
     2. Line chart of mutation impact per generation (up to max_gen if specified)
     """
+    mutation_stats_df.set_index("my_mutation")
     # Create boxplot with relative frequencies on secondary axis
     fig, ax1 = plt.subplots(figsize=(12, 6))
     color = 'tab:blue'
