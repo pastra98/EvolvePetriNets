@@ -40,7 +40,6 @@
     "enough_gens_to_change_things": 5,
     "update_species_rep": true,
     "leader_is_rep": true,
-    "selection_threshold": 30,
     "elitism": true,
     "allowed_gens_no_improvement": 99999,
     "old_age": 10,

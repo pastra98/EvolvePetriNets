@@ -80,7 +80,6 @@ tournament_size: int # for crossover, how big should tournament be that selects 
 enough_gens_to_change_things: int
 update_species_rep: bool
 leader_is_rep: bool
-selection_threshold: int
 elitism: bool
 
 allowed_gens_no_improvement: int

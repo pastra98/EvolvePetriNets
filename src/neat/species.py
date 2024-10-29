@@ -15,6 +15,7 @@ class Species:
         self.pool: List[GeneticNet] = []
         self.expected_offspring = 0
         self.spawn_count = 0 # number of spawns the species got during the last generation it was active
+        self.asex_spawn_count = 0 # counter used for asex spawns, iterating through the pool
         self.avg_fitness = 0 # average fitness of all new members
         self.avg_fitness_adjusted = 0 # average fitness adjusted by the age modifier
         self.fitness_share = 0 # proportion of own (adjusted) fitness relative to total
@@ -45,7 +46,7 @@ class Species:
             self.obliterate = True
         else:
             # the species survives into the next generation
-            self.spawn_count = 0
+            self.spawn_count, self.asex_spawn_count = 0, 0
             self.num_to_spawn = 0
             self.age += 1
             # first sort the new members, and determine the fittest member
@@ -65,12 +66,8 @@ class Species:
             # if the representative should be updated, do so now
             if params.update_species_rep:
                 self.representative = self.leader if params.leader_is_rep else rd.choice(self.members)
-            # pool is a reference to the new members of the last gen
-            # If a species reaches selection_threshold, not every member gets in the pool
-            if len(self.members) > params.selection_threshold:
-                self.pool = self.members[:ceil(len(self.members)*params.spawn_cutoff)] # ensure that even super-small species get spawns when using threshold
-            else:
-                self.pool = self.members
+            # pool is a reference to the members of the last gen that will spawn offspring
+            self.pool = self.members[:ceil(len(self.members)*params.spawn_cutoff)] # ensure that even super-small species get spawns when using threshold
             # calculate the average fitness and adjusted fitness of this species
             self.avg_fitness = sum(map(lambda m: m.fitness, self.members)) / len(self.members)
             fit_modif = params.youth_bonus if self.age < params.old_age else params.old_penalty
@@ -113,9 +110,10 @@ class Species:
         """Copy a member from the pool, mutates it, and returns it.
         """
         # As long as not every pool member as been spawned, pick next one from pool
-        baby = self.pool[self.spawn_count % len(self.pool)].clone()
+        baby = self.pool[self.asex_spawn_count % len(self.pool)].clone()
         baby.mutate(self.curr_mutation_rate)
         self.spawn_count += 1
+        self.asex_spawn_count += 1
         return baby
 
 
