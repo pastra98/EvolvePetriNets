@@ -35,7 +35,6 @@
     "pop_perc_elite": 0.05,
     "spawn_cutoff": 0.2,
     "species_boundary": 0.95,
-    "compat_to_multiple": true,
     "species_component_pool_size": 20,
     "tournament_size": 10,
     "enough_gens_to_change_things": 5,

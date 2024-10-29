@@ -73,7 +73,6 @@ spawn_cutoff: float # either determines cutoff within species mating pool or ent
 # -------------------- selection strategy: SPECIATION
 species_boundary: float
 
-compat_to_multiple: bool # if true, then new genomes are compared to components from multiple members
 species_component_pool_size: int # how many (randomly chosen) species membrs contrib their comp to species comp pool
 tournament_size: int # for crossover, how big should tournament be that selects 2 parents
 

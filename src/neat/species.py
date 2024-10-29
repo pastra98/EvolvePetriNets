@@ -76,8 +76,7 @@ class Species:
             fit_modif = params.youth_bonus if self.age < params.old_age else params.old_penalty
             self.avg_fitness_adjusted = self.avg_fitness * fit_modif
             # save the components of the last gen
-            if params.compat_to_multiple:
-                self.component_set = self.update_components()
+            self.component_set = self.update_components()
             # reassign new members to a new empty array, so new agents can be placed
             # in the next gen. Clearing it also clear the pool, since pool is a reference.
             self.members = []
@@ -87,7 +86,9 @@ class Species:
         """Adds species_component_pool_size component sets to a shared set of components
         """
         n_representatives = min(params.species_component_pool_size, len(self.members))
-        representatives = rd.choices(self.members, k=n_representatives)
+        # add the species representative + n_representatives (excl. rep)
+        representatives = rd.choices(self.members[1:], k=n_representatives-1)
+        representatives.append(self.representative)
         components = set()
         for rep in representatives:
             components.update(rep.get_unique_component_set())

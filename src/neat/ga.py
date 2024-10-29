@@ -270,8 +270,7 @@ class GeneticAlgorithm:
             for _ in range(num_to_spawn):
                 baby = s.asex_spawn()
                 # check if baby still simillar enough to current species
-                cset = s.component_set if params.compat_to_multiple else s.representative.get_unique_component_set()
-                if baby.get_genetic_distance(cset) < params.species_boundary:
+                if baby.get_genetic_distance(s.component_set) < params.species_boundary:
                     s.add_member(baby)
                 else: # try to adopt
                     found_species = self.find_species(baby, self.species + new_species)
@@ -329,9 +328,8 @@ class GeneticAlgorithm:
         # try to find an existing species to which the genome is close enough to be a member
         distance = params.species_boundary
         for s in species_to_search:
-            cset = s.component_set if params.compat_to_multiple else s.representative.get_unique_component_set()
-            if new_genome.get_genetic_distance(cset) < distance:
-                distance = new_genome.get_genetic_distance(cset)
+            if (genetic_distance := new_genome.get_genetic_distance(s.component_set)) < distance:
+                distance = genetic_distance
                 found_species = s
         return found_species
 
@@ -366,11 +364,7 @@ class GeneticAlgorithm:
             else:
                 s = self.species[i]
             baby: GeneticNet = s.elite_spawn_with_mutations()
-            if params.compat_to_multiple:
-                cset = s.component_set
-            else:
-                cset = s.representative.get_unique_component_set()
-            if baby.get_genetic_distance(cset) > params.species_boundary:
+            if baby.get_genetic_distance(s.component_set) > params.species_boundary:
                 found_species = self.find_and_add_to_species(baby)
             else:
                 s.add_member(baby)
