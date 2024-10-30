@@ -3,7 +3,7 @@
     "setups": [
         {
             "setupname": "whatever",
-            "parampath": "params/testing/test_params.json",
+            "parampath": "params/default_params.json",
             "logpath": "pm_data/running_example.xes",
             "stop_cond": {
                 "var": "gen",
@@ -12,20 +12,7 @@
             "n_runs": 4,
             "send_gen_info_to_console": false,
             "is_profiled": false,
-            "save_plots": false
-        },
-        {
-            "setupname": "whatever2",
-            "parampath": "params/testing/test_params.json",
-            "logpath": "pm_data/running_example.xes",
-            "stop_cond": {
-                "var": "gen",
-                "val": 10
-            },
-            "n_runs": 4,
-            "send_gen_info_to_console": false,
-            "is_profiled": false,
-            "save_plots": false
+            "save_plots": true
         }
     ]
 }
