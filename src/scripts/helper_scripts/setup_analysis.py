@@ -767,3 +767,64 @@ def plot_offspring_distribution(rank_spawns, title='Distribution of Offspring by
     plt.grid(True, which="both", ls="-", alpha=0.2)
     plt.tight_layout()
     plt.show()
+
+
+#-------------------------------------------------------------------------------
+# temporary
+import shutil
+
+def cleanup_runs(root_path: str):
+    """
+    Deletes all files in run directories except for data/gen_info.feather
+    
+    Args:
+        root_path (str): Path to the root directory containing execution_data
+    """
+    root_path = Path(root_path)
+    execution_data_path = root_path / "execution_data"
+    
+    # Process each setup directory
+    for setup_dir in tqdm(execution_data_path.iterdir(), desc="Processing setup directories"):
+        if setup_dir.is_dir() and setup_dir.name.startswith("setup_"):
+            print(f"\nCleaning {setup_dir.name}")
+            
+            # Process each run directory
+            for run_dir in setup_dir.iterdir():
+                if run_dir.is_dir():
+                    try:
+                        data_dir = run_dir / "data"
+                        gen_info_path = data_dir / "gen_info.feather"
+                        
+                        if not gen_info_path.exists():
+                            print(f"Warning: gen_info.feather not found in {run_dir}")
+                            continue
+                            
+                        # Create temporary directory to hold gen_info.feather
+                        temp_dir = run_dir / "temp"
+                        temp_dir.mkdir(exist_ok=True)
+                        
+                        # Move gen_info.feather to temp directory
+                        shutil.move(gen_info_path, temp_dir / "gen_info.feather")
+                        
+                        # Delete everything in run directory except temp
+                        for item in run_dir.iterdir():
+                            if item.name != "temp":
+                                if item.is_file():
+                                    item.unlink()
+                                elif item.is_dir():
+                                    shutil.rmtree(item)
+                        
+                        # Recreate data directory and move gen_info back
+                        data_dir.mkdir(exist_ok=True)
+                        shutil.move(temp_dir / "gen_info.feather", gen_info_path)
+                        
+                        # Remove temp directory
+                        shutil.rmtree(temp_dir)
+                        
+                    except Exception as e:
+                        print(f"Error processing {run_dir}: {e}")
+                        continue
+    
+    print("\nCleanup completed!")
+
+#-------------------------------------------------------------------------------
