@@ -6,7 +6,7 @@ from neatutils import log as lg
 from neatutils import neatlogger as nl
 from neat import ga
 
-def run_setup(run_nr, main_logger, setup, results_path) -> dict:
+def run_setup(run_nr, update_q, setup, results_path) -> dict:
     """Runs a given setup
     """
 
@@ -28,8 +28,7 @@ def run_setup(run_nr, main_logger, setup, results_path) -> dict:
     run_logger = nl.get_logger(run_dir, run_name, setup["send_gen_info_to_console"])
 
     # run the current setup once, profile if enabled in setup, save result
-    run_logger.info(f"\n{80*'-'}\n{run_start}: loading new ga with params {setup['parampath']}\n")
-    main_logger.info(f"\n{80*'-'}\n{run_start}: loading new ga with params {setup['parampath']}\nthis is {setup['setupname']} run {run_nr}\n")
+    run_logger.debug(f"\n{80*'-'}\n{run_start}: loading new ga with params {setup['parampath']}\n")
     try:
         if setup["is_profiled"]:
             with cProfile.Profile() as pr:
@@ -44,18 +43,17 @@ def run_setup(run_nr, main_logger, setup, results_path) -> dict:
         run_name += "___EXCEPTION"
         exc_str = f"Error while running {setup['setupname']}, check log at: {run_logger.handlers[1].baseFilename}"
         run_logger.exception(exc_str)
-        main_logger.exception(exc_str)
         
     # update results of this run with times
     run_end = datetime.datetime.now()
     run_result |= {"start": run_start, "end": run_end, "time": str(run_end - run_start)}
-    run_logger.info(f"{80*'/'}\nRun finished at {run_end}")
-    main_logger.info(f"{80*'/'}\nRun {run_nr} of setup {setup['setupname']} finished at {run_end}")
+    run_logger.debug(f"{80*'/'}\nRun finished at {run_end}")
+    update_q.put(f"{setup['setupname']}-{run_nr}")
 
     # if run successfull, save endreports
     if not "EXCEPTION" in run_result:
         er.save_report(run_result, f"{run_dir}", save_plots=setup["save_plots"])
-        main_logger.info(f"reports saved at:\n{run_dir}")
+        run_logger.debug(f"{setup["setupname"]} - {run_nr} - reports saved at:\n{run_dir}")
 
     gc.collect()
     return {
@@ -67,7 +65,7 @@ def run_setup(run_nr, main_logger, setup, results_path) -> dict:
     }
 
 
-def run_ga(setup: logging.Logger, logger):
+def run_ga(setup: dict, logger):
     log = lg.get_log_from_xes(setup["logpath"])
     stopvar, stopval = setup["stop_cond"]["var"], setup["stop_cond"]["val"]
     # initialize GeneticAlgorithm with setup info
@@ -79,8 +77,7 @@ def run_ga(setup: logging.Logger, logger):
         try:
             gen_info = curr_ga.next_generation()
             # info always printed, debug depends on logging level (send_gen_info_to_console)
-            logger.info(f"GA {setup['setupname']} GEN: {gen_info['gen']}")
-            logger.debug(f"{pprint.pformat(gen_info)}\n{8*'-'}")
+
         # on exception save the ga, return to main
         except Exception:
             logger.exception(f"GA_{setup['parampath']}\nEXCEPTION in generation {curr_ga.curr_gen}")
@@ -90,7 +87,7 @@ def run_ga(setup: logging.Logger, logger):
             return result
         # check if reach stopping codition, could be anything
         if gen_info[stopvar] == stopval: # FUTUREIMPROVEMENT: could add other criteria here
-            logger.info(f"{setup['setupname']} reached {stopvar} of {stopval}")
+            logger.debug(f"{setup['setupname']} reached {stopvar} of {stopval}")
             result = curr_ga.get_ga_final_info()
             return result
 

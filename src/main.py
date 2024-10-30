@@ -1,9 +1,39 @@
 import sys, os, json, datetime
-from multiprocessing import Pool
 
 from neatutils import neatlogger as nl
 from neatutils.setuprunner import run_setup
+
+import multiprocessing as mp
 import pandas as pd
+
+import threading
+from queue import Empty
+from tqdm import tqdm
+
+
+class SetupTracker(threading.Thread):
+    """A listener Thread that fetches from the queue shared by all setuprunner
+    threads. Setuprunner only puts into the queue after a setup has finished running.
+    Shows a progress bar for the number of finished setups.
+    """
+    def __init__(self, queue, n_runs):
+        super().__init__()
+        self._queue = queue
+        self._stop_event = threading.Event()
+        self.pbar = tqdm(total=n_runs, desc=f"Running {n_runs} setups")
+
+
+    def run(self):
+        while not self._stop_event.is_set():
+            try:
+                value = self._queue.get(timeout=5)
+                self.pbar.update(1)
+            except Empty:
+                continue
+    
+    def stop(self):
+        self.pbar.close()
+        self._stop_event.set()
 
 
 def main(conf: dict) -> None:
@@ -16,13 +46,32 @@ def main(conf: dict) -> None:
     main_logger = nl.get_logger(results_path, "main", True)
     main_logger.info(f"Execution started at: {exec_start_time}")
 
+
     argslist = []
     for setup in conf["setups"]:
-        for run_nr, args in enumerate([[setup, results_path]] * setup["n_runs"], start=1):
-            argslist.append(tuple([run_nr, main_logger, *args]))
+        for run_nr in range(1, setup["n_runs"] + 1):
+            # Create tuple matching the function signature exactly
+            args = (run_nr, setup, results_path)
+            argslist.append(args)
 
-    with Pool() as p:
-        setup_fitnesses = p.starmap(run_setup, argslist)
+    with mp.Manager() as manager:
+        shared_queue = manager.Queue()
+
+        # n_runs = sum([s["n_runs"] for s in conf["setups"]])
+        pl = SetupTracker(shared_queue, len(argslist))
+        pl.start()
+
+        with mp.Pool() as p:
+            # Prepend queue to each argument tuple
+            setup_fitnesses = p.starmap(
+                run_setup,
+                [(run_nr, shared_queue, setup, results_path) for (run_nr, setup, results_path) in argslist]
+            )
+        
+        pl.stop()
+        pl.join()
+
+
 
     # info about overall execution (may put log in there)
     exec_end_time = datetime.datetime.now()
