@@ -24,6 +24,8 @@ class Species:
         self.num_gens_no_improvement = 0
         self.curr_mutation_rate = 0 # 0 -> normal or 1 -> high
         self.component_set = founder.get_unique_component_set() # for first gen just use founder
+        # automatically add the founder as a member
+        self.add_member(founder)
 
     
     def add_member(self, new_genome) -> None:

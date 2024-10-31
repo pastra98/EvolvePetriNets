@@ -48,6 +48,7 @@ class GeneticAlgorithm:
         self.species: List[Species] = []
         self.surviving_species: List[Species] = []
         self.best_species: Species = None
+        self.killed_best_genome_species = False # flag to mark that species containing best g is obliterated
 
         params.load(params_name)
 
@@ -187,7 +188,6 @@ class GeneticAlgorithm:
                     found_species.add_member(g)
                 else: # new genome matches no current species -> make a fresh one
                     fresh_species = self.get_fresh_species(g)
-                    fresh_species.add_member(g)
                     initial_species.append(fresh_species)
                 self.best_species = found_species # just to initialize best species to a species for allowing comparison
             self.species = initial_species
@@ -255,6 +255,17 @@ class GeneticAlgorithm:
                 s.add_member(l)
                 elite_g.append(l)
         self.num_elite = len(elite_g)
+
+        # if necessary, make a new species if the species containing best genome was killed off
+        if self.killed_best_genome_species:
+            clone = self.curr_best_genome.clone()
+            adopting_species = self.find_species(clone, self.species + new_species)
+            if adopting_species == None:
+                fresh_species = self.get_fresh_species(clone)
+                new_species.append(fresh_species)
+                self.num_elite += 1 # count as elite spawn, to reduce asex spawns
+            else:
+                adopting_species.add_member(clone)
         
         # get the remaining asex spawns
         self.num_asex = params.popsize - self.num_crossover - self.num_elite
@@ -278,7 +289,6 @@ class GeneticAlgorithm:
                         found_species.add_member(baby)
                     else: # new genome matches no current species -> make a fresh one
                         fresh_species = self.get_fresh_species(baby)
-                        fresh_species.add_member(baby)
                         new_species.append(fresh_species)
                 asex_g.append(baby)
         # add new species
@@ -303,17 +313,18 @@ class GeneticAlgorithm:
         # order the updated species by fitness, select the current best species
         self.species.sort(key=lambda s: s.avg_fitness, reverse=True)
         self.best_species = self.species[0]
-        # now that best species is determined, kill off stale species and update spawn amount
+        # kill off stale species and update spawn amount
+        self.killed_best_genome_species = False
         for s in self.species:
-            # don't kill off best species or species containing curr best genome
-            if (not s.obliterate) or (s == self.best_species) or (self.curr_best_genome.species_id == s.name):
+            # If the species contains best genome, set flag to create new species for it in pop update
+            if s.obliterate:
+                if self.curr_best_genome.species_id == s.name:
+                    self.killed_best_genome_species = True
+                num_dead_species += 1 # dont add it to updated species
+            else:
                 self.surviving_species.append(s)
                 total_species_avg_fitness += s.avg_fitness
                 total_adjusted_species_avg_fitness += s.avg_fitness_adjusted 
-            else:
-                num_dead_species += 1 # dont add it to updated species
-        if not self.surviving_species or total_adjusted_species_avg_fitness == 0:
-            raise Exception("mass extinction")
         # calculate offspring amt based on fitness relative to the total_adjusted_species_avg_fitness
         for s in self.surviving_species:
             s.calculate_fitness_share(total_adjusted_species_avg_fitness)
@@ -348,9 +359,10 @@ class GeneticAlgorithm:
                 if params.selection_strategy == "speciation":
                     baby_species = self.find_species(baby, self.species + new_species)
                     if not baby_species:
-                        baby_species = self.get_fresh_species(baby)
-                        new_species.append(baby_species)
-                    baby_species.add_member(baby)
+                        fresh_species = self.get_fresh_species(baby)
+                        new_species.append(fresh_species)
+                    else:
+                        baby_species.add_member(baby)
 
         return new_genomes, new_species
 
@@ -539,8 +551,8 @@ class PopulationComponentTracker:
 def compute_t(inc, pop_fit_vals, pop_len, pop_sum, pop_df):
     inc_sum, inc_len = inc.sum(), len(inc)
     inc_avg_fit = inc_sum / inc_len
-    exc_len = pop_len - inc_len
-    exc_avg_fit = (pop_sum - inc_sum) / max(exc_len, 1) # exc len can sometimes be 0
+    exc_len = max(pop_len - inc_len, 1) # exc len can sometimes be 0 if component is shared by everyone
+    exc_avg_fit = (pop_sum - inc_sum) / exc_len
     mean_diff = inc_avg_fit - exc_avg_fit
 
     inc_df, exc_df = inc_len-1, exc_len-1
