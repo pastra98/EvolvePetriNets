@@ -48,7 +48,6 @@ class GeneticAlgorithm:
         self.species: List[Species] = []
         self.surviving_species: List[Species] = []
         self.best_species: Species = None
-        self.killed_best_genome_species = False # flag to mark that species containing best g is obliterated
 
         params.load(params_name)
 
@@ -256,17 +255,6 @@ class GeneticAlgorithm:
                 elite_g.append(l)
         self.num_elite = len(elite_g)
 
-        # if necessary, make a new species if the species containing best genome was killed off
-        if self.killed_best_genome_species:
-            clone = self.curr_best_genome.clone()
-            adopting_species = self.find_species(clone, self.species + new_species)
-            if adopting_species == None:
-                fresh_species = self.get_fresh_species(clone)
-                new_species.append(fresh_species)
-                self.num_elite += 1 # count as elite spawn, to reduce asex spawns
-            else:
-                adopting_species.add_member(clone)
-        
         # get the remaining asex spawns
         self.num_asex = params.popsize - self.num_crossover - self.num_elite
         asex_g: List[GeneticNet] = []
@@ -309,22 +297,19 @@ class GeneticAlgorithm:
         num_dead_species = 0
         # first update all, determine best species
         for s in self.species:
-            s.update()
+            # let species know if it contains the best genome in population
+            s.update(s.name == self.curr_best_genome.species_id)
         # order the updated species by fitness, select the current best species
         self.species.sort(key=lambda s: s.avg_fitness, reverse=True)
         self.best_species = self.species[0]
         # kill off stale species and update spawn amount
-        self.killed_best_genome_species = False
         for s in self.species:
-            # If the species contains best genome, set flag to create new species for it in pop update
-            if s.obliterate:
-                if self.curr_best_genome.species_id == s.name:
-                    self.killed_best_genome_species = True
-                num_dead_species += 1 # dont add it to updated species
-            else:
+            if not s.obliterate:
                 self.surviving_species.append(s)
                 total_species_avg_fitness += s.avg_fitness
                 total_adjusted_species_avg_fitness += s.avg_fitness_adjusted 
+            else:
+                num_dead_species += 1 # dont add it to updated species
         # calculate offspring amt based on fitness relative to the total_adjusted_species_avg_fitness
         for s in self.surviving_species:
             s.calculate_fitness_share(total_adjusted_species_avg_fitness)

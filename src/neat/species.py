@@ -35,7 +35,7 @@ class Species:
         new_genome.species_id = self.name
 
     
-    def update(self) -> None:
+    def update(self, has_best_genome) -> None:
         """Checks if the species continues to survive into the next generation. If so,
         the total fitness of the species is calculated and adjusted according to the age
         bonus of the species. It's members are ranked according to their fitness, and
@@ -45,7 +45,8 @@ class Species:
         # survived for too many generations without improving, in which case it is marked
         # for obliteration.
         if not self.members or self.num_gens_no_improvement > params.allowed_gens_no_improvement:
-            self.obliterate = True
+            if not has_best_genome:
+                self.obliterate = True
         else:
             # the species survives into the next generation
             self.spawn_count, self.asex_spawn_count = 0, 0
