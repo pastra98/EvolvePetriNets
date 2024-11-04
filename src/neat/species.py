@@ -47,39 +47,39 @@ class Species:
         if not self.members or self.num_gens_no_improvement > params.allowed_gens_no_improvement:
             if not has_best_genome:
                 self.obliterate = True
+                return
+        # the species survives into the next generation
+        self.spawn_count, self.asex_spawn_count = 0, 0
+        self.num_to_spawn = 0
+        self.age += 1
+        # first sort the new members, and determine the fittest member
+        self.members.sort(key=lambda m: m.fitness, reverse=True)
+        self.leader = self.members[0]
+        self.num_members = len(self.members)
+        # check if current best member is fitter than previous best
+        if self.leader.fitness > self.best_ever_fitness:
+            # this means the species is improving -> normal mutation rate
+            self.best_ever_fitness = self.leader.fitness
+            self.num_gens_no_improvement = 0
+            self.curr_mutation_rate = 0 # normal mutation rate
         else:
-            # the species survives into the next generation
-            self.spawn_count, self.asex_spawn_count = 0, 0
-            self.num_to_spawn = 0
-            self.age += 1
-            # first sort the new members, and determine the fittest member
-            self.members.sort(key=lambda m: m.fitness, reverse=True)
-            self.leader = self.members[0]
-            self.num_members = len(self.members)
-            # check if current best member is fitter than previous best
-            if self.leader.fitness > self.best_ever_fitness:
-                # this means the species is improving -> normal mutation rate
-                self.best_ever_fitness = self.leader.fitness
-                self.num_gens_no_improvement = 0
-                self.curr_mutation_rate = 0 # normal mutation rate
-            else:
-                self.num_gens_no_improvement += 1
-                if self.num_gens_no_improvement > params.enough_gens_to_change_things:
-                    self.curr_mutation_rate = 1 # high mutation rate
-            # if the representative should be updated, do so now
-            if params.update_species_rep:
-                self.representative = self.leader if params.leader_is_rep else rd.choice(self.members)
-            # pool is a reference to the members of the last gen that will spawn offspring
-            self.pool = self.members[:ceil(len(self.members)*params.spawn_cutoff)] # ensure that even super-small species get spawns when using threshold
-            # calculate the average fitness and adjusted fitness of this species
-            self.avg_fitness = sum(map(lambda m: m.fitness, self.members)) / len(self.members)
-            fit_modif = params.youth_bonus if self.age < params.old_age else params.old_penalty
-            self.avg_fitness_adjusted = self.avg_fitness * fit_modif
-            # save the components of the last gen
-            self.component_set = self.update_components()
-            # reassign new members to a new empty array, so new agents can be placed
-            # in the next gen. Clearing it also clear the pool, since pool is a reference.
-            self.members = []
+            self.num_gens_no_improvement += 1
+            if self.num_gens_no_improvement > params.enough_gens_to_change_things:
+                self.curr_mutation_rate = 1 # high mutation rate
+        # if the representative should be updated, do so now
+        if params.update_species_rep:
+            self.representative = self.leader if params.leader_is_rep else rd.choice(self.members)
+        # pool is a reference to the members of the last gen that will spawn offspring
+        self.pool = self.members[:ceil(len(self.members)*params.spawn_cutoff)] # ensure that even super-small species get spawns when using threshold
+        # calculate the average fitness and adjusted fitness of this species
+        self.avg_fitness = sum(map(lambda m: m.fitness, self.members)) / len(self.members)
+        fit_modif = params.youth_bonus if self.age < params.old_age else params.old_penalty
+        self.avg_fitness_adjusted = self.avg_fitness * fit_modif
+        # save the components of the last gen
+        self.component_set = self.update_components()
+        # reassign new members to a new empty array, so new agents can be placed
+        # in the next gen. Clearing it also clear the pool, since pool is a reference.
+        self.members = []
             
 
     def update_components(self) -> set:
