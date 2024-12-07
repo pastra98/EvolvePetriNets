@@ -4,6 +4,7 @@ visualizing genomes, printing traces & variants, printing metrics, resetting the
 """
 from neat import params, genome, initial_population
 from neatutils import log as lg
+import gzip
 
 import pm4py
 from pm4py.stats import get_variants
@@ -23,8 +24,12 @@ log = lg.get_log_from_xes("../pm_data/running_example.xes")
 # path = "E:/migrate_o/github_repos/EvolvePetriNets/results/data/bs__perc_fit_tr_gen_prec_06-25-2024_15-59-21/whatever/1_06-25-2024_15-59-31/reports/best_genome.pkl"
 
 def load_genome(path):
-    with open(path, 'rb') as file:
-        g: genome.GeneticNet = pickle.load(file)
+    if path.endswith(".gz"):
+        with gzip.open(path, 'rb') as file:
+            g: genome.GeneticNet = pickle.load(file)
+    else:
+        with open(path, 'rb') as file:
+            g: genome.GeneticNet = pickle.load(file)
     g.clear_cache()
     return g
 
