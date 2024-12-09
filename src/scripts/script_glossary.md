@@ -66,6 +66,13 @@ src/scripts/analysis_scripts/useful_functions.py
 **purpose:**
 Small helper functions that can be re-used in other analysis scripts for stuff like visualizing genomes, printing traces & variants, printing metrics, resetting the ga.
 
+### Analyzing process discovery contest (PDC) logs
+**path:**
+src/scripts/analysis_scripts/pdc_log_analysis.py
+
+**purpose:**
+Select pdc logs based on filters and print some info about them and their models
+
 ## Helper scripts
 
 ### Setup Analysis
