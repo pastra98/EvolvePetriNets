@@ -25,19 +25,48 @@ def load_component_dict(filename):
     with gzip.open(filename, 'rb') as f:
         return pickle.load(f)
 
-data_fp = "C:/Users/pauls/Documents/GitHubRepos/EvolvePetriNets/analysis/data/testing_truncation/execution_data/setup_32/20_10-21-2024_22-50-31/data"
+data_fp = "C:/Users/pauls/Documents/GitHubRepos/EvolvePetriNets/results/data/new_er_11-04-2024_11-00-41/whatever/1_11-04-2024_11-00-45/data"
+# data_fp = "C:/Users/pauls/Documents/GitHubRepos/EvolvePetriNets/analysis/data/speciation_test_b95/execution_data/setup_59/20_11-04-2024_03-12-00/data"
 # data_fp = "C:/Users/pauls/Documents/GitHubRepos/EvolvePetriNets/results/data/intra_s_truncation_s_cutoff_005_10-08-2024_13-36-59/whatever/4_10-08-2024_13-37-05/data"
 
 gen_info_df = pl.read_ipc(data_fp + "/gen_info.feather")
 gen_info_df_pd = gen_info_df.to_pandas()
 pop_df = pl.read_ipc(data_fp + "/population.feather")
 pop_df_pd = pop_df.to_pandas()
-# species_df = pl.read_ipc(data_fp + "/species.feather").to_pandas()
+species_df = pl.read_ipc(data_fp + "/species.feather")
+species_df_pd = species_df.to_pandas()
 component_dict = load_component_dict(data_fp + "/component_dict.pkl.gz")
 
 savedir = data_fp
 
 FSIZE = (10, 5)
+
+# %%
+import scripts.helper_scripts.setup_analysis as sa
+reload(sa)
+
+sr = sa.analyze_spawns_by_fitness_rank(pop_df, 500, 500)
+sa.plot_offspring_distribution(sr)
+# sr
+
+# pop_df.filter(pl.col("parent_id")=="ea3a4b3a-6adf-4837-8c9f-94853b9f04a4")["my_mutation"]
+# print(pop_df.filter(pl.col("parent_id")=="ea3a4b3a-6adf-4837-8c9f-94853b9f04a4")[["species_id","gen"]].sort("gen"))
+# pop_df.filter(pl.col("id")=="ea3a4b3a-6adf-4837-8c9f-94853b9f04a4")["species_id"][0]
+# species_df.filter(
+#     pl.col("name")=="1_9ddcfbf8-13e1-4e2a-a905-dfd8990e904a",
+#     pl.col("gen") >= 200)
+# %%
+# pop_df["0295a1fa-9c08-4641-a8df-a6bd9c5abe55"]
+
+pop_df.filter(
+    pl.col("parent_id") == "0295a1fa-9c08-4641-a8df-a6bd9c5abe55"
+).unique("species_id")["species_id"].to_list()[0]
+
+species_df.filter(
+    pl.col("name") == "1_bd6879d2-1ce3-4830-b420-8f364278cd90",
+    pl.col("obliterate") == True
+)
+# )["gen"].max()
 
 # %%
 """
