@@ -4,6 +4,7 @@ from neat import genome, params
 from pm4py.objects.petri_net.obj import PetriNet as pn
 from pm4py.discovery import (
     discover_petri_net_alpha as alpha,
+    discover_petri_net_alpha_plus as alpha_plus,
     discover_petri_net_inductive as inductive,
     discover_petri_net_heuristics as heuristics,
     discover_petri_net_ilp as ilp
@@ -75,6 +76,7 @@ def get_random_genomes(n_genomes, log, component_tracker):
 def get_bootstrap_genomes(log, component_tracker):
     bootstrap_setup = {
         alpha: params.n_alpha_genomes,
+        # alpha_plus: params.n_alpha_genomes,
         inductive: params.n_inductive_genomes,
         heuristics: params.n_heuristics_genomes,
         ilp: params.n_ilp_genomes
