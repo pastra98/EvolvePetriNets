@@ -128,6 +128,7 @@ get_log_stats("../pm_data/running_example.xes")
 # iterate through different pdc years, using the defaults I set (kind of arbitrary, e.g. using simple loops only)
 for y in [2016, 2017, 2019, 2020, 2021, 2022, 2023, 2024]:
     fp = get_bpic_train_logpath(y)
+    print(fp)
     print("\nlog statistics")
     get_log_stats(fp)
     print(80*"-", "\n")
@@ -156,3 +157,16 @@ for miner in miners:
     print(miner)
     net, im, fm = miner(log)
     show_net_and_stats(net, im, fm)
+
+"""
+chosen logs for selection strat comparison
+
+smol:
+I:/EvolvePetriNets/pm_data/running_example.xes
+
+mid:
+I:/EvolvePetriNets/pm_data/pdc_logs/2022/Training Logs/pdc2022_1110000.xes
+
+big:
+I:/EvolvePetriNets/pm_data/pdc_logs/2024/Training Logs/pdc2024_11100000.xes
+"""
