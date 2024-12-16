@@ -1,3 +1,4 @@
+# %%
 import polars as pl
 import matplotlib.pyplot as plt
 import numpy as np
@@ -7,6 +8,7 @@ from typing import Dict, List, Optional
 import gzip
 import pickle
 from tqdm import tqdm
+import re
 
 ################################################################################
 #################### PROCESSING AND COMBINING DATAFRAMES #######################
@@ -161,6 +163,7 @@ def exec_results_crawler(
         root_path: str,
         save_dfs = True,
         force_recalculation = False,
+        use_setup_num = True,
     ) -> dict:
     """
     Process execution data from a directory structure containing genetic algorithm runs.
@@ -210,10 +213,10 @@ def exec_results_crawler(
     execution_data_path = root_path / "execution_data"
     for setup_dir in tqdm(execution_data_path.iterdir(), desc="Processing setup directories"):
         # Check if directory name matches setup pattern
-        if setup_dir.is_dir() and setup_dir.name.startswith("setup_"):
+        if setup_dir.is_dir():
             try:
-                # Extract setup number
-                setup_num = int(setup_dir.name.split("_")[1])
+                # Extract setup number, use dir name if not use_setup_num
+                setupname = int(setup_dir.name.split("_")[1]) if use_setup_num else setup_dir.name
                 
                 # Initialize setup in results
                 setup_aggregation = {}
@@ -305,7 +308,7 @@ def exec_results_crawler(
                         except Exception as e:
                             print(f"Error saving aggregated results for {setup_dir.name}: {e}")
 
-                execution_results['setups'][setup_num] = setup_aggregation
+                execution_results['setups'][setupname] = setup_aggregation
                 
             except (ValueError, IndexError) as e:
                 print(f"Error processing directory {setup_dir}: {e}")
@@ -328,7 +331,7 @@ def search_setups(res_dict: dict, search_dict: dict):
     return search_res
 
 
-def search_and_aggregate_param_results(res_dict: dict, search_dict: dict):
+def search_and_aggregate_param_results(res_dict: dict, search_dict: dict, search_res=None):
     """
     Filters a results dict returned by exec_results_crawler() for specific params.
 
@@ -348,7 +351,8 @@ def search_and_aggregate_param_results(res_dict: dict, search_dict: dict):
         }
             
     """
-    search_res = search_setups(res_dict, search_dict)
+    if not search_res:
+        search_res = search_setups(res_dict, search_dict)
 
     # aggregation results
     agg_dict = {}
@@ -541,7 +545,6 @@ def generalized_lineplot(
     plt.tight_layout()
     return fig
 
-
 def generalized_barplot(
     plt_layout: List[List[str]],
     data_sources: Dict[str, pl.DataFrame],
@@ -551,7 +554,8 @@ def generalized_barplot(
     group_titles: Optional[List[str]] = None,
     figsize: tuple[int, int] = (12, 6),
     label_lambda = lambda l: l,
-    label_rot = 90
+    label_rot = 90,
+    fp_precision = 90,
     ) -> None:
     """
     Create a grouped bar plot where each group contains multiple bars.
@@ -627,7 +631,7 @@ def generalized_barplot(
         for rect, label, value in zip(rects, labels, values):
             if value > 0:  # Only label non-zero bars
                 ax.text(rect.get_x() + rect.get_width() / 2., rect.get_height() - (rect.get_height() * 0.05),
-                        label_lambda(f'{label}\n{value:.0f}'),
+                        label_lambda(f'{label}\n{value:.2f}'),
                         ha='center', va='top', color='black', rotation=label_rot)
     
     # Customize the plot
@@ -804,4 +808,83 @@ def cleanup_runs(root_path: str, keep_first_n=3):
     
     print("\nCleanup completed!")
 
+
+def extract_run_metrics(data_path: str | Path) -> pl.DataFrame:
+    """
+    Extract metrics from run directories and create a summary dataframe.
+    
+    Args:
+        data_path (str | Path): Path to the data directory containing setup folders
+        
+    Returns:
+        pl.DataFrame: DataFrame containing run metrics
+    """
+    data_path = Path(data_path)
+    
+    # Lists to store extracted data
+    extracted_data = []
+    
+    # Process each setup directory
+    for setup_dir in tqdm(data_path.iterdir(), desc="Processing setups"):
+        if setup_dir.is_dir():
+            setupname = setup_dir.name
+            
+            # Process each run directory in this setup
+            for run_dir in setup_dir.iterdir():
+                if run_dir.is_dir():
+                    try:
+                        # Extract run number from directory name
+                        run_nr = int(run_dir.name.split("_")[0])
+                        
+                        # Read and parse report.txt
+                        report_path = run_dir / "report.txt"
+                        if not report_path.exists():
+                            continue
+                            
+                        with open(report_path, 'r') as f:
+                            report_content = f.read()
+                        
+                        # Extract max fitness using regex
+                        fitness_match = re.search(r'Best fitness:\n([\d.]+)', report_content)
+                        max_fitness = float(fitness_match.group(1)) if fitness_match else None
+                        
+                        # Extract num components using regex
+                        components_match = re.search(r'Total components discovered:\n(\d+)', report_content)
+                        num_components = int(components_match.group(1)) if components_match else None
+                        
+                        # Add data to list
+                        extracted_data.append({
+                            'setupname': setupname,
+                            'run_nr': run_nr,
+                            'max_fitness': max_fitness,
+                            'num_components': num_components,
+                            'Exceptions': True
+                        })
+                        
+                    except Exception as e:
+                        print(f"Error processing {run_dir}: {e}")
+                        # Add error entry
+                        extracted_data.append({
+                            'setupname': setupname,
+                            'run_nr': run_dir.name.split("_")[0],
+                            'max_fitness': None,
+                            'num_components': None,
+                            'Exceptions': True
+                        })
+    
+    # Create DataFrame from extracted data
+    if not extracted_data:
+        return pl.DataFrame(schema={
+            'setupname': pl.Utf8,
+            'run_nr': pl.Int64,
+            'max_fitness': pl.Float64,
+            'num_components': pl.Int64,
+            'Exceptions': pl.Boolean
+        })
+    
+    return pl.DataFrame(extracted_data)
+
 #-------------------------------------------------------------------------------
+# %%
+# df = extract_run_metrics("I:/EvolvePetriNets/analysis/data/popsize_medium_log/execution_data")
+# df.write_ipc("I:/EvolvePetriNets/analysis/data/popsize_medium_log/execution_data/final_report.feather")
