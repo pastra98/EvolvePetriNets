@@ -21,17 +21,19 @@ reload(uf)
 path = "scripts/pickled_genomes/"
 alpha_g = load_genome(path + "alpha_bootstrap.pkl")
 inductive_g = load_genome(path + "inductive_bootstrap.pkl")
-# ilp_g = load_genome(path + "inductive_bootstrap.pkl")
-# spaghetti_g3 = load_genome(path + "spaghetti_g3.pkl")
-# imprecise = load_genome(path + "imprecise_model.pkl")
-# only_exec = load_genome(path + "only_exec_score.pkl")
-# hierarchical = load_genome(path + "hierarchical.pkl")
+ilp_g = load_genome(path + "inductive_bootstrap.pkl")
+spaghetti_g3 = load_genome(path + "spaghetti_g3.pkl")
+imprecise = load_genome(path + "imprecise_model.pkl")
+only_exec = load_genome(path + "only_exec_score.pkl")
+
+glist = [alpha_g, inductive_g, ilp_g, spaghetti_g3, imprecise, only_exec]
+
 # show_genome(only_exec)
 
 # show_genome(alpha_g)
 # eval_and_print_metrics(alpha_g, log)
-show_genome(inductive_g)
-eval_and_print_metrics(inductive_g, log)
+show_genome(alpha_g)
+eval_and_print_metrics(alpha_g, log)
 
 # %%
 reload(fc); reload(genome)
@@ -143,7 +145,7 @@ old_replay = old_petri.replay_log()
 # print(old_petri._aggregate_trace_fitness(old_replay))
 # pprint(old_replay)
 old_eval = old_petri.evaluate()
-pprint(old_eval["metrics"])
+pprint(old_eval["metrics"]["aggregated_replay_fitness"])
 
 print("new")
 new_petri = alpha_g.build_fc_np_petri(log)
@@ -153,8 +155,25 @@ new_replay = new_petri.replay_log()
 # pprint(new_replay)
 
 new_eval = new_petri.evaluate()
-pprint(new_eval["metrics"])
+pprint(new_eval["metrics"]["aggregated_replay_fitness"])
 
+load_genome(path + "alpha_bootstrap.pkl")
+
+# testing genomes of the small log
+def compare_oop_np_genomes(genome_list):
+    for g in genome_list:
+        old_petri = g.build_fc_petri(log)
+        old_replay = old_petri.replay_log()
+        old_eval = old_petri.evaluate()
+
+        new_petri = g.build_fc_np_petri(log)
+        new_replay = new_petri.replay_log()
+        new_eval = new_petri.evaluate()
+        print()
+        print("OOP:  ", old_eval["metrics"]["aggregated_replay_fitness"])
+        print("numpy:", new_eval["metrics"]["aggregated_replay_fitness"])
+
+compare_oop_np_genomes(glist)
 # %%
 reload(genome)
 reload(fc)
