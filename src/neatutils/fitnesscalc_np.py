@@ -303,7 +303,7 @@ class PetriNetNP:
         node_degrees = self._get_node_degrees()
         # simplicity / generalization metrics
         metrics = {
-            "aggregated_replay_fitnesss": self._aggregate_trace_fitness(replay),
+            "aggregated_replay_fitness": self._aggregate_trace_fitness(replay),
             "io_connectedness": self._io_connectedness_simplicity(node_degrees),
             "mean_by_max": self._mean_by_max_simplicity(node_degrees),
             "trans_by_tasks": self._fraction_task_trans(),

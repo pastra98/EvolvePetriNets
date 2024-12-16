@@ -2,7 +2,7 @@ Best fitness:
 1.0
 Best metrics:
 {
-    "aggregated_replay_fitnesss": 1.0,
+    "aggregated_replay_fitness": 1.0,
     "io_connectedness": 0.7777777777777778,
     "mean_by_max": 0.7058823529411764,
     "trans_by_tasks": 1.0,

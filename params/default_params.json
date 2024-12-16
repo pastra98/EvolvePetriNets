@@ -49,7 +49,7 @@
     "missing_penal": 0.4,
     "min_tokens_for_replay": 51,
     "metric_dict": {
-        "aggregated_replay_fitnesss": {
+        "aggregated_replay_fitness": {
             "weight": 2,
             "raise_by": 1,
             "active_gen": 0,
@@ -99,7 +99,7 @@
             "raise_by": 1,
             "active_gen": 0,
             "anchor_to": [
-                "aggregated_replay_fitnesss",
+                "aggregated_replay_fitness",
                 0.7
             ]
         },
@@ -117,7 +117,7 @@
             "raise_by": 1,
             "active_gen": 0,
             "anchor_to": [
-                "aggregated_replay_fitnesss",
+                "aggregated_replay_fitness",
                 0.6
             ]
         },
@@ -126,7 +126,7 @@
             "raise_by": 1,
             "active_gen": 0,
             "anchor_to": [
-                "aggregated_replay_fitnesss",
+                "aggregated_replay_fitness",
                 0.8
             ]
         },
@@ -144,7 +144,7 @@
             "raise_by": 1,
             "active_gen": 0,
             "anchor_to": [
-                "aggregated_replay_fitnesss",
+                "aggregated_replay_fitness",
                 0.8
             ]
         }

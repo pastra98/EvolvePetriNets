@@ -1,15 +1,15 @@
 {
-    "name": "new_er",
+    "name": "good_speciation_params",
     "setups": [
         {
-            "setupname": "whatever",
-            "parampath": "params/default_params.json",
+            "setupname": "testme",
+            "parampath": "C:/Users/pauls/Documents/GitHubRepos/EvolvePetriNets/params/good_speciation.json",
             "logpath": "pm_data/running_example.xes",
             "stop_cond": {
                 "var": "gen",
-                "val": 10
+                "val": 500
             },
-            "n_runs": 4,
+            "n_runs": 40,
             "send_gen_info_to_console": false,
             "is_profiled": false,
             "save_plots": true
