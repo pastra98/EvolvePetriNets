@@ -1,16 +1,16 @@
 {
-    "name": "good_speciation_params",
+    "name": "normal_speed_midlog",
     "setups": [
         {
             "setupname": "testme",
-            "parampath": "C:/Users/pauls/Documents/GitHubRepos/EvolvePetriNets/params/good_speciation.json",
-            "logpath": "pm_data/running_example.xes",
+            "parampath": "I:/EvolvePetriNets/params/good_speciation.json",
+            "logpath": "I:/EvolvePetriNets/pm_data/pdc_logs/2024/Training Logs/pdc2024_11100000.xes",
             "stop_cond": {
                 "var": "gen",
-                "val": 500
+                "val": 100
             },
-            "n_runs": 40,
-            "send_gen_info_to_console": false,
+            "n_runs": 8,
+            "send_gen_info_to_console": true,
             "is_profiled": false,
             "save_plots": true
         }
