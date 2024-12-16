@@ -78,8 +78,6 @@ def run_ga(setup: dict, logger):
             gen_info = curr_ga.next_generation()
             logger.debug(f"{pprint.pformat(gen_info)}\n{8*'-'}")
             # info always printed, debug depends on logging level (send_gen_info_to_console)
-            if setup["send_gen_info_to_console"]:
-                logger.info(f"{pprint.pformat(gen_info)}\n{8*'-'}")
 
         # on exception save the ga, return to main
         except Exception:
