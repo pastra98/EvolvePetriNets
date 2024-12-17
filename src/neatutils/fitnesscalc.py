@@ -55,7 +55,10 @@ class Transition:
         """Checks if all places have tokens, trans are also enabled if they have no inputs,
         but a missing penalty will be added
         """
-        return all([p.has_tokens() for p in self.inputs.values()])
+        for p in self.inputs.values():
+            if not p.has_tokens():
+                return False
+        return True
 
 
     def _enable(self):
@@ -153,8 +156,8 @@ class Petri:
                 replay.append((task, (0, 0, 0), []))
                 continue
             trans = self.transitions[task]
-            # if trans exists, check first if it needs to be enabled through hiddens
-            if not trans.is_enabled():
+            # if there are hidden transitions and the trans is disabled, try enabling it
+            if self.hidden_transitions and not trans.is_enabled():
                 fired_hiddens = self._try_enable_trans_through_hidden(trans)
                 if fired_hiddens:
                     for fh in fired_hiddens:
