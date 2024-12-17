@@ -32,8 +32,9 @@ glist = [alpha_g, inductive_g, ilp_g, spaghetti_g3, imprecise, only_exec]
 
 # show_genome(alpha_g)
 # eval_and_print_metrics(alpha_g, log)
-show_genome(alpha_g)
-eval_and_print_metrics(alpha_g, log)
+
+show_genome(inductive_g)
+eval_and_print_metrics(inductive_g, log)
 
 # %%
 reload(fc); reload(genome)
@@ -137,46 +138,36 @@ reload(fc)
 reload(fc_np)
 reload(genome)
 
-print("old")
-log = get_log_from_xes("../pm_data/running_example.xes")
-old_petri = alpha_g.build_fc_petri(log)
-old_replay = old_petri.replay_log()
-# print(old_petri._over_enabled_transitions(old_replay))
-# print(old_petri._aggregate_trace_fitness(old_replay))
-# pprint(old_replay)
-old_eval = old_petri.evaluate()
-pprint(old_eval["metrics"]["aggregated_replay_fitness"])
-
-print("new")
-new_petri = alpha_g.build_fc_np_petri(log)
-new_replay = new_petri.replay_log()
-# print(new_petri._over_enabled_transitions(new_replay))
-# print(new_petri._aggregate_trace_fitness(old_replay))
-# pprint(new_replay)
-
-new_eval = new_petri.evaluate()
-pprint(new_eval["metrics"]["aggregated_replay_fitness"])
-
-load_genome(path + "alpha_bootstrap.pkl")
-
 # testing genomes of the small log
-def compare_oop_np_genomes(genome_list):
+def compare_oop_np_genomes(genome_list, eval_log):
     for g in genome_list:
+        # show_genome(g)
         old_petri = g.build_fc_petri(log)
         old_replay = old_petri.replay_log()
         old_eval = old_petri.evaluate()
 
-        new_petri = g.build_fc_np_petri(log)
-        new_replay = new_petri.replay_log()
-        new_eval = new_petri.evaluate()
+        # new_petri = g.build_fc_np_petri(log)
+        # new_replay = new_petri.replay_log()
+        # new_eval = new_petri.evaluate()
         print()
         print("OOP:  ", old_eval["metrics"]["aggregated_replay_fitness"])
-        print("numpy:", new_eval["metrics"]["aggregated_replay_fitness"])
+        # print("numpy:", new_eval["metrics"]["aggregated_replay_fitness"])
 
-compare_oop_np_genomes(glist)
+compare_oop_np_genomes(glist, get_log_from_xes("../pm_data/running_example.xes"))
+
+# midlog_genome = load_genome("I:/EvolvePetriNets/analysis/data/popsize_medium_log/execution_data/400/6_12-15-2024_16-54-10/best_genome.pkl.gz")
+# midlog = get_log_from_xes()
+
+# compare_oop_np_genomes(glist, get_log_from_xes("../pm_data/running_example.xes"))
 # %%
 reload(genome)
 reload(fc)
 reload(fc_np)
 
-res = alpha_g.evaluate_fitness(log)
+big_genome = load_genome(path + "biglog_genome.pkl")
+biglog = get_log_from_xes("I:/EvolvePetriNets/pm_data/pdc_logs/2024/Training Logs/pdc2024_11100000.xes")
+# show_genome(big_genome)
+
+# %%
+reload(fc)
+eval_and_print_metrics(big_genome, biglog)
