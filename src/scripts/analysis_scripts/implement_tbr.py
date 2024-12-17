@@ -6,7 +6,7 @@ Could also be used later for comparing numpy-based implementation to current OOP
 import scripts.analysis_scripts.useful_functions as uf
 from scripts.analysis_scripts.useful_functions import \
     load_genome, show_genome, get_aligned_traces, get_log_variants, log, reset_ga, \
-    eval_and_print_metrics
+    eval_and_print_metrics, analyze_log_variants
 
 from neat import params, genome, initial_population
 import neatutils.fitnesscalc as fc
@@ -171,3 +171,76 @@ biglog = get_log_from_xes("I:/EvolvePetriNets/pm_data/pdc_logs/2024/Training Log
 # %%
 reload(fc)
 eval_and_print_metrics(big_genome, biglog)
+
+# %%
+from collections import Counter
+reload(uf)
+
+analyze_log_variants(biglog)
+
+# %%
+
+# pprint({k: v for k, v in list(biglog["variants"].items())[:10]})
+
+# %%
+# %%
+################################################################################
+#################### TESTING FRAGMENTING THE LOG ###############################
+################################################################################
+# Extremely messy ugly code, but this should work to identify overlaps in variants
+# there are surely 100 ways to improve this but I'm glad it works :)
+
+variants = list(log["variants"].keys())
+longest_v = max([len(v) for v in variants])
+
+
+task_tree = {}
+for task_nr in range(longest_v):
+    curr_tasks = {}
+    for var_i, var in enumerate(variants):
+        if task_nr+1 > len(var):
+            continue # shorter variants
+        task = var[task_nr]
+        curr_tasks.setdefault(task, set()).add(var_i)
+    task_tree[task_nr] = curr_tasks
+
+
+final_fragments = {}
+fragments = {tuple([k]): v for k, v in task_tree[0].items()}
+for task_nr, branches in list(task_tree.items())[1:]:
+    new_fragments = {}
+    for t, vids in branches.items():
+    
+        for fk, fv in fragments.items():
+            if overlap := vids.intersection(fv):
+                if len(overlap) == len(fv): # extend current fragment
+                    new_fragments[fk + tuple([t])] = overlap
+                else: # fragment branches of
+                    final_fragments[fk] = fv # keep the old fragment in final fragments
+                    new_fragments[tuple([t])] = overlap # start a new one
+    fragments = new_fragments
+
+tagged_fragments = {}
+for i, item in enumerate(final_fragments.items()):
+    k, v = item
+    tagged_fragments[i] = [k, v]
+
+from copy import copy
+shortened_variants = {vi: [[], []] for vi in range(len(variants))}
+
+for frag_id, frag in tagged_fragments.items():
+    tasks, matching_vars = frag
+    for i in matching_vars:
+        shortened_variants[i][0].append(frag_id)
+
+for i, var in enumerate(variants):
+    used_fragments = [tagged_fragments[frag_id][0] for frag_id in shortened_variants[i][0]]
+    var_copy = copy(var)
+    for f in used_fragments:
+        var_copy = var_copy[len(f):]
+    shortened_variants[i][1] = list(var_copy)
+
+print("fragments")
+pprint(tagged_fragments)
+print("\nvariants shortened")
+pprint(shortened_variants)
