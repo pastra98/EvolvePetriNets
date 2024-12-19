@@ -105,6 +105,9 @@ class Petri:
             t_id: t for t_id, t in transitions.items() if not t.is_task
             }
         self.log = log
+        # compute the prefixes, update marking dict
+        self.marking_dict: Dict[int, List[dict, List[List[Place, int]]]] = {}
+        self.compute_prefixes()
 
 
     def evaluate(self):
@@ -112,6 +115,7 @@ class Petri:
         """
         # get replay & node degrees
         replay = self.replay_log()
+        # do the prefix optimized replay
         node_degrees = self._get_node_degrees()
         # simplicity / generalization metrics
         metrics = {
@@ -135,20 +139,24 @@ class Petri:
 # -------------------- REPLAY -------------------- 
 
     def replay_log(self) -> dict:
-        """Replay every trace of the log
+        """Using the prefix optimization, this will replace the other replay func
         """
+        # the markings need to be calculated before this
         log_replay: List[dict] = []
-        for trace in self.log["variants"]:
-            trace_replay = self._replay_trace(trace)
-            trace_fitness = self._get_trace_fitness(trace_replay)
-            log_replay.append(trace_replay | {"fitness": trace_fitness})
+        for var_i in range(len(self.log["variants"])):
+            prefixes, rest_of_trace = self.log["shortened_variants"][var_i]
+            initial_replay = self.load_marking(prefixes[-1])
+            trace_replay = self._replay_trace(rest_of_trace)
+            full_replay = self.merge_replay_stats(initial_replay, trace_replay)
+            trace_fitness = self._get_trace_fitness(full_replay)
+            log_replay.append(full_replay | {"fitness": trace_fitness})
         return log_replay
 
 
     def _replay_trace(self, trace: Tuple[str]):
-        """Replay a trace, return cpmr counts
+        """Replay a trace, return cpmr counts. Continues from the current marking
+        remember to reset it when it should start from initial marking
         """
-        self.set_initial_marking()
         replay: List[Tuple[str, List[int]]] = []
         c, p, m, r = 0, 0, 0, 0 # consumed, produced, missing, remaining
         for task in trace:
@@ -199,14 +207,6 @@ class Petri:
         return fired_hiddens
 
 
-    def set_initial_marking(self):
-        """Clear net of tokens, set 1 in token source
-        """
-        for p in self.places.values():
-            p.n_tokens = 0
-        self.places["start"].n_tokens = 1
-
-
     def _get_trace_fitness(self, trace_replay: dict):
         """Use replay stats to calculate the fitness of trace, reward successive
         good executions (none missing, trans has output places)
@@ -236,6 +236,72 @@ class Petri:
         # penalize for remaining tokens (set to 0 if using the remaining score)
         return fitness
 
+# -------------------- MARKINGS -------------------- 
+
+    def set_initial_marking(self):
+        """Clear net of tokens, set 1 in token source
+        """
+        for p in self.places.values():
+            p.n_tokens = 0
+        self.places["start"].n_tokens = 1
+
+
+    def load_marking(self, prefix_id: int):
+        # Again super ugly, a method that changes state of the object and is fruitful
+        # return the replay state at this point
+        # load the marking, i.e. token-place configuration
+        replay_info, placelist = self.marking_dict[prefix_id]
+        for p, num_tokens in placelist:
+            p.n_tokens = num_tokens
+        return replay_info
+
+
+    @staticmethod
+    def merge_replay_stats(r1: dict, r2: dict):
+        # remaining and sink are only calculated at end of replay (their state is stored in places anyways)
+        merged = {}
+        for stat in r1:
+            if stat in ["remaining", "sink"]:
+                merged[stat] = r2[stat]
+            else:
+                merged[stat] = r1[stat] + r2[stat]
+        return merged
+
+
+    def compute_prefixes(self):
+
+        def get_marking_and_replay(prefix: int):
+            # previous state is taken care of by outer loop
+            # load the prefix tasks, replay the trace, save the place info, return it
+            replay_info = self._replay_trace(prefix_map[prefix])
+            placelist = []
+            for p in self.places.values():
+                placelist.append([p, p.n_tokens])
+            # big problem: need to also store the replay info when then replaying the tasks
+            return [replay_info, placelist]
+
+        prefix_map = self.log["prefixes"]
+
+        for pf_list in self.log["unique_prefixes"]:
+            # if all prefixes are already in the dict, continue
+            initial_pf = pf_list[0]
+            if initial_pf not in self.marking_dict:
+                # need initial marking for the first prefix, no need to merge it
+                self.set_initial_marking()
+                self.marking_dict[initial_pf] = get_marking_and_replay(initial_pf)
+
+            prev_pf = initial_pf
+            for pf in pf_list[1:]:
+                if pf not in self.marking_dict:
+                    # load the state from the marking, along with replay info
+                    prev_replay_info = self.load_marking(prev_pf)
+                    # continue replay from the previous marking
+                    replay_info, placelist = get_marking_and_replay(pf)
+                    # merge the replay infos
+                    merged_replay = self.merge_replay_stats(prev_replay_info, replay_info)
+                    self.marking_dict[pf] = [merged_replay, placelist]
+                prev_pf = pf
+
 # -------------------- METRICS -------------------- 
 # ---------- REPLAY FITNESS
 
@@ -243,6 +309,7 @@ class Petri:
         """Aggregate fitness from all traces of replay, divides by max achievable fitness.
         """
         agg_fitness = 0
+        # assumes the order of replay is the same as the order of variants in the log
         for replay, cardinality in zip(replay, self.log["variants"].values()):
             agg_fitness += replay["fitness"] * cardinality
         max_fit = max_replay_fitness( # tuples len of trace with cardinality
