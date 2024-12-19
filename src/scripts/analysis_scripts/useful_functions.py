@@ -10,6 +10,7 @@ import pm4py
 from pm4py.stats import get_variants
 from pm4py.algo.conformance.tokenreplay.variants.token_replay import apply as get_replayed_traces
 from pm4py.objects.petri_net.obj import PetriNet as pn
+from collections import Counter
 
 from pprint import pprint
 from IPython.display import display
@@ -65,3 +66,12 @@ def reset_ga():
     for module in neat_modules:
         reload(module)
     params.load('../params/testing/test_params.json')
+
+def analyze_log_variants(log: dict):
+    print("num variants:", len(log["variants"]))
+    variant_lens = [len(v) for v in list(log["variants"].keys())]
+    print("distribution of variant lens:", Counter(variant_lens))
+    print("total num of tasks in log (only variants):", sum(variant_lens))
+    variants_in_traces = [c for c in log["variants"].values()]
+    vt = sum([k*v for k, v in Counter(variants_in_traces).items()]) # adds up to 1000
+    print("total num of traces:", vt)
