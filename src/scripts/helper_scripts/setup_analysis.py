@@ -259,6 +259,7 @@ def exec_results_crawler(
                     agg_gen_info = []
                     agg_mutation_stats = []
                     agg_spawn_ranks = []
+                    fitness_variances = []
                     
                     # Process each run directory
                     for run_dir in setup_dir.iterdir():
@@ -273,6 +274,10 @@ def exec_results_crawler(
                             # fetch data from pop df, calculate spawn ranks
                             pop_df = pl.read_ipc(data_dir / "population.feather")
                             agg_spawn_ranks.append(analyze_spawns_by_fitness_rank(pop_df, popsize, maxgen))
+                            # get the fitness variances from the pop df
+                            fitness_variances.append(pop_df.group_by("gen").agg([
+                                pl.col("fitness").var().alias("fitness_variance")
+                                ]).sort("gen"))
                             # calculate mean metrics and join to gen info df
                             mean_metrics = pop_df.group_by('gen').agg([pl.col('^metric_.*$').mean()])
                             gen_info_df = gen_info_df.join(mean_metrics, "gen")
@@ -283,7 +288,11 @@ def exec_results_crawler(
                             agg_gen_info.append(gen_info_df)
                             agg_mutation_stats.append(mutation_stats_df)
 
-                    setup_aggregation['gen_info_agg'] = aggregate_geninfo_dataframes(agg_gen_info)
+                    # first aggregate the gen info, then the other dataframes
+                    agg_gen_info = aggregate_geninfo_dataframes(agg_gen_info)
+                    aggregated_fitness_var = aggregate_dataframes(fitness_variances, "gen", [], True)
+                    setup_aggregation['gen_info_agg'] = agg_gen_info.join(aggregated_fitness_var, "gen")
+                    # the other dataframes
                     setup_aggregation['mutation_stats_agg'] = aggregate_mutation_dataframes(agg_mutation_stats)
                     setup_aggregation['spawn_rank_agg'] = aggregate_spawn_ranks(agg_spawn_ranks)
 
@@ -886,5 +895,3 @@ def extract_run_metrics(data_path: str | Path) -> pl.DataFrame:
 
 #-------------------------------------------------------------------------------
 # %%
-# df = extract_run_metrics("I:/EvolvePetriNets/analysis/data/popsize_medium_log/execution_data")
-# df.write_ipc("I:/EvolvePetriNets/analysis/data/popsize_medium_log/execution_data/final_report.feather")
