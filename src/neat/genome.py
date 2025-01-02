@@ -66,8 +66,8 @@ class GeneticNet:
         self.id = str(uuid4())
         self.parent_id: int = parent_id
         self.species_id: str = None # gets assigned by species.add_member()
-        self.fitness: float = 0
         # fitness measures
+        self.fitness: float = 0
         self.fitness_metrics: dict = {}
         # make Transition genes for every task saved in innovs and add to genome
         self.task_list = task_list
