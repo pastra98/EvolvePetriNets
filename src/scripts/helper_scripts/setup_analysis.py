@@ -1004,19 +1004,21 @@ def plot_t_value_distributions(filepath_dict, generation, generation_end=None):
     xticks = np.arange(np.floor(min_val), np.ceil(max_val) + 1, 1.0)
     ax1.set_xticks(xticks)
     ax2.set_xticks(xticks)
+    ax1.tick_params(axis='both', which='major', labelsize=12)
+    ax2.tick_params(axis='both', which='major', labelsize=12)
     
     ax1.set_axisbelow(True)
     ax2.set_axisbelow(True)
     
     title = f'T-Value Distribution for Generation {generation}' if generation_end is None else \
             f'T-Value Distribution for Generations {generation}-{generation_end}'
-    ax1.set_title(title)
-    ax1.set_xlabel('')
-    ax1.set_ylabel('Density')
+    ax1.set_title(title, fontsize=16)
+    ax1.set_xlabel('', fontsize=14)
+    ax1.set_ylabel('Density', fontsize=14)
     ax1.legend()
     
-    ax2.set_xlabel('T-Value')
-    ax2.set_ylabel('Boxplot')
+    ax2.set_xlabel('T-Value', fontsize=14)
+    ax2.set_ylabel('Boxplot', fontsize=14)
     ax2.set_yticks([])
     
     plt.tight_layout()
