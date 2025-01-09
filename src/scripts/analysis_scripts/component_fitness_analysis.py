@@ -9,7 +9,7 @@ import numpy as np
 from scipy.stats import ttest_ind
 import pickle
 from tqdm import tqdm
-from numba import njit
+# from numba import njit
 
 population = "../results/data/component_fitness_analysis_200gen_05-14-2024_13-03-59/no_log_splices/1_05-14-2024_13-04-08/reports/population.pkl"
 df_expanded = pd.read_pickle(population)
@@ -66,6 +66,9 @@ pprint(list(sorted_component_fitness.items())[:10])
 #################### OPTIMIZED T TEST COMPARISON ###############################
 ################################################################################
 from scipy.stats import t as t_funcs
+import polars as pl
+
+df_expanded = pl.read_ipc("I:/EvolvePetriNets/results/data/guided_mutations_minitest_deleteme_01-08-2025_17-39-18/setup_2/2_01-08-2025_17-39-21/data/population.feather").to_pandas()
 
 def optimized_t(expanded_df: pd.DataFrame):
     comp_dict = {}
@@ -322,3 +325,18 @@ rules = association_rules(frequent_itemsets, metric="confidence", min_threshold=
 # Filter rules that imply high fitness
 high_fitness_rules = rules[rules['consequents'] == {True}]
 print(high_fitness_rules)
+
+# %%
+################################################################################
+#################### Plotting component t distribution #########################
+################################################################################
+
+import scripts.helper_scripts.setup_analysis as sa
+reload(sa)
+
+fp_dict = {
+    'random': "I:/EvolvePetriNets/analysis/data/comparing_t_value_distributions/midlog_no_t.pkl.gz",
+    'guided': "I:/EvolvePetriNets/analysis/data/comparing_t_value_distributions/midlog_yes_t.pkl.gz"
+}
+
+sa.plot_t_value_distributions(fp_dict, 20)

@@ -9,6 +9,10 @@ import gzip
 import pickle
 from tqdm import tqdm
 import re
+import seaborn as sns
+import pandas as pd
+import numpy as np
+import pickle, gzip
 
 ################################################################################
 #################### PROCESSING AND COMBINING DATAFRAMES #######################
@@ -894,4 +898,143 @@ def extract_run_metrics(data_path: str | Path) -> pl.DataFrame:
     return pl.DataFrame(extracted_data)
 
 #-------------------------------------------------------------------------------
-# %%
+
+################################################################################
+#################### Plotting component t distribution #########################
+################################################################################
+def plot_t_value_distributions(filepath_dict, generation, generation_end=None):
+    """
+    Plot T-value distributions from multiple pickle files containing component dictionaries.
+    Creates a composite plot with density curves and boxplots sharing the same x-axis.
+    
+    Parameters
+    ----------
+    filepath_dict : dict
+        Dictionary where keys are labels for the distributions (e.g., 'random', 'guided')
+        and values are paths to gzipped pickle files containing component dictionaries
+    generation : int
+        Starting generation number to analyze. If generation_end is None, only this generation
+        is analyzed
+    generation_end : int, optional
+        If provided, analyzes T-values from generation through generation_end inclusive
+        
+    Returns
+    -------
+    matplotlib.figure.Figure
+        The generated figure object which can be further modified or saved
+        
+    Example
+    -------
+    >>> dfs = {
+        'random': 'path/to/random/components.pkl.gz',
+        'guided': 'path/to/guided/components.pkl.gz'
+    }
+    >>> fig = plot_t_value_distributions(dfs, 300)
+    >>> fig.savefig('t_value_distribution.png', dpi=300, bbox_inches='tight')
+    """
+    
+    # Load and process data
+    processed_dfs = {}
+    for label, filepath in filepath_dict.items():
+        # Load pickle file
+        with gzip.open(filepath, 'rb') as file:
+            component_dict = pickle.load(file)
+        
+        # Convert to DataFrame
+        df_data = []
+        for outer_dict in component_dict.values():
+            row = {int(k): v for k, v in outer_dict['t_val'].items()}
+            df_data.append(row)
+        processed_dfs[label] = pd.DataFrame(df_data)
+    
+    # Create visualization
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 6), 
+                                  gridspec_kw={'height_ratios': [3, 1]}, 
+                                  sharex=True)
+    
+    colors = {}
+    all_values = []
+    
+    # Top subplot: density plots
+    for label, df in processed_dfs.items():
+        if generation_end is None:
+            values = df[generation].dropna()
+        else:
+            columns = range(generation, generation_end + 1)
+            values = df[columns].values.flatten()
+            values = values[~np.isnan(values)]
+        
+        all_values.extend(values)
+        line = sns.kdeplot(data=values, label=label, ax=ax1)
+        colors[label] = line.get_lines()[-1].get_color()
+    
+    ax1.grid(axis='x', color='lightgrey', linestyle='-', alpha=0.3)
+    
+    # Bottom subplot: boxplots
+    positions = np.linspace(0, 1, len(processed_dfs) + 2)[1:-1]
+    
+    for (label, df), pos in zip(processed_dfs.items(), positions):
+        if generation_end is None:
+            values = df[generation].dropna()
+        else:
+            columns = range(generation, generation_end + 1)
+            values = df[columns].values.flatten()
+            values = values[~np.isnan(values)]
+        
+        bp = ax2.boxplot(values, 
+                        positions=[pos], 
+                        vert=False,
+                        widths=[0.15],
+                        sym='',
+                        whis=[5, 95],
+                        patch_artist=False,
+                        meanline=True,
+                        showmeans=True)
+        
+        plt.setp(bp['boxes'], color=colors[label])
+        plt.setp(bp['whiskers'], color=colors[label])
+        plt.setp(bp['caps'], color=colors[label])
+        plt.setp(bp['medians'], color=colors[label])
+        plt.setp(bp['means'], color=colors[label], linestyle='--')
+    
+    ax2.grid(axis='x', color='lightgrey', linestyle='-', alpha=0.3)
+    
+    # Set x-ticks and styling
+    min_val, max_val = min(all_values), max(all_values)
+    xticks = np.arange(np.floor(min_val), np.ceil(max_val) + 1, 1.0)
+    ax1.set_xticks(xticks)
+    ax2.set_xticks(xticks)
+    
+    ax1.set_axisbelow(True)
+    ax2.set_axisbelow(True)
+    
+    title = f'T-Value Distribution for Generation {generation}' if generation_end is None else \
+            f'T-Value Distribution for Generations {generation}-{generation_end}'
+    ax1.set_title(title)
+    ax1.set_xlabel('')
+    ax1.set_ylabel('Density')
+    ax1.legend()
+    
+    ax2.set_xlabel('T-Value')
+    ax2.set_ylabel('Boxplot')
+    ax2.set_yticks([])
+    
+    plt.tight_layout()
+    
+    # Print statistics
+    for label, df in processed_dfs.items():
+        if generation_end is None:
+            values = df[generation].dropna()
+        else:
+            columns = range(generation, generation_end + 1)
+            values = df[columns].values.flatten()
+            values = values[~np.isnan(values)]
+            
+        print(f"\nStatistics for {label}:")
+        print(f"Count of non-NA values: {len(values)}")
+        print(f"Mean: {values.mean():.3f}")
+        print(f"Std: {values.std():.3f}")
+        print(f"Min: {values.min():.3f}")
+        print(f"Max: {values.max():.3f}")
+    
+    return fig
