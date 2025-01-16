@@ -270,8 +270,10 @@ def exec_results_crawler(
                             gen_info_df = pl.read_ipc(data_dir / "gen_info.feather")
                             mutation_stats_df = pl.read_ipc(data_dir / "mutation_stats_df.feather")
                             maxgen = len(gen_info_df)
-                            # load best genome and append to list
-                            best_genomes.append(load_compressed_pickle(run_dir / "best_genome.pkl.gz"))
+                            # load best genome and append to list (if there is still component tracker, delete it ya moron)
+                            best_g = load_compressed_pickle(run_dir / "best_genome.pkl.gz")
+                            del best_g.pop_component_tracker
+                            best_genomes.append(best_g)
                             # load and add the component data of that run to the df
                             cdict = load_compressed_pickle(data_dir / "component_dict.pkl.gz")
                             gen_info_df = gen_info_df.join(count_unique_components(cdict, maxgen), "gen")

@@ -30,7 +30,7 @@ def save_report(ga_info: dict, savedir: str, save_plots: bool) -> None:
     # -------- saving data
     os.makedirs(f"{savedir}/data")
     # pickle component tracker
-    pickle_object(ga_info["component_dict"], "component_dict", f"{savedir}/data")
+    pickle_object(ga_info["component_dict"], "component_dict", f"{savedir}/data", False)
     # get the full history df, create the dataframes and save them
     full_history = ga_info["history"]
     # save the dataframes that don't contain species
@@ -42,7 +42,7 @@ def save_report(ga_info: dict, savedir: str, save_plots: bool) -> None:
     mutation_stats_df.write_ipc(f"{savedir}/data/mutation_stats_df.feather")
     # save species leader gviz
     save_genome_gviz(ga_info["best_genome"], savedir, name_prefix="best_genome")
-    pickle_object(ga_info["best_genome"], "best_genome", savedir)
+    pickle_object(ga_info["best_genome"], "best_genome", savedir, True)
     # check if there are species, if yes - save the species df
     use_species = "species" in full_history[1]
     if use_species:
@@ -227,10 +227,12 @@ def save_species_leaders(leaders: list[GeneticNet], savedir: str):
         save_genome_gviz(g, f"{savedir}/leaders", name_prefix=f"species_{g.species_id}")
 
 
-def pickle_object(thing, name: str, savedir: str, use_compression=True):
+def pickle_object(thing, name: str, savedir: str, is_gen_net: bool, use_compression=True):
     """Pickle the full GeneticNet to disk
     """
     fp = f"{savedir}/{name}.pkl"
+    if is_gen_net:
+        thing.pop_component_tracker = None # a pickle will also serialize that reference, i.e. the entire kitchen sink. dummy!
     if use_compression:
         with gzip.open(fp + ".gz", "wb") as f:
             pickle.dump(thing, f, protocol=pickle.HIGHEST_PROTOCOL)
