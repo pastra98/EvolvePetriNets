@@ -1,6 +1,6 @@
 {
     "selection_strategy": "speciation",
-    "popsize": 500,
+    "popsize": 300,
     "n_alpha_genomes": 0,
     "n_inductive_genomes": 0,
     "n_heuristics_genomes": 0,
@@ -100,7 +100,7 @@
             "active_gen": 0,
             "anchor_to": [
                 "aggregated_replay_fitness",
-                0.7
+                0.3
             ]
         },
         "token_usage": {
@@ -118,7 +118,7 @@
             "active_gen": 0,
             "anchor_to": [
                 "aggregated_replay_fitness",
-                0.6
+                0.3
             ]
         },
         "num_arcs": {
@@ -127,7 +127,7 @@
             "active_gen": 0,
             "anchor_to": [
                 "aggregated_replay_fitness",
-                0.8
+                0.3
             ]
         },
         "trans_by_places": {
@@ -145,7 +145,7 @@
             "active_gen": 0,
             "anchor_to": [
                 "aggregated_replay_fitness",
-                0.8
+                0.3
             ]
         }
     },
