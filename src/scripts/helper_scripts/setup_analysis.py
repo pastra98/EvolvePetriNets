@@ -202,10 +202,6 @@ def exec_results_crawler(
     # Convert string path to Path object
     root_path = Path(root_path)
 
-    # load max gen, assumes that all runs have same num of gens & stop_cond == "gen"
-    with open(root_path / f"{root_path.name}.json") as f:
-        maxgen = json.load(f)["setups"][0]["stop_cond"]["val"]
-    
     # Load final report
     final_report_path = root_path / "execution_data" / "final_report_df.feather"
     if final_report_path.exists():
@@ -264,14 +260,18 @@ def exec_results_crawler(
                     agg_mutation_stats = []
                     agg_spawn_ranks = []
                     fitness_variances = []
+                    best_genomes = []
                     
                     # Process each run directory
                     for run_dir in setup_dir.iterdir():
-                        if run_dir.is_dir():
+                        if run_dir.is_dir() and run_dir.name != "aggregated_runs":
                             data_dir = run_dir / "data"
                             # load the gen_info and mutation_stats dfs
                             gen_info_df = pl.read_ipc(data_dir / "gen_info.feather")
                             mutation_stats_df = pl.read_ipc(data_dir / "mutation_stats_df.feather")
+                            maxgen = len(gen_info_df)
+                            # load best genome and append to list
+                            best_genomes.append(load_compressed_pickle(run_dir / "best_genome.pkl.gz"))
                             # load and add the component data of that run to the df
                             cdict = load_compressed_pickle(data_dir / "component_dict.pkl.gz")
                             gen_info_df = gen_info_df.join(count_unique_components(cdict, maxgen), "gen")
@@ -299,6 +299,8 @@ def exec_results_crawler(
                     # the other dataframes
                     setup_aggregation['mutation_stats_agg'] = aggregate_mutation_dataframes(agg_mutation_stats)
                     setup_aggregation['spawn_rank_agg'] = aggregate_spawn_ranks(agg_spawn_ranks)
+                    # add best genomes
+                    setup_aggregation['best_genomes'] = best_genomes
 
                     # Save aggregated results if requested
                     if save_dfs:
@@ -1040,3 +1042,4 @@ def plot_t_value_distributions(filepath_dict, generation, generation_end=None):
         print(f"Max: {values.max():.3f}")
     
     return fig
+# %%
