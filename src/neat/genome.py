@@ -679,7 +679,7 @@ class GeneticNet:
             anchor_metric, anchor_threshold = metric_params["anchor_to"]
             if anchor_metric in self.fitness_metrics:
                 anchor_value = self.fitness_metrics[anchor_metric]
-                val = min(anchor_value, val) if anchor_value > anchor_threshold else 0
+                val = val if anchor_value > anchor_threshold else 0
             # transform the variable (default = 1, so no change)
             pow = metric_params.get("raise_by")
             val, max_val = val ** pow, max_val ** pow
