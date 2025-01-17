@@ -5,6 +5,7 @@ import numpy as np
 import json
 from pathlib import Path
 from typing import Dict, List, Optional
+from statistics import mean
 import gzip
 import pickle
 from tqdm import tqdm
@@ -216,6 +217,7 @@ def exec_results_crawler(
         if setup_dir.is_dir():
             try:
                 # Extract setup number, use dir name if not use_setup_num
+                print(setup_dir.name)
                 setupname = int(setup_dir.name.split("_")[1]) if use_setup_num else setup_dir.name
                 
                 # Initialize setup in results
@@ -244,6 +246,15 @@ def exec_results_crawler(
                         with open(aggregated_runs_dir / "spawn_rank_agg.json", 'r') as f:
                             setup_aggregation['spawn_rank_agg'] = json.load(f)
                         
+                        # still load the genomes - duplicate code but this whole function is AI slop anyways at this point
+                        best_genomes = []
+                        for run_dir in setup_dir.iterdir():
+                            if run_dir.is_dir() and run_dir.name != "aggregated_runs":
+                                best_g = load_compressed_pickle(run_dir / "best_genome.pkl.gz")
+                                del best_g.pop_component_tracker
+                                best_genomes.append(best_g)
+                        setup_aggregation['best_genomes'] = best_genomes
+
                         print(f"Successfully loaded cached results for {setup_dir.name}")
                         
                     except Exception as e:
@@ -1044,4 +1055,80 @@ def plot_t_value_distributions(filepath_dict, generation, generation_end=None):
         print(f"Max: {values.max():.3f}")
     
     return fig
-# %%
+
+def merge_two_results_df(df1_path, df2_path, savepath):
+    """Just a dirty little helper to merge two results dfs
+    """
+    df1 = pl.read_ipc(df1_path)
+    df1 = df1.with_columns([pl.col("num_components").cast(pl.Float64)])
+    df2 = pl.read_ipc(df2_path)
+    df2 = df2.with_columns([pl.col("num_components").cast(pl.Float64)])
+    df3 = pl.concat([df1, df2])
+    df3.write_ipc(savepath + "/final_report_df_merged.feather")
+    print(f"saved merged df at {savepath}\nlength: {len(df3)}\n", df3)
+
+
+def analyze_best_genome_comps(data: dict):
+    """This function takes in the result from the setup crawler (with best genomes loaded)
+    It then returns:
+        * A component comparison df
+        * A dict mapping all the unique components in all the setups present in the res,
+        mapped to unique ids
+
+    Explaining the df:
+    The df includes for each setup:
+        * how many components are there in total among all genomes
+        * what is the avg. number of components in the best g from every run
+        * the delta between total unique compos and avg. The lower the number, the
+        more similar the final genomes of that setup. A delta of 0 is perfect convergence
+        * The set of all unique components in that setup. comparing those sets indicates
+        if two setups found the same components
+    """
+    all_unique_comps = {}
+    df_data = []
+    next_component_id = 0
+
+    for sname, sdata in data["setups"].items():
+        setup_all_comps = []
+        setup_unique_comps = set()
+        # iterate all components
+        for g in sdata["best_genomes"]:
+            cset = g.get_unique_component_set()
+            g_comp_ids = []
+            # if new component, add it to dict and save
+            for comp in cset:
+                if comp not in all_unique_comps:
+                    all_unique_comps[comp] = next_component_id
+                    curr_comp_id = next_component_id
+                    setup_unique_comps.add(curr_comp_id)
+                    next_component_id += 1
+                # else fetch id of existing comp
+                else:
+                    curr_comp_id = all_unique_comps[comp]
+                    setup_unique_comps.add(curr_comp_id)
+                # add to comp ids
+                g_comp_ids.append(curr_comp_id)
+            # add component ids of that genome to all setup components
+            setup_all_comps.append(g_comp_ids)
+
+        mean_compcount = mean([len(c) for c in setup_all_comps])
+        total_unique_comps = len(setup_unique_comps)
+        comp_delta = total_unique_comps - mean_compcount
+        df_data.append({
+            "name": sname,
+            "total_unique_comps": total_unique_comps,
+            "mean_compcount": mean_compcount,
+            "comp_delta": comp_delta,
+            "setup_unique_comps": setup_unique_comps
+            })
+
+    return pl.DataFrame(df_data), all_unique_comps
+
+
+def get_jaccard_dist_between_comps(df, setup1_name, setup2_name):
+    """Expects a df returned by analyze_best_genome_comps
+    """
+    c1 = df.filter(pl.col("name")==setup1_name).select("setup_unique_comps").item()
+    c2 = df.filter(pl.col("name")==setup2_name).select("setup_unique_comps").item()
+    print(f"Jaccard similarity {setup1_name} - {setup2_name}\n",
+          len(c1.intersection(c2)) / len(c1.union(c2)))
