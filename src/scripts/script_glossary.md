@@ -114,3 +114,10 @@ src/scripts/pm4py_scripts/tbr_outputs.ipynb
 
 **purpose:**
 The purpose of this notebook is to identify problems I have with the token-replay implementation of pm4py - focusing specificly on the outputs of the `tokenreplay.variants.token_replay.apply_trace` method.  Pickles of the genomes are also saved in this folder.
+
+### pkl analysis tool
+**path:**
+src/scripts/analysis_scripts/pkl_analysis.ipynb
+
+**purpose:**
+Serialized genomes are big for some reason. Claude helped me write an analysis tool
