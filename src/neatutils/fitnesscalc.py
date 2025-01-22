@@ -224,7 +224,7 @@ class Petri:
             # subtract input/output penalties
             if not consumed: pts -= NO_INPUTS_PENAL
             if not produced: pts -= NO_OUTPUTS_PENAL
-            # missing token penalty
+            # missing token penalty, missing here corresponds to the total number of input places
             if missing:
                 pts -= params.missing_penal * (consumed/missing)
             # update multiplier
