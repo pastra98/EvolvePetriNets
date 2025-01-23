@@ -1132,3 +1132,83 @@ def get_jaccard_dist_between_comps(df, setup1_name, setup2_name):
     c2 = df.filter(pl.col("name")==setup2_name).select("setup_unique_comps").item()
     print(f"Jaccard similarity {setup1_name} - {setup2_name}\n",
           len(c1.intersection(c2)) / len(c1.union(c2)))
+
+
+################################################################################
+#################### PROCESSING LOGS OF TWO RUNS AND SPIT OUT DIFF #############
+################################################################################
+
+import re
+
+def compare_ga_logs(log_path1, log_path2):
+    """
+    Analyzes and compares evaluation times from two GA log files.
+    Prints statistics and returns the speed difference.
+    """
+    # Read and process both logs
+    with open(log_path1, 'r') as f:
+        # Extract evaluation times using regex
+        times1 = [float(x) for x in re.findall(r"'evaluate_curr_generation':\s*([\d.]+)", f.read())]
+    
+    with open(log_path2, 'r') as f:
+        times2 = [float(x) for x in re.findall(r"'evaluate_curr_generation':\s*([\d.]+)", f.read())]
+    
+    # Calculate statistics
+    avg1 = sum(times1) / len(times1)
+    total1 = sum(times1)
+    
+    avg2 = sum(times2) / len(times2)
+    total2 = sum(times2)
+    
+    # Calculate speed difference
+    speed_difference = total2 / total1
+    
+    # Print results
+    print(f"\nLog 1:")
+    print(f"Average evaluation time: {avg1:.4f} seconds")
+    print(f"Total evaluation time: {total1:.4f} seconds")
+    print(f"Number of generations: {len(times1)}")
+    
+    print(f"\nLog 2:")
+    print(f"Average evaluation time: {avg2:.4f} seconds")
+    print(f"Total evaluation time: {total2:.4f} seconds")
+    print(f"Number of generations: {len(times2)}")
+    
+    print(f"\nLog 1 is {speed_difference:.2f}x faster than Log 2")
+    
+    return speed_difference
+
+################################################################################
+#################### PLOTTING GENOMES IN A MORE READABLE WAY ###################
+################################################################################
+
+running_example_remap = {
+    'check ticket'      : "check t.",
+    'decide'            : "decide",
+    'examine casually'  : "casual ex.",
+    'examine thoroughly': "thorough ex.",
+    'pay compensation'  : "pay comp.",
+    'register request'  : "register r.",
+    'reinitiate request': "reinitiate",
+    'reject request'    : "reject"
+}
+
+def plot_digraph(g, fontsize=36, node_labels=running_example_remap):
+    """Plot digraph with custom font size and optional node relabeling"""
+    gviz = g.get_gviz()
+    gviz.graph_attr['fontsize'] = str(fontsize)
+    gviz.node_attr['fontsize'] = str(fontsize)
+    gviz.edge_attr['fontsize'] = str(fontsize)
+    
+    new_body = []
+    for e in gviz.body:
+        new_e = e
+        for old_name, new_name in node_labels.items():
+            if old_name in e:
+                new_e = e.replace(old_name, new_name).replace("fontsize=12", f"fontsize={fontsize}")
+                break
+        new_body.append(new_e)
+    gviz.body = new_body
+
+                
+    return gviz
