@@ -169,6 +169,7 @@ def exec_results_crawler(
         save_dfs = True,
         force_recalculation = False,
         use_setup_num = True,
+        load_best_genomes = True
     ) -> dict:
     """
     Process execution data from a directory structure containing genetic algorithm runs.
@@ -282,9 +283,10 @@ def exec_results_crawler(
                             mutation_stats_df = pl.read_ipc(data_dir / "mutation_stats_df.feather")
                             maxgen = len(gen_info_df)
                             # load best genome and append to list (if there is still component tracker, delete it ya moron)
-                            best_g = load_compressed_pickle(run_dir / "best_genome.pkl.gz")
-                            del best_g.pop_component_tracker
-                            best_genomes.append(best_g)
+                            if load_best_genomes:
+                                best_g = load_compressed_pickle(run_dir / "best_genome.pkl.gz")
+                                del best_g.pop_component_tracker
+                                best_genomes.append(best_g)
                             # load and add the component data of that run to the df
                             cdict = load_compressed_pickle(data_dir / "component_dict.pkl.gz")
                             gen_info_df = gen_info_df.join(count_unique_components(cdict, maxgen), "gen")
@@ -292,9 +294,11 @@ def exec_results_crawler(
                             pop_df = pl.read_ipc(data_dir / "population.feather")
                             agg_spawn_ranks.append(analyze_spawns_by_fitness_rank(pop_df, popsize, maxgen))
                             # get the fitness variances from the pop df
-                            fitness_variances.append(pop_df.group_by("gen").agg([
-                                pl.col("fitness").var().alias("fitness_variance")
-                                ]).sort("gen"))
+                            fitness_stats = pop_df.group_by("gen").agg([
+                                pl.col("fitness").var().alias("fitness_variance"),
+                                (pl.col("fitness").std() / pl.col("fitness").count().sqrt()).alias("fitness_stderr")
+                            ]).sort("gen")
+                            fitness_variances.append(fitness_stats)
                             # calculate mean metrics and join to gen info df
                             mean_metrics = pop_df.group_by('gen').agg([pl.col('^metric_.*$').mean()])
                             gen_info_df = gen_info_df.join(mean_metrics, "gen")
@@ -307,8 +311,8 @@ def exec_results_crawler(
 
                     # first aggregate the gen info, then the other dataframes
                     agg_gen_info = aggregate_geninfo_dataframes(agg_gen_info)
-                    aggregated_fitness_var = aggregate_dataframes(fitness_variances, "gen", [], True)
-                    setup_aggregation['gen_info_agg'] = agg_gen_info.join(aggregated_fitness_var, "gen")
+                    aggregated_fitness_stats = aggregate_dataframes(fitness_variances, "gen", [], True)
+                    setup_aggregation['gen_info_agg'] = agg_gen_info.join(aggregated_fitness_stats, "gen")
                     # the other dataframes
                     setup_aggregation['mutation_stats_agg'] = aggregate_mutation_dataframes(agg_mutation_stats)
                     setup_aggregation['spawn_rank_agg'] = aggregate_spawn_ranks(agg_spawn_ranks)
