@@ -14,7 +14,7 @@ from scripts.analysis_scripts.useful_functions import \
 
 from neat import params, genome, initial_population
 import neatutils.fitnesscalc as fc
-import neatutils.fitnesscalc_np as fc_np
+# import neatutils.fitnesscalc_np as fc_np
 from pprint import pprint
 from importlib import reload
 from pm4py.objects.petri_net.exporter.variants.pnml import export_net
