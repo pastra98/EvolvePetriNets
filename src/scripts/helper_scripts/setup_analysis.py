@@ -398,11 +398,11 @@ def search_and_aggregate_param_results(res_dict: dict, search_dict: dict, search
 ################################################################################
 
 #################### CONSTANTS USED FOR PLOTS ##################################
-TICKFONT = 12
-AXLABELFONT = 14
-TITLEFONT = 18
-SUBPLOTITLEFONT = 16
-LEGENDFONT = None
+TICKFONT = 16
+AXLABELFONT = 18
+TITLEFONT = 24
+SUBPLOTITLEFONT = 20
+LEGENDFONT = 16
 ################################################################################
 
 
@@ -570,12 +570,10 @@ def generalized_lineplot(
         
         # Add labels and legend
         ax.tick_params(labelsize=TICKFONT)
-        ax.set_xlabel(x_ax, fontsize=AXLABELFONT)
-        ax.set_ylabel(y_ax, fontsize=AXLABELFONT)
-        ax.legend(loc=legend_loc)
+        ax.legend(loc=legend_loc, fontsize=LEGENDFONT)
         ax.grid(True, linestyle='--', alpha=0.7)
-        ax.set_xlabel(x_ax.replace("_", " "), fontsize=12)
-        ax.set_ylabel(y_ax.replace("_", " "), fontsize=12)
+        ax.set_xlabel(x_ax.replace("_", " "), fontsize=AXLABELFONT)
+        ax.set_ylabel(y_ax.replace("_", " "), fontsize=AXLABELFONT)
 
     
     # Hide empty subplots if any
