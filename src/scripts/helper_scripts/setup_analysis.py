@@ -534,7 +534,7 @@ def generalized_lineplot(
     # Set main title
     if title is None:
         title = f"{y_ax.replace("_", " ")} by {x_ax}"
-    fig.suptitle(title, fontsize=14, y=1.02)
+    fig.suptitle(title, fontsize=18, y=1.02)
     
     # Create plots
     for idx, (subplot_data, ax) in enumerate(zip(plt_layout, axes)):
@@ -557,13 +557,17 @@ def generalized_lineplot(
         
         # Set subplot title if provided
         if subplt_titles:
-            ax.set_title(subplt_titles[idx])
+            ax.set_title(subplt_titles[idx].replace("_", " "), fontsize=16)
         
         # Add labels and legend
-        ax.set_xlabel(x_ax)
-        ax.set_ylabel(y_ax)
+        ax.tick_params(labelsize=12)
+        ax.set_xlabel(x_ax, fontsize=14)
+        ax.set_ylabel(y_ax, fontsize=14)
         ax.legend(loc=legend_loc)
         ax.grid(True, linestyle='--', alpha=0.7)
+        ax.set_xlabel(x_ax.replace("_", " "), fontsize=12)
+        ax.set_ylabel(y_ax.replace("_", " "), fontsize=12)
+
     
     # Hide empty subplots if any
     for idx in range(len(plt_layout), len(axes)):
@@ -675,6 +679,69 @@ def generalized_barplot(
     
     return fig
 
+def generalized_boxplot(
+   plt_layout: List[List[str]],
+   data_sources: Dict[str, pl.DataFrame],
+   y_ax: str,
+   gen: int = -1,
+   title: Optional[str] = None,
+   group_titles: Optional[List[str]] = None,
+   figsize: tuple[int, int] = (12, 6),
+   ) -> None:
+
+   # Create figure and axis
+   fig, ax = plt.subplots(figsize=figsize, layout='constrained')
+   
+   # Set title
+   if title is None:
+       generation = gen if gen != -1 else "final generation"
+       title = f"{y_ax.replace('_', ' ')} at {generation}"
+   ax.set_title(title)
+   
+   # Calculate layout
+   num_groups = len(plt_layout)
+   max_boxes = max(len(group) for group in plt_layout)
+   box_width = 0.8 / max_boxes
+   x = np.arange(num_groups)
+   
+   # Plot each set of boxes
+   for box_idx in range(max_boxes):
+       values = []
+       labels = []
+       
+       # Collect values for this set of boxes
+       for group_idx, group in enumerate(plt_layout):
+           if box_idx < len(group):
+               data_key = group[box_idx]
+               if data_key not in data_sources:
+                   raise ValueError(f"Data source '{data_key}' not found")
+               
+               df = data_sources[data_key]
+               
+               # Get the generation
+               target_gen = df['gen'].max() if gen == -1 else gen
+               
+               value = df.filter(pl.col('gen') == target_gen)[y_ax].to_list()
+               values.append(value)
+               labels.append(data_key)
+           else:
+               values.append([])
+               labels.append("")
+
+       # Plot boxes
+       offset = box_width * box_idx
+       bp = ax.boxplot(values, positions=x + offset, widths=box_width*0.8, 
+                      patch_artist=True, labels=labels)
+               
+   # Customize plot
+   ax.set_ylabel(y_ax.replace('_', ' '))
+   if group_titles:
+       ax.set_xticks(x + box_width * (max_boxes - 1) / 2)
+       ax.set_xticklabels(group_titles)
+   
+   ax.grid(True, axis='y', linestyle='--', alpha=0.7)
+   
+   return fig
 
 import polars as pl
 from sklearn.linear_model import LinearRegression
