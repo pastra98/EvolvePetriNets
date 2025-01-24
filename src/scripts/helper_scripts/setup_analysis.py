@@ -590,60 +590,34 @@ def generalized_lineplot(
 
 
 def generalized_barplot(
-    plt_layout: List[List[str]],
-    data_sources: Dict[str, pl.DataFrame],
-    y_ax: str,
-    gen: int = -1,
-    title: Optional[str] = None,
-    group_titles: Optional[List[str]] = None,
-    figsize: tuple[int, int] = (12, 6),
-    label_lambda = lambda l: l,
-    label_rot = 90,
-    fp_precision = 90,
-    ) -> None:
-    """
-    Create a grouped bar plot where each group contains multiple bars.
-    
-    Parameters:
-    -----------
-    plt_layout : List[List[str]]
-        List of lists where each inner list represents a group of bars to be plotted together.
-    data_sources : Dict[str, pl.DataFrame]
-        Dictionary mapping data source names to polars DataFrames.
-    y_ax : str
-        Column name to plot as bar heights.
-    gen : int, optional
-        Generation number to plot. If -1 (default), uses the last generation.
-    title : str, optional
-        Plot title. If None, uses f"{y_ax} at generation {gen}"
-    group_titles : List[str], optional
-        Labels for each group of bars. Must match length of plt_layout.
-    figsize : tuple[int, int], optional
-        Figure size in inches. Defaults to (12, 6).
-    """
-    # Create figure and axis
+        plt_layout,
+        data_sources,
+        y_ax,
+        gen=-1,
+        title=None,
+        group_titles=None, 
+        figsize=(12, 6),
+        label_lambda=lambda l: l,
+        label_rot=90,
+        fp_precision=90,
+        show_errors=True):
     fig, ax = plt.subplots(figsize=figsize, layout='constrained')
     
-    # Set main title
     if title is None:
         generation = gen if gen != -1 else "final generation"
         title = f"{y_ax.replace('_', ' ')} at {generation}"
     ax.set_title(title, fontsize=TITLEFONT)
     
-    # Calculate number of groups and bars
     num_groups = len(plt_layout)
     max_bars = max(len(group) for group in plt_layout)
-    
-    # Set up bar width and positions
     bar_width = 0.8 / max_bars
     x = np.arange(num_groups)
     
-    # Plot each set of bars
     for bar_idx in range(max_bars):
         values = []
+        errors = []
         labels = []
         
-        # Collect values for this set of bars
         for group_idx, group in enumerate(plt_layout):
             if bar_idx < len(group):
                 data_key = group[bar_idx]
@@ -651,42 +625,41 @@ def generalized_barplot(
                     raise ValueError(f"Data source '{data_key}' not found in data_sources")
                 
                 df = data_sources[data_key]
+                target_gen = df['gen'].max() if gen == -1 else gen
                 
-                # Get the correct generation
-                if gen == -1:
-                    target_gen = df['gen'].max()
-                else:
-                    target_gen = gen
-                
-                # Get the value for the specified generation
                 value = df.filter(pl.col('gen') == target_gen)[y_ax].item()
                 values.append(value)
                 labels.append(data_key)
+                
+                if y_ax == "best_genome_fitness":
+                    error = df.filter(pl.col('gen') == target_gen)["fitness_stderr"].item()
+                    errors.append(error)
             else:
-                values.append(0)  # Add placeholder for missing bars
+                values.append(0)
                 labels.append("")
+                if y_ax == "best_genome_fitness":
+                    errors.append(0)
         
-        # Plot bars for this set
         offset = bar_width * bar_idx
-        rects = ax.bar(x + offset, values, bar_width, 
-                      label=f"Bar Set {bar_idx + 1}")
+        if y_ax == "best_genome_fitness" and show_errors:
+            rects = ax.bar(x + offset, values, bar_width, 
+                          yerr=errors, capsize=5,
+                          label=f"Bar Set {bar_idx + 1}")
+        else:
+            rects = ax.bar(x + offset, values, bar_width, 
+                          label=f"Bar Set {bar_idx + 1}")
         
-        # Add value labels on bars
         for rect, label, value in zip(rects, labels, values):
-            if value > 0:  # Only label non-zero bars
+            if value > 0:
                 ax.text(rect.get_x() + rect.get_width() / 2., rect.get_height() - (rect.get_height() * 0.05),
                         label_lambda(f'{label}\n{value:.2f}'),
                         ha='center', va='top', color='black', rotation=label_rot,
                         fontsize=TICKFONT)
     
-    # Customize the plot
     ax.set_ylabel(y_ax.replace('_', ' '), fontsize=AXLABELFONT)
-    if group_titles:
-        ax.set_xticks(x + bar_width * (max_bars - 1) / 2)
-        ax.set_xticklabels(group_titles, fontsize=TICKFONT)
-    else:
-        ax.set_xticks(x + bar_width * (max_bars - 1) / 2)
-        ax.set_xticklabels([f"Group {i+1}" for i in range(num_groups)], fontsize=TICKFONT)
+    ax.set_xticks(x + bar_width * (max_bars - 1) / 2)
+    ax.set_xticklabels(group_titles if group_titles else [f"Group {i+1}" for i in range(num_groups)], 
+                       fontsize=TICKFONT)
     
     ax.tick_params(labelsize=TICKFONT)
     ax.grid(True, axis='y', linestyle='--', alpha=0.7)
