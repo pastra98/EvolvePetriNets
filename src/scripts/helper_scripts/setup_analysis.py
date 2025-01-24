@@ -397,6 +397,15 @@ def search_and_aggregate_param_results(res_dict: dict, search_dict: dict, search
 #################### AGGREGATED PLOTTING FUNCTIONS #############################
 ################################################################################
 
+#################### CONSTANTS USED FOR PLOTS ##################################
+TICKFONT = 12
+AXLABELFONT = 14
+TITLEFONT = 18
+SUBPLOTITLEFONT = 16
+LEGENDFONT = None
+################################################################################
+
+
 def components_fitness_scatter(df: pl.DataFrame, setup_map: dict = None) -> None:
     """
     Accepts a results DataFrame and visualizes all runs on a scatterplot: 
@@ -534,7 +543,7 @@ def generalized_lineplot(
     # Set main title
     if title is None:
         title = f"{y_ax.replace("_", " ")} by {x_ax}"
-    fig.suptitle(title, fontsize=18, y=1.02)
+    fig.suptitle(title, fontsize=TITLEFONT, y=1.02)
     
     # Create plots
     for idx, (subplot_data, ax) in enumerate(zip(plt_layout, axes)):
@@ -557,12 +566,12 @@ def generalized_lineplot(
         
         # Set subplot title if provided
         if subplt_titles:
-            ax.set_title(subplt_titles[idx].replace("_", " "), fontsize=16)
+            ax.set_title(subplt_titles[idx].replace("_", " "), fontsize=SUBPLOTITLEFONT)
         
         # Add labels and legend
-        ax.tick_params(labelsize=12)
-        ax.set_xlabel(x_ax, fontsize=14)
-        ax.set_ylabel(y_ax, fontsize=14)
+        ax.tick_params(labelsize=TICKFONT)
+        ax.set_xlabel(x_ax, fontsize=AXLABELFONT)
+        ax.set_ylabel(y_ax, fontsize=AXLABELFONT)
         ax.legend(loc=legend_loc)
         ax.grid(True, linestyle='--', alpha=0.7)
         ax.set_xlabel(x_ax.replace("_", " "), fontsize=12)
@@ -576,6 +585,7 @@ def generalized_lineplot(
     # Adjust layout to prevent overlap
     plt.tight_layout()
     return fig
+
 
 def generalized_barplot(
     plt_layout: List[List[str]],
@@ -616,7 +626,7 @@ def generalized_barplot(
     if title is None:
         generation = gen if gen != -1 else "final generation"
         title = f"{y_ax.replace('_', ' ')} at {generation}"
-    ax.set_title(title)
+    ax.set_title(title, fontsize=TITLEFONT)
     
     # Calculate number of groups and bars
     num_groups = len(plt_layout)
@@ -664,20 +674,23 @@ def generalized_barplot(
             if value > 0:  # Only label non-zero bars
                 ax.text(rect.get_x() + rect.get_width() / 2., rect.get_height() - (rect.get_height() * 0.05),
                         label_lambda(f'{label}\n{value:.2f}'),
-                        ha='center', va='top', color='black', rotation=label_rot)
+                        ha='center', va='top', color='black', rotation=label_rot,
+                        fontsize=TICKFONT)
     
     # Customize the plot
-    ax.set_ylabel(y_ax.replace('_', ' '))
+    ax.set_ylabel(y_ax.replace('_', ' '), fontsize=AXLABELFONT)
     if group_titles:
         ax.set_xticks(x + bar_width * (max_bars - 1) / 2)
-        ax.set_xticklabels(group_titles)
+        ax.set_xticklabels(group_titles, fontsize=TICKFONT)
     else:
         ax.set_xticks(x + bar_width * (max_bars - 1) / 2)
-        ax.set_xticklabels([f"Group {i+1}" for i in range(num_groups)])
+        ax.set_xticklabels([f"Group {i+1}" for i in range(num_groups)], fontsize=TICKFONT)
     
+    ax.tick_params(labelsize=TICKFONT)
     ax.grid(True, axis='y', linestyle='--', alpha=0.7)
     
     return fig
+
 
 def generalized_boxplot(
    plt_layout: List[List[str]],
