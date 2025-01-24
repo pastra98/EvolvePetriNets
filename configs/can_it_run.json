@@ -1,16 +1,16 @@
 {
-    "name": "normal_speed_midlog",
+    "name": "just_testin",
     "setups": [
         {
-            "setupname": "testme",
+            "setupname": "idc",
             "parampath": "I:/EvolvePetriNets/params/good_speciation.json",
-            "logpath": "I:/EvolvePetriNets/pm_data/pdc_logs/2024/Training Logs/pdc2024_11100000.xes",
+            "logpath": "pm_data/running_example.xes",
             "stop_cond": {
                 "var": "gen",
-                "val": 100
+                "val": 500
             },
-            "n_runs": 8,
-            "send_gen_info_to_console": true,
+            "n_runs": 14,
+            "send_gen_info_to_console": false,
             "is_profiled": false,
             "save_plots": true
         }
