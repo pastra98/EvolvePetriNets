@@ -1255,3 +1255,69 @@ def plot_digraph(g, fontsize=36, node_labels=running_example_remap):
 
                 
     return gviz
+
+################################################################################
+#################### GET THE F SCORE FOR PDC LOGS ##############################
+################################################################################
+from neatutils import log
+from importlib import reload
+
+from scripts.analysis_scripts.useful_functions import load_genome
+from pprint import pprint
+reload(log)
+
+def get_pdc_f_score(genome, pdc_model_code: str, pdc_year: str):
+
+    def get_replay_scores(log_to_replay):
+        model_eval = genome.build_fc_petri(log_to_replay).evaluate()
+        replay_res = {}
+        for v_id, r in enumerate(model_eval["replay"]):
+            case_id = log_to_replay["case_variant_map"][v_id]
+            replay_res[case_id] = r["fitness"]
+        return replay_res
+
+    # get the replay for the test log
+    test_log = log.get_log_from_xes(f"I:/EvolvePetriNets/pm_data/pdc_logs/{pdc_year}/Test Logs/pdc{pdc_year}_{pdc_model_code}.xes", is_pdc_log=True)
+    test_rep = get_replay_scores(test_log)
+    # get the replay for the base log
+    base_log = log.get_log_from_xes(f"I:/EvolvePetriNets/pm_data/pdc_logs/{pdc_year}/Base Logs/pdc{pdc_year}_{pdc_model_code}.xes", is_pdc_log=True)
+    base_rep = get_replay_scores(base_log)
+    # get the dict for the Ground Truth log
+    gt_log_df = log.get_log_from_xes(f"I:/EvolvePetriNets/pm_data/pdc_logs/{pdc_year}/Ground Truth Logs/pdc{pdc_year}_{pdc_model_code}.xes", is_pdc_log=True)["dataframe"]
+    gt_log_df = gt_log_df[["case:concept:name", "case:pdc:isPos"]].drop_duplicates()
+    gt_map = dict(zip(gt_log_df["case:concept:name"], gt_log_df["case:pdc:isPos"]))
+    # compare the two
+    total_missing = 0
+    tp, tn, fp, fn = 0, 0, 0, 0
+    for case_id, correct_is_pos in gt_map.items():
+        test_class = test_rep.get(case_id)
+        base_class = base_rep.get(case_id)
+        # for some reason some cases are not in both logs... grrrr
+        if not (test_class and base_class):
+            # print("missing:", case_id, test_class, base_class)
+            total_missing += 1
+            continue
+        my_is_pos = test_class > base_class
+        if my_is_pos and correct_is_pos:
+            tp += 1
+        elif not my_is_pos and not correct_is_pos:
+            tn += 1
+        elif my_is_pos and not correct_is_pos:
+            fp += 1
+        elif not my_is_pos and correct_is_pos:
+            fn += 1
+    print("missing perc", total_missing / len(gt_map))
+    
+    # Calculate precision, recall, and F-score
+    precision = tp / (tp + fp) if (tp + fp) > 0 else 0
+    recall = tp / (tp + fn) if (tp + fn) > 0 else 0
+    f_score = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0
+    return {
+        "tp": tp,
+        "tn": tn,
+        "fp": fp,
+        "fn": fn,
+        "precision": precision,
+        "recall": recall,
+        "f_score": f_score
+    }
