@@ -143,8 +143,7 @@ class Petri:
         """
         # the markings need to be calculated before this
         log_replay: List[dict] = []
-        for var_i in range(len(self.log["variants"])):
-            prefixes, rest_of_trace = self.log["shortened_variants"][var_i]
+        for prefixes, rest_of_trace in self.log["shortened_variants"].values():
             initial_replay = self.load_marking(prefixes[-1])
             trace_replay = self._replay_trace(rest_of_trace)
             full_replay = self.merge_replay_stats(initial_replay, trace_replay)
