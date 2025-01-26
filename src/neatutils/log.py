@@ -2,11 +2,12 @@ from pm4py.stats import get_variants
 from datetime import datetime, timedelta
 from pm4py.algo.discovery.footprints.algorithm import apply as get_footprints
 from pprint import pprint
+from pm4py.objects.log.util import pandas_numpy_variants
 from copy import copy
 
 import pm4py
 
-def get_log_from_xes(logpath: str) -> dict:
+def get_log_from_xes(logpath: str, is_pdc_log=False) -> dict:
     log = pm4py.read_xes(logpath, show_progress_bar=False)
     # Add a dummy timestamp column because pm4py requires it
     if "time:timestamp" not in log.columns:
@@ -15,8 +16,22 @@ def get_log_from_xes(logpath: str) -> dict:
         log['time:timestamp'] = timestamps
     # compute footprits and variants, return dict
     footprints = get_footprints(log)
-    variants = get_variants(log)
-    # TODO clean this up
+    # keys of the fragments will be just the index of a variant (i.e. their order).
+    # therefore to map fragments to cases, the case_variant_map maps the id (order) of
+    # variants to case ids. it checks the case-variant map returned by pm4py to do this
+    # this procedure is only implemented for pdc logs currently
+    variants, case_variant = pandas_numpy_variants.apply(log)
+    print(len(case_variant))
+    print(case_variant)
+    if is_pdc_log:
+        case_variant_reversed = {v: k for k, v in case_variant.items()}
+        case_variant_map = {}
+        for v_id, v in enumerate(variants.keys()):
+            case_id = case_variant_reversed[v]
+            case_variant_map.setdefault(case_id, []).append(v_id)
+    else:
+        case_variant_map = None
+
     fragments, shortened_variants, unique_prefix = split_log_fragments(variants)
 
     return {
@@ -26,7 +41,8 @@ def get_log_from_xes(logpath: str) -> dict:
         "task_list": [a for a in footprints["activities"]],
         "prefixes": fragments,
         "unique_prefixes": unique_prefix,
-        "shortened_variants": shortened_variants
+        "shortened_variants": shortened_variants,
+        "case_variant_map": case_variant_map
     }
 
 
