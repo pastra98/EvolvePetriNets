@@ -19,7 +19,7 @@ def create_initial_pop(log, component_tracker) -> list:
     n_random_g = params.popsize - len(bootstrap_g)
 
     if n_random_g < 0:
-        raise Exception("Number of random genomes should not exceed population size")
+        raise Exception("Number of bootstrap genomes should not exceed population size")
 
     random_g = get_random_genomes(n_random_g, log, component_tracker)
     return bootstrap_g + random_g

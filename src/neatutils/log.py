@@ -26,7 +26,7 @@ def get_log_from_xes(logpath: str, is_pdc_log=False) -> dict:
         case_variant_map = {}
         for v_id, v in enumerate(variants.keys()):
             case_id = case_variant_reversed[v]
-            case_variant_map.setdefault(case_id, []).append(v_id)
+            case_variant_map[v_id] = case_id
     else:
         case_variant_map = None
 
