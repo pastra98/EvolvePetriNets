@@ -915,45 +915,33 @@ def extract_run_metrics(data_path: str | Path) -> pl.DataFrame:
             # Process each run directory in this setup
             for run_dir in setup_dir.iterdir():
                 if run_dir.is_dir():
-                    try:
-                        # Extract run number from directory name
-                        run_nr = int(run_dir.name.split("_")[0])
+                    # Extract run number from directory name
+                    run_nr = int(run_dir.name.split("_")[0])
+                    
+                    # Read and parse report.txt
+                    report_path = run_dir / "report.txt"
+                    if not report_path.exists():
+                        continue
                         
-                        # Read and parse report.txt
-                        report_path = run_dir / "report.txt"
-                        if not report_path.exists():
-                            continue
-                            
-                        with open(report_path, 'r') as f:
-                            report_content = f.read()
-                        
-                        # Extract max fitness using regex
-                        fitness_match = re.search(r'Best fitness:\n([\d.]+)', report_content)
-                        max_fitness = float(fitness_match.group(1)) if fitness_match else None
-                        
-                        # Extract num components using regex
-                        components_match = re.search(r'Total components discovered:\n(\d+)', report_content)
-                        num_components = int(components_match.group(1)) if components_match else None
-                        
-                        # Add data to list
-                        extracted_data.append({
-                            'setupname': setupname,
-                            'run_nr': run_nr,
-                            'max_fitness': max_fitness,
-                            'num_components': num_components,
-                            'Exceptions': True
-                        })
-                        
-                    except Exception as e:
-                        print(f"Error processing {run_dir}: {e}")
-                        # Add error entry
-                        extracted_data.append({
-                            'setupname': setupname,
-                            'run_nr': run_dir.name.split("_")[0],
-                            'max_fitness': None,
-                            'num_components': None,
-                            'Exceptions': True
-                        })
+                    with open(report_path, 'r') as f:
+                        report_content = f.read()
+                    
+                    # Extract max fitness using regex
+                    fitness_match = re.search(r'Best fitness:\n([\d.]+)', report_content)
+                    max_fitness = float(fitness_match.group(1)) if fitness_match else None
+                    
+                    # Extract num components using regex
+                    components_match = re.search(r'Total components discovered:\n(\d+)', report_content)
+                    num_components = int(components_match.group(1)) if components_match else None
+                    
+                    # Add data to list
+                    extracted_data.append({
+                        'setupname': setupname,
+                        'run_nr': run_nr,
+                        'max_fitness': max_fitness,
+                        'num_components': num_components,
+                        'Exceptions': False
+                    })
     
     # Create DataFrame from extracted data
     if not extracted_data:
