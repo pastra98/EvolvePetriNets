@@ -21,8 +21,6 @@ def get_log_from_xes(logpath: str, is_pdc_log=False) -> dict:
     # variants to case ids. it checks the case-variant map returned by pm4py to do this
     # this procedure is only implemented for pdc logs currently
     variants, case_variant = pandas_numpy_variants.apply(log)
-    print(len(case_variant))
-    print(case_variant)
     if is_pdc_log:
         case_variant_reversed = {v: k for k, v in case_variant.items()}
         case_variant_map = {}
