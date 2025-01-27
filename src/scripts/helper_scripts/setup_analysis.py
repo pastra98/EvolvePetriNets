@@ -739,51 +739,53 @@ import scipy
 
 def run_regression(results_dict: dict, predictors: list):
     """
-    Perform linear regression analysis to study parameter impacts on num_components and max_fitness.
+    Perform linear regression analysis and return results in a pandas DataFrame.
     
     Args:
         results_dict (dict): Dictionary containing execution results from exec_crawler
         predictors (list): List of parameter names to use as predictors in regression
         
     Returns:
-        dict: Dictionary containing regression results for each target variable
+        pd.DataFrame: DataFrame containing regression results with predictors as rows
+                     and effects on targets as columns
     """
+    import pandas as pd
+    import numpy as np
+    from sklearn.preprocessing import StandardScaler
+    from sklearn.linear_model import LinearRegression
+    import scipy.stats
+    
     # Extract the results dataframe
-    results_df = results_dict['final_report']
+    df = results_dict['final_report'].to_pandas()
     
     # Create new dataframe with setup numbers
-    df = results_df.with_columns(
-        setup_num=pl.col('setupname').str.extract(r'setup_(\d+)').cast(pl.Int32)
-    )
+    df['setup_num'] = df['setupname'].str.extract(r'setup_(\d+)').astype(int)
     
     # Add predictor columns from params
     for predictor in predictors:
-        # Create a mapping of setup numbers to parameter values
         param_values = {
             setup_num: setup_data['params'].get(predictor)
             for setup_num, setup_data in results_dict['setups'].items()
         }
-        
-        # Convert param_values to a list maintaining order
-        param_series = [param_values.get(i) for i in df['setup_num']]
-        
-        # Add the column to the dataframe
-        df = df.with_columns(pl.Series(predictor, param_series))
+        df[predictor] = df['setup_num'].map(param_values)
     
     # Prepare data for regression
-    X = df.select(predictors).to_numpy()
+    X = df[predictors].values
     targets = ["num_components", "max_fitness"]
     
     # Initialize scaler
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(X)
     
-    # Store regression results
-    regression_results = {}
+    # Initialize results storage
+    index = pd.Index([p.replace("_", "\_") for p in predictors])
+    columns = []
+    data = []
+
     
     # Perform regression for each target
     for target in targets:
-        y = df.select(target).to_numpy().ravel()
+        y = df[target].values
         
         # Fit regression model
         model = LinearRegression()
@@ -791,47 +793,33 @@ def run_regression(results_dict: dict, predictors: list):
         
         # Calculate R-squared and adjusted R-squared
         r2 = model.score(X_scaled, y)
-        n = X.shape[0]  # number of observations
-        p = X.shape[1]  # number of predictors
+        n = X.shape[0]
+        p = X.shape[1]
         adjusted_r2 = 1 - (1 - r2) * (n - 1) / (n - p - 1)
         
         # Calculate p-values
-        n = X.shape[0]
-        p = X.shape[1]
-        dof = n - p - 1  # degrees of freedom
-        mse = np.sum((y - model.predict(X_scaled)) ** 2) / dof  # mean squared error
+        dof = n - p - 1
+        mse = np.sum((y - model.predict(X_scaled)) ** 2) / dof
         var_b = mse * np.linalg.inv(np.dot(X_scaled.T, X_scaled)).diagonal()
         sd_b = np.sqrt(var_b)
         t_stat = model.coef_ / sd_b
         p_values = 2 * (1 - scipy.stats.t.cdf(np.abs(t_stat), dof))
         
-        # Store results
-        regression_results[target] = {
-            'model': model,
-            'coefficients': dict(zip(predictors, model.coef_)),
-            'intercept': model.intercept_,
-            'r2': r2,
-            'adjusted_r2': adjusted_r2,
-            'p_values': dict(zip(predictors, p_values)),
-            'feature_importance': dict(zip(
-                predictors,
-                np.abs(model.coef_ * np.std(X, axis=0))  # standardized coefficients
-            ))
-        }
+                # Format results for this target
+        col_name = "\makecell{\\textbf{"+f"{target.replace("_", "\_")}"+"}\\\ (Adj R² = "+f"{adjusted_r2:.4f})" + "}".replace("_", "\_")
+        columns.append(col_name)
         
-        # Print summary
-        print(f"\nRegression Results for {target}")
-        print("-" * 50)
-        print(f"R-squared: {r2:.4f}")
-        print(f"Adjusted R-squared: {adjusted_r2:.4f}")
-        print("\nStandardized Coefficients:")
-        for pred, coef, p_val in zip(predictors, model.coef_, p_values):
-            print(f"{pred:20} {coef:10.4f} (p={p_val:.4f})")
-            
-    # Add the processed dataframe to the results
-    regression_results['processed_df'] = df
+        # Format coefficients and p-values
+        target_results = ["\makecell{"+f"{coef:.4f} \\\ (p$\\approx${p_val:.4f})"+"}"
+                         for coef, p_val in zip(model.coef_, p_values)]
+        data.append(target_results)
     
-    return regression_results
+    # Create final DataFrame
+    final_results = pd.DataFrame(np.array(data).T, index=index, columns=columns)
+    print(final_results.to_latex().replace("\\\n", "\\[12pt]\n"))
+    return final_results
+    
+
 
 ################################################################################
 #################### ONE-OFF PLOTTING FUNCTIONS ################################
