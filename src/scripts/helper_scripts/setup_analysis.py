@@ -816,7 +816,9 @@ def run_regression(results_dict: dict, predictors: list):
     
     # Create final DataFrame
     final_results = pd.DataFrame(np.array(data).T, index=index, columns=columns)
-    print(final_results.to_latex().replace("\\\n", "\\[12pt]\n"))
+    print("\\begin{table}[h]\n\\centering\n",
+          final_results.to_latex().replace("\\\n", "\\[12pt]\n").replace("\\toprule","\\toprule \\rowcolor[gray]{0.9}"),
+          "\\caption{XXX}\n\\label{tab:XXX}\n\\end{table}")
     return final_results
     
 
