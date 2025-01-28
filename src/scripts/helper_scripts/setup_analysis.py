@@ -499,7 +499,8 @@ def generalized_lineplot(
     title: Optional[str] = None,
     subplt_titles: Optional[List[str]] = None,
     figsize: tuple[int, int] = (12, 8),
-    legend_loc = "lower right"
+    legend_loc = "lower right",
+    show_all_legends: bool = True
     ) -> None:
     """
     Create a dynamic multi-subplot figure with line plots.
@@ -521,6 +522,11 @@ def generalized_lineplot(
         List of titles for each subplot. Must match length of plt_layout if provided.
     figsize : tuple[int, int], optional
         Figure size in inches. Defaults to (12, 8).
+    legend_loc : str, optional
+        Location of the legend. Defaults to "lower right".
+    show_all_legends : bool, optional
+        If True, shows legends for all subplots. If False, only shows legend for the first subplot.
+        Defaults to True.
     """
     # Input validation
     if not plt_layout:
@@ -542,11 +548,10 @@ def generalized_lineplot(
         axes = np.array([axes[0], axes[1]])  # Two plots stacked vertically
     else:
         axes = axes.flatten()  # Multiple plots in a grid
-
     
     # Set main title
     if title is None:
-        title = f"{y_ax.replace("_", " ")} by {x_ax}"
+        title = f"{y_ax.replace('_', ' ')} by {x_ax}"
     fig.suptitle(title, fontsize=TITLEFONT, y=1.02)
     
     # Create plots
@@ -572,13 +577,13 @@ def generalized_lineplot(
         if subplt_titles:
             ax.set_title(subplt_titles[idx].replace("_", " "), fontsize=SUBPLOTITLEFONT)
         
-        # Add labels and legend
+        # Add labels and legend (only for first subplot if show_all_legends is False)
         ax.tick_params(labelsize=TICKFONT)
-        ax.legend(loc=legend_loc, fontsize=LEGENDFONT)
+        if show_all_legends or idx == 0:
+            ax.legend(loc=legend_loc, fontsize=LEGENDFONT)
         ax.grid(True, linestyle='--', alpha=0.7)
         ax.set_xlabel(x_ax.replace("_", " "), fontsize=AXLABELFONT)
         ax.set_ylabel(y_ax.replace("_", " "), fontsize=AXLABELFONT)
-
     
     # Hide empty subplots if any
     for idx in range(len(plt_layout), len(axes)):
