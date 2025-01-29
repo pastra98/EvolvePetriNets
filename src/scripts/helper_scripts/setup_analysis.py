@@ -743,7 +743,7 @@ from sklearn.preprocessing import StandardScaler
 import numpy as np
 import scipy
 
-def run_regression(results_dict: dict, predictors: list):
+def run_regression(results_dict: dict, predictors: list, include_species_target=False):
     """
     Perform linear regression analysis and return results in a pandas DataFrame.
     
@@ -778,6 +778,8 @@ def run_regression(results_dict: dict, predictors: list):
     # Prepare data for regression
     X = df[predictors].values
     targets = ["num_components", "max_fitness"]
+    if include_species_target:
+        targets.append("num_species_last_gen")
     
     # Initialize scaler
     scaler = StandardScaler()
