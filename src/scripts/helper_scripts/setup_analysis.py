@@ -248,13 +248,14 @@ def exec_results_crawler(
                             setup_aggregation['spawn_rank_agg'] = json.load(f)
                         
                         # still load the genomes - duplicate code but this whole function is AI slop anyways at this point
-                        best_genomes = []
-                        for run_dir in setup_dir.iterdir():
-                            if run_dir.is_dir() and run_dir.name != "aggregated_runs":
-                                best_g = load_compressed_pickle(run_dir / "best_genome.pkl.gz")
-                                del best_g.pop_component_tracker
-                                best_genomes.append(best_g)
-                        setup_aggregation['best_genomes'] = best_genomes
+                        if load_best_genomes:
+                            best_genomes = []
+                            for run_dir in setup_dir.iterdir():
+                                if run_dir.is_dir() and run_dir.name != "aggregated_runs":
+                                    best_g = load_compressed_pickle(run_dir / "best_genome.pkl.gz")
+                                    del best_g.pop_component_tracker
+                                    best_genomes.append(best_g)
+                            setup_aggregation['best_genomes'] = best_genomes
 
                         print(f"Successfully loaded cached results for {setup_dir.name}")
                         
