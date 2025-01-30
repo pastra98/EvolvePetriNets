@@ -18,6 +18,20 @@ from neat.genome import GeneticNet
 
 FSIZE = (10, 5)
 
+# global plotting params - not importing those from sa cuz reasons
+TICKFONT = 16
+AXLABELFONT = 18
+TITLEFONT = 24
+SUBPLOTITLEFONT = 20
+LEGENDFONT = 16
+plt.rcParams['font.size'] = TICKFONT  # Base font size
+plt.rcParams['axes.titlesize'] = TITLEFONT
+plt.rcParams['axes.labelsize'] = AXLABELFONT
+plt.rcParams['xtick.labelsize'] = TICKFONT
+plt.rcParams['ytick.labelsize'] = TICKFONT
+plt.rcParams['legend.fontsize'] = LEGENDFONT
+
+
 
 def save_report(ga_info: dict, savedir: str, save_plots: bool) -> None:
     """saves some plots in the specified dir
@@ -441,7 +455,7 @@ def mutation_effects_plot(pop_df, mutation_stats_df, savedir: str, max_gen: int 
     ax2.plot(range(1, len(mutation_stats_df) + 1), mutation_stats_df['relative_frequency'], color=color, marker='o', linestyle='-')
     ax2.tick_params(axis='y', labelcolor=color)
     # finish up the plot
-    plt.title('Fitness Impact Distribution and Relative Frequency of Each Mutation')
+    plt.title('Mutation Frequency & Impact')
     fig.tight_layout()
     fig.savefig(f"{savedir}/mutation_analysis.pdf", dpi=300)
     plt.close(fig)
@@ -494,10 +508,10 @@ def best_genome_lineage(best_genomes_df: pd.DataFrame, savedir=str):
             label=f'Mutation: {mutation}'
         )
     
-    plt.legend(loc='lower right', fontsize='medium')
-    plt.xlabel('Generation', fontsize=12)
-    plt.ylabel('Fitness', fontsize=12)
-    plt.title('Best Genome: Fitness Progression with Mutation Types', fontsize=14)
+    plt.legend(loc='lower right')
+    plt.xlabel('Generation')
+    plt.ylabel('Fitness')
+    plt.title('Mutation History')
     plt.grid(True)
     plt.tight_layout()
     plt.savefig(f"{savedir}/best_mutation_lineage.pdf")
@@ -524,7 +538,7 @@ def best_genome_mutation_analysis(best_genomes_df: pd.DataFrame, savedir: str):
     ax1.set_xlabel('Mutation Type')
     # set ticks
     ax1.set_xticks(x)
-    ax1.set_xticklabels(mutation_types, rotation=45, ha='right', fontsize=10)
+    ax1.set_xticklabels(mutation_types, rotation=45, ha='right')
     ax1.tick_params(axis='y')
 
     # Create second y-axis for fitness impact
@@ -533,7 +547,7 @@ def best_genome_mutation_analysis(best_genomes_df: pd.DataFrame, savedir: str):
     ax2.set_ylabel('Mean Fitness Impact')
     ax2.tick_params(axis='y', labelcolor='r')
     
-    plt.title('Best Genome: Mutation Count and Mean Fitness Impact by Mutation Type', fontsize=14)
+    plt.title('Best Genome Mutation Fitness Impact')
     ax1.legend(loc='upper left')
     ax2.legend(loc='upper right')
     plt.tight_layout()
@@ -579,7 +593,7 @@ def plot_species_evolution(
         cmap: dict,
         savedir: str,
         maxwidth=200,
-        figsize=(20, 12)
+        figsize=(10, 12)
         ):
     """A tree visualization of which species branched from which, how many members
     they had, and when they had the best genome.
@@ -647,7 +661,7 @@ def plot_species_evolution(
             segments.append([(x1, y), (x2, y)])
             widths.append(num_members)
             if is_best:
-                ax.scatter(x1, y, color='gold', marker='d', s=100, edgecolor='black', linewidth=1, zorder=2)
+                ax.scatter(x1, y, color='gold', marker='d', s=50, edgecolor='black', linewidth=1, zorder=2)
         # add first branching segment
         if data['forked_from']:
             first_p = segments[0][0]
@@ -666,17 +680,17 @@ def plot_species_evolution(
 
     # Set up plot along with labels
     ax.autoscale()
-    ax.tick_params(axis='x', labelsize=18)
-    ax.set_xlabel('Generation', fontsize=24)
-    ax.set_ylabel('Species', fontsize=24)
-    ax.set_title('Evolutionary Tree', fontsize=36)
+    ax.tick_params(axis='x')
+    ax.set_xlabel('Generation')
+    ax.set_ylabel('Species')
+    ax.set_title('Evolutionary Tree')
     ax.set_yticks([])
     fig.tight_layout()
     fig.savefig(f"{savedir}/species_tree.pdf", bbox_inches='tight')
     # Separate plot for the legend
     figlegend, ax_legend = plt.subplots(figsize=(10, 1))
     ax_legend.axis('off')
-    legend = ax_legend.legend(handles=legend_elements, loc='center', ncol=len(legend_elements)/2, fontsize=12)
+    legend = ax_legend.legend(handles=legend_elements, loc='center', ncol=len(legend_elements)/2)
     figlegend.tight_layout()
     figlegend.savefig(f"{savedir}/species_tree_legend.pdf", bbox_inches='tight')
     

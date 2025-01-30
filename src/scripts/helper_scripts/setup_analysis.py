@@ -1,4 +1,5 @@
 # %%
+from collections import defaultdict
 import polars as pl
 import matplotlib.pyplot as plt
 import numpy as np
@@ -637,7 +638,7 @@ def generalized_barplot(
                 values.append(value)
                 labels.append(data_key)
                 
-                if y_ax == "best_genome_fitness":
+                if y_ax == "best_genome_fitness" and show_errors:
                     error = df.filter(pl.col('gen') == target_gen)["fitness_stderr"].item()
                     errors.append(error)
             else:
@@ -854,12 +855,105 @@ def plot_offspring_distribution(rank_spawns, title='Distribution of Offspring by
     plt.xlim(1, cap_limit if cap_limit else len(ranks))
     # plt.yscale('log')
     plt.tick_params(labelsize=TICKFONT)
-    plt.xticks(range(0, cap_limit if cap_limit else len(ranks), 50))
+    plt.xticks(range(-1, cap_limit if cap_limit else len(ranks), 50))
     plt.grid(True, which="both", ls="-", alpha=0.2)
     plt.tight_layout()
     
     return fig
 
+def get_species_similarities_setup(setup_path):
+    similarities = []
+    for run_dir in Path(setup_path).iterdir():
+        if run_dir.is_dir():
+            data_path = run_dir / "data"
+            similarities.append(species_similarity_over_time(data_path.as_posix() + "/"))
+    # Sum the values for each key
+    sum_dict = defaultdict(float)
+    count = len(similarities)
+    for d in similarities:
+        for key, value in d.items():
+            sum_dict[key] += value
+    # Calculate the average for each key
+    return {key: value / count for key, value in sum_dict.items()}
+
+def species_similarity_over_time(data_path):
+    # First part remains the same
+    pop_df = pl.read_ipc(data_path + "population.feather")
+    species_components = {}
+    for species_id in pop_df['species_id'].unique():
+        species_components[species_id] = {}
+        species_data = pop_df.filter(pl.col('species_id') == species_id)
+        # Process each generation for this species
+        for gen in species_data['gen'].unique():
+            gen_data = species_data.filter(pl.col('gen') == gen)
+            # Combine all component lists into a single set
+            all_components = set()
+            for comp_list in gen_data['my_components']:
+                all_components.update(comp_list)
+            # Store the set in our nested dictionary
+            species_components[species_id][gen] = all_components
+    
+    # Calculate Jaccard similarities for each generation
+    species_similarities = {}
+    all_generations = sorted(set(gen for species_dict in species_components.values() 
+                               for gen in species_dict.keys()))
+    
+    for gen in all_generations:
+        # Get all species that exist in this generation
+        species_in_gen = [species_id for species_id, gens in species_components.items() 
+                         if gen in gens]
+        
+        similarities = []
+        # Compare each pair of species
+        for i in range(len(species_in_gen)):
+            for j in range(i + 1, len(species_in_gen)):
+                species1 = species_in_gen[i]
+                species2 = species_in_gen[j]
+                
+                set1 = species_components[species1][gen]
+                set2 = species_components[species2][gen]
+                
+                # Calculate Jaccard similarity
+                intersection = len(set1.intersection(set2))
+                union = len(set1.union(set2))
+                similarity = intersection / union if union > 0 else 0
+                
+                similarities.append(similarity)
+        
+        # Store average similarity for this generation
+        species_similarities[gen] = sum(similarities) / len(similarities) if similarities else 0
+    
+    return species_similarities
+
+def plot_similarities(similarity_dict_collection, title):
+    """
+    Plot multiple similarity dictionaries on the same graph.
+    
+    Args:
+        similarity_dict_collection (dict): Dictionary where keys are names/labels and 
+            values are dictionaries of generation -> similarity mappings
+        title (str): Title for the plot
+    """
+    
+    plt.figure(figsize=(8, 5))
+    
+    # Plot each similarity dictionary
+    for name, similarities in similarity_dict_collection.items():
+        generations = sorted(similarities.keys())
+        avg_similarities = [similarities[gen] for gen in generations]
+        
+        plt.plot(generations, avg_similarities, '-', label=name, markersize=4)
+    
+    plt.xlabel('Generation')
+    plt.ylabel('Average Jaccard Similarity')
+    plt.title(title)
+    plt.grid(True, linestyle='--', alpha=0.7)
+    plt.legend()
+    
+    # Adjust layout to prevent label cutoff
+    plt.tight_layout()
+    
+    return plt.gcf()  # Return the figure object
 
 
 
