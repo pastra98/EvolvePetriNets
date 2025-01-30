@@ -16,8 +16,19 @@ import pandas as pd
 import numpy as np
 import pickle, gzip
 
+
 ################################################################################
 #################### PROCESSING AND COMBINING DATAFRAMES #######################
+################################################################################
+
+#################### CONSTANTS USED FOR PLOTS ##################################
+TICKFONT = 16
+AXLABELFONT = 18
+TITLEFONT = 24
+SUBPLOTITLEFONT = 20
+LEGENDFONT = 16
+
+
 ################################################################################
 
 # -------------------- PICKLED FILES (E.G. COMPONENT DICT)
@@ -403,13 +414,6 @@ def search_and_aggregate_param_results(res_dict: dict, search_dict: dict, search
 #################### AGGREGATED PLOTTING FUNCTIONS #############################
 ################################################################################
 
-#################### CONSTANTS USED FOR PLOTS ##################################
-TICKFONT = 16
-AXLABELFONT = 18
-TITLEFONT = 24
-SUBPLOTITLEFONT = 20
-LEGENDFONT = 16
-################################################################################
 
 
 def components_fitness_scatter(df: pl.DataFrame, setup_map: dict = None) -> None:
@@ -502,7 +506,8 @@ def generalized_lineplot(
     subplt_titles: Optional[List[str]] = None,
     figsize: tuple[int, int] = (12, 8),
     legend_loc = "lower right",
-    show_all_legends: bool = True
+    show_all_legends: bool = True,
+    legend_lambda=lambda l: l
     ) -> None:
     """
     Create a dynamic multi-subplot figure with line plots.
@@ -548,6 +553,8 @@ def generalized_lineplot(
         axes = np.array([axes])  # Single plot
     elif len(plt_layout) == 2:
         axes = np.array([axes[0], axes[1]])  # Two plots stacked vertically
+        # fig, axes = plt.subplots(1, 2, figsize=figsize)  # Two plots side by side
+        # axes = np.array(axes)    # Ensure axes is numpy array
     else:
         axes = axes.flatten()  # Multiple plots in a grid
     
@@ -572,7 +579,7 @@ def generalized_lineplot(
             ax.plot(
                 df[x_ax].to_numpy(),
                 df[y_ax].to_numpy(),
-                label=line_data,
+                label=legend_lambda(line_data),
             )
         
         # Set subplot title if provided
