@@ -15,6 +15,7 @@ import seaborn as sns
 import pandas as pd
 import numpy as np
 import pickle, gzip
+import matplotlib.patheffects as path_effects
 
 
 ################################################################################
@@ -27,8 +28,6 @@ AXLABELFONT = 18
 TITLEFONT = 24
 SUBPLOTITLEFONT = 20
 LEGENDFONT = 16
-
-
 ################################################################################
 
 # -------------------- PICKLED FILES (E.G. COMPONENT DICT)
@@ -504,7 +503,7 @@ def generalized_lineplot(
     x_ax: str = "gen",
     title: Optional[str] = None,
     subplt_titles: Optional[List[str]] = None,
-    figsize: tuple[int, int] = (12, 8),
+    figsize: tuple[int, int] = (8, 8),
     legend_loc = "lower right",
     show_all_legends: bool = True,
     legend_lambda=lambda l: l
@@ -667,8 +666,9 @@ def generalized_barplot(
             if value > 0:
                 ax.text(rect.get_x() + rect.get_width() / 2., rect.get_height() - (rect.get_height() * 0.05),
                         label_lambda(f'{label}\n{value:.2f}'),
-                        ha='center', va='top', color='black', rotation=label_rot,
-                        fontsize=TICKFONT)
+                        ha='center', va='top', color='yellow', rotation=label_rot,
+                        fontsize=AXLABELFONT,
+                        path_effects=[path_effects.withStroke(linewidth=1, foreground="black")]) # White outline
     
     ax.set_ylabel(y_ax.replace('_', ' '), fontsize=AXLABELFONT)
     ax.set_xticks(x + bar_width * (max_bars - 1) / 2)
@@ -1064,6 +1064,40 @@ def extract_run_metrics(data_path: str | Path) -> pl.DataFrame:
     return pl.DataFrame(extracted_data)
 
 #-------------------------------------------------------------------------------
+def plot_fitness_components(df: pl.DataFrame):
+    """
+    Generates a scatter plot of max_fitness vs. num_components for different setup sizes and selection methods.
+
+    Args:
+        df: Polars DataFrame with columns 'setupname', 'max_fitness', and 'num_components'.
+    """
+
+    fig, axes = plt.subplots(1, 3, figsize=(14, 4))  # Adjust figure size as needed
+
+    sizes = ["small", "medium", "big"]
+    selection_methods = ["truncation", "roulette", "speciation"]
+    colors = ["blue", "orangered", "green"]  # Define colors for selection methods
+
+    for i, size in enumerate(sizes):
+        size_df = df.filter(pl.col("setupname").str.contains(size))
+
+        for j, method in enumerate(selection_methods):
+            method_df = size_df.filter(pl.col("setupname").str.starts_with(method))
+            axes[i].scatter(
+                method_df["num_components"],
+                method_df["max_fitness"],
+                color=colors[j],
+                label=method if i == 0 else None,  # Only label once per method
+                alpha=0.7
+            )
+
+    # Set common labels outside the loop
+    fig.text(0.5, 0.01, "Number of Components", ha='center', va='center', fontsize=AXLABELFONT) # x label
+    fig.text(0.08, 0.5, "Max Fitness", ha='center', va='center', rotation='vertical', fontsize=AXLABELFONT) # y label
+    fig.legend(bbox_to_anchor=(0.9, 0.5), loc='center left', fontsize=AXLABELFONT)
+    return fig
+
+
 
 ################################################################################
 #################### Plotting component t distribution #########################
