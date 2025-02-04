@@ -431,12 +431,19 @@ def create_fitness_boxplots(df):
     # Split setupnames and create new columns
     df[['selection_method', 'size', 'log']] = df['setupname'].str.split('_', expand=True)
     
+    # Define colors for each method
+    colors = {
+        "truncation": "blue",
+        "roulette": "orangered",
+        "speciation": "green"
+    }
+    
     # Initialize storage for summary statistics
     summary_stats = []
     
     # Create figure
     fig, axes = plt.subplots(1, 3, figsize=(15, 6))
-    fig.suptitle('Fitness Distribution by Size and Selection Method', fontsize=TITLEFONT)
+    fig.suptitle('', fontsize=TITLEFONT)
     
     # Define sizes and their order
     sizes = ['small', 'medium', 'big']
@@ -467,12 +474,30 @@ def create_fitness_boxplots(df):
                 'max': summary['max']
             })
         
-        # Create boxplot
-        axes[idx].boxplot(data_to_plot, labels=labels)
-        axes[idx].set_title(f'{size.capitalize()} Population', fontsize=SUBPLOTITLEFONT)
+        # Create boxplot with colors and meanlines
+        bp = axes[idx].boxplot(data_to_plot, 
+                             labels=labels,
+                             patch_artist=True,  # Required for filling boxes with color
+                             meanline=True,      # Show mean lines
+                             showmeans=True)     # Show mean markers
+        
+        # Customize box colors
+        for box, method in zip(bp['boxes'], ['roulette', 'truncation', 'speciation']):
+            box.set(facecolor=colors[method], alpha=0.3)
+        
+        # Set meanline and mean marker properties
+        for mean in bp['means']:
+            mean.set(color='black', linestyle='--', linewidth=1)
+        
+        # Add horizontal grid lines
+        axes[idx].yaxis.grid(True, linestyle=':', alpha=0.7)
+        axes[idx].set_title(f'{size.capitalize()} Log', fontsize=SUBPLOTITLEFONT)
         axes[idx].set_ylabel('Max Fitness' if idx == 0 else '', fontsize=AXLABELFONT)
         axes[idx].tick_params(axis='both', labelsize=TICKFONT)
         axes[idx].set_xticklabels(labels, rotation=45)
+        
+        # Set background grid below boxes
+        axes[idx].set_axisbelow(True)
     
     # Adjust layout
     plt.tight_layout()
