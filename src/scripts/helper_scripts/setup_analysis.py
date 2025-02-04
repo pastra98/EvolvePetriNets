@@ -413,6 +413,76 @@ def search_and_aggregate_param_results(res_dict: dict, search_dict: dict, search
 #################### AGGREGATED PLOTTING FUNCTIONS #############################
 ################################################################################
 
+### ---- fitness boxplot ---- ####
+def create_fitness_boxplots(df):
+    """
+    Creates boxplots for fitness data grouped by size and selection method.
+    
+    Args:
+        df: Polars or Pandas DataFrame with columns: setupname, max_fitness
+        
+    Returns:
+        tuple: (matplotlib figure, pandas DataFrame with 5-point summary)
+    """
+    # Convert to pandas if it's a polars dataframe
+    if hasattr(df, 'to_pandas'):
+        df = df.to_pandas()
+    
+    # Split setupnames and create new columns
+    df[['selection_method', 'size', 'log']] = df['setupname'].str.split('_', expand=True)
+    
+    # Initialize storage for summary statistics
+    summary_stats = []
+    
+    # Create figure
+    fig, axes = plt.subplots(1, 3, figsize=(15, 6))
+    fig.suptitle('Fitness Distribution by Size and Selection Method', fontsize=TITLEFONT)
+    
+    # Define sizes and their order
+    sizes = ['small', 'medium', 'big']
+    
+    # Process each size
+    for idx, size in enumerate(sizes):
+        # Get data for this size
+        size_data = df[df['size'] == size]
+        
+        # Prepare data for boxplot
+        data_to_plot = []
+        labels = []
+        
+        for method in ['roulette', 'truncation', 'speciation']:
+            method_data = size_data[size_data['selection_method'] == method]['max_fitness']
+            data_to_plot.append(method_data)
+            labels.append(method)
+            
+            # Calculate 5-point summary
+            summary = method_data.describe()
+            summary_stats.append({
+                'size': size,
+                'method': method,
+                'min': summary['min'],
+                'q1': summary['25%'],
+                'median': summary['50%'],
+                'q3': summary['75%'],
+                'max': summary['max']
+            })
+        
+        # Create boxplot
+        axes[idx].boxplot(data_to_plot, labels=labels)
+        axes[idx].set_title(f'{size.capitalize()} Population', fontsize=SUBPLOTITLEFONT)
+        axes[idx].set_ylabel('Max Fitness' if idx == 0 else '', fontsize=AXLABELFONT)
+        axes[idx].tick_params(axis='both', labelsize=TICKFONT)
+        axes[idx].set_xticklabels(labels, rotation=45)
+    
+    # Adjust layout
+    plt.tight_layout()
+    
+    # Create summary dataframe
+    summary_df = pd.DataFrame(summary_stats)
+    
+    return fig, summary_df
+
+### ---- fitness boxplot ---- ####
 
 
 def components_fitness_scatter(df: pl.DataFrame, setup_map: dict = None) -> None:
@@ -731,6 +801,7 @@ def generalized_boxplot(
                labels.append("")
 
        # Plot boxes
+       print(values)
        offset = box_width * box_idx
        bp = ax.boxplot(values, positions=x + offset, widths=box_width*0.8, 
                       patch_artist=True, labels=labels)
