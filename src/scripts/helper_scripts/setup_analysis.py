@@ -605,6 +605,7 @@ def generalized_lineplot(
     ) -> None:
     """
     Create a dynamic multi-subplot figure with line plots.
+    Handles 1, 2, or 3 subplots arranged horizontally.
     
     Parameters:
     -----------
@@ -622,7 +623,7 @@ def generalized_lineplot(
     subplt_titles : List[str], optional
         List of titles for each subplot. Must match length of plt_layout if provided.
     figsize : tuple[int, int], optional
-        Figure size in inches. Defaults to (12, 8).
+        Figure size for each subplot in inches. Defaults to (8, 8).
     legend_loc : str, optional
         Location of the legend. Defaults to "lower right".
     show_all_legends : bool, optional
@@ -636,21 +637,25 @@ def generalized_lineplot(
     if subplt_titles and len(subplt_titles) != len(plt_layout):
         raise ValueError("subplt_titles must match the number of subplots in plt_layout")
     
-    # Determine grid layout
-    rows, cols = create_subplot_grid(len(plt_layout))
+    num_plots = len(plt_layout)
+    if num_plots > 3:
+        raise ValueError("This function supports a maximum of 3 subplots")
     
     # Create figure and subplots
-    fig, axes = plt.subplots(rows, cols, figsize=figsize)
+    # For 3 subplots, create them in one row with the specified figsize for each
+    if num_plots == 3:
+        total_width = figsize[0] * 3
+        total_height = figsize[1]
+        fig, axes = plt.subplots(1, 3, figsize=(total_width, total_height))
+    elif num_plots == 2:
+        fig, axes = plt.subplots(1, 2, figsize=(figsize[0] * 2, figsize[1]))
+    else:  # num_plots == 1
+        fig, axes = plt.subplots(1, 1, figsize=figsize)
+        axes = np.array([axes])  # Wrap in array for consistent indexing
     
-    # Convert axes to array for consistent indexing
-    if len(plt_layout) == 1:
-        axes = np.array([axes])  # Single plot
-    elif len(plt_layout) == 2:
-        axes = np.array([axes[0], axes[1]])  # Two plots stacked vertically
-        # fig, axes = plt.subplots(1, 2, figsize=figsize)  # Two plots side by side
-        # axes = np.array(axes)    # Ensure axes is numpy array
-    else:
-        axes = axes.flatten()  # Multiple plots in a grid
+    # Ensure axes is always a numpy array
+    if num_plots > 1:
+        axes = np.array(axes)
     
     # Set main title
     if title is None:
@@ -680,7 +685,7 @@ def generalized_lineplot(
         if subplt_titles:
             ax.set_title(subplt_titles[idx].replace("_", " "), fontsize=SUBPLOTITLEFONT)
         
-        # Add labels and legend (only for first subplot if show_all_legends is False)
+        # Add labels and legend
         ax.tick_params(labelsize=TICKFONT)
         if show_all_legends or idx == 0:
             ax.legend(loc=legend_loc, fontsize=LEGENDFONT)
@@ -688,14 +693,9 @@ def generalized_lineplot(
         ax.set_xlabel(x_ax.replace("_", " "), fontsize=AXLABELFONT)
         ax.set_ylabel(y_ax.replace("_", " "), fontsize=AXLABELFONT)
     
-    # Hide empty subplots if any
-    for idx in range(len(plt_layout), len(axes)):
-        axes[idx].set_visible(False)
-    
     # Adjust layout to prevent overlap
     plt.tight_layout()
     return fig
-
 
 def generalized_barplot(
         plt_layout,
