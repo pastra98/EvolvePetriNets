@@ -708,8 +708,11 @@ def generalized_barplot(
         figsize=(12, 6),
         label_lambda=lambda l: l,
         label_rot=90,
-        fp_precision=90,
-        show_errors=True):
+        fp_precision=2,
+        show_errors=True,
+        x_label_rot=0,
+        ytick_lambda=lambda y: y,
+        ylim=None):
     fig, ax = plt.subplots(figsize=figsize, layout='constrained')
     
     if title is None:
@@ -761,7 +764,7 @@ def generalized_barplot(
         for rect, label, value in zip(rects, labels, values):
             if value > 0:
                 ax.text(rect.get_x() + rect.get_width() / 2., rect.get_height() - (rect.get_height() * 0.05),
-                        label_lambda(f'{label}\n{value:.2f}'),
+                        label_lambda(f'{label}\n{round(value,fp_precision)}'),
                         ha='center', va='top', color='yellow', rotation=label_rot,
                         fontsize=AXLABELFONT,
                         path_effects=[path_effects.withStroke(linewidth=1, foreground="black")]) # White outline
@@ -769,11 +772,17 @@ def generalized_barplot(
     ax.set_ylabel(y_ax.replace('_', ' '), fontsize=AXLABELFONT)
     ax.set_xticks(x + bar_width * (max_bars - 1) / 2)
     ax.set_xticklabels(group_titles if group_titles else [f"Group {i+1}" for i in range(num_groups)], 
-                       fontsize=TICKFONT)
+                       fontsize=TICKFONT, rotation=x_label_rot)
     
     ax.tick_params(labelsize=TICKFONT)
     ax.grid(True, axis='y', linestyle='--', alpha=0.7)
+    if ylim:
+        ax.set_ylim(ylim)
     
+    # Apply lambda function to all y-ticks
+    yticks = plt.gca().get_yticks()
+    plt.gca().set_yticklabels([ytick_lambda(y) for y in yticks])
+
     return fig
 
 
