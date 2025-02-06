@@ -460,7 +460,6 @@ def create_fitness_boxplots(df):
         for method in ['roulette', 'truncation', 'speciation']:
             method_data = size_data[size_data['selection_method'] == method]['max_fitness']
             data_to_plot.append(method_data)
-            labels.append(method)
             
             # Calculate 5-point summary
             summary = method_data.describe()
@@ -473,6 +472,8 @@ def create_fitness_boxplots(df):
                 'q3': summary['75%'],
                 'max': summary['max']
             })
+            label = method + "\n(" + str(round(method_data.mean(), 3)) + ")"
+            labels.append(label)
         
         # Create boxplot with colors and meanlines
         bp = axes[idx].boxplot(data_to_plot, 
@@ -1186,14 +1187,93 @@ def plot_fitness_components(df: pl.DataFrame):
                 label=method if i == 0 else None,  # Only label once per method
                 alpha=0.7
             )
+        axes[i].set_title(size.capitalize(), fontsize=SUBPLOTITLEFONT)
 
     # Set common labels outside the loop
-    fig.text(0.5, 0.01, "Number of Components", ha='center', va='center', fontsize=AXLABELFONT) # x label
-    fig.text(0.08, 0.5, "Max Fitness", ha='center', va='center', rotation='vertical', fontsize=AXLABELFONT) # y label
+    fig.text(0.5, 0.0005, "\nNumber of Components", ha='center', va='center', fontsize=AXLABELFONT) # x label
+    fig.text(0.06, 0.5, "Max Fitness", ha='center', va='center', rotation='vertical', fontsize=AXLABELFONT) # y label
     fig.legend(bbox_to_anchor=(0.9, 0.5), loc='center left', fontsize=AXLABELFONT)
+    for ax in axes:
+        ax.tick_params(axis='both', which='major', labelsize=TICKFONT)
+    # Adjust space between plots
+    fig.subplots_adjust(wspace=0.4)  # Adjust wspace to add more space between plots
     return fig
 
 
+################################################################################
+#################### Fitness scatterplot distribution ##########################
+################################################################################
+import matplotlib.pyplot as plt
+import numpy as np
+
+def fitness_distribution_by_generation(df, title="Fitness Distribution by Generation", 
+                                     color_species=False):
+    """
+    Create a scatter plot of fitness values across generations for a genetic algorithm.
+    
+    Parameters:
+    -----------
+    df : polars.DataFrame
+        DataFrame containing 'gen', 'fitness', and 'species_id' columns
+    title : str, optional
+        Plot title (default: "Fitness Distribution by Generation")
+    color_species : bool, optional
+        If True, colors points by species_id. If False, uses default grey (default: False)
+        
+    Returns:
+    --------
+    matplotlib.figure.Figure
+        The created figure object
+    """
+    # Create figure and axis objects
+    fig, ax = plt.subplots(figsize=(10, 6))
+    
+    if color_species:
+        # Get unique species for coloring
+        unique_species = df['species_id'].unique().to_list()
+        
+        # Create color map
+        colors = plt.cm.rainbow(np.linspace(0, 1, len(unique_species)))
+        
+        # Plot each species with different color
+        for species, color in zip(unique_species, colors):
+            species_data = df.filter(pl.col('species_id') == species)
+            ax.scatter(species_data['gen'], 
+                      species_data['fitness'],
+                      alpha=0.5,
+                      color=color,
+                      s=10,
+                      label=f'Species {species}')
+        
+        # Add legend
+        # ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left', 
+        #          fontsize=TICKFONT)
+        
+    else:
+        # Single color plot
+        ax.scatter(df['gen'], df['fitness'],
+                  alpha=0.5,
+                  color='grey',
+                  s=10)
+    
+    # Set labels and title with specified font sizes
+    ax.set_xlabel('Generation', fontsize=AXLABELFONT)
+    ax.set_ylabel('Fitness', fontsize=AXLABELFONT)
+    ax.set_title(title, fontsize=TITLEFONT, pad=20)
+    
+    # Customize tick labels
+    ax.tick_params(axis='both', which='major', labelsize=TICKFONT)
+    
+    # Add grid for better readability
+    ax.grid(True, linestyle='--', alpha=0.7)
+    
+    # Adjust layout to prevent label cutoff
+    if color_species:
+        plt.tight_layout(rect=[0, 0, 0.85, 1])  # Make room for legend
+    else:
+        plt.tight_layout()
+    
+    return fig
 
 ################################################################################
 #################### Plotting component t distribution #########################

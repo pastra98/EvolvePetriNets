@@ -695,10 +695,10 @@ def plot_species_evolution(
     figlegend.savefig(f"{savedir}/species_tree_legend.pdf", bbox_inches='tight')
     
 
-def plot_avg_species_fit(species_df: pd.DataFrame, cmap: dict, savedir: str, use_adjusted=True):
+def plot_avg_species_fit(species_df: pd.DataFrame, cmap: dict, savedir: str, use_adjusted=True, fig_size=FSIZE):
     """Plots the average fitness of all species, defaults to adjusted fitness
     """
-    plt.figure(figsize=FSIZE)
+    plt.figure(figsize=fig_size)
     for species_name in cmap:
         filtered_df = species_df[species_df["name"]==species_name]
         if use_adjusted:
@@ -706,7 +706,8 @@ def plot_avg_species_fit(species_df: pd.DataFrame, cmap: dict, savedir: str, use
         else:
             plt.plot(filtered_df["gen"], filtered_df["avg_fitness"], color=cmap[species_name])
 
-    plt.title(f"Average {'adjusted ' if use_adjusted else ''}fitness of species")
+    # plt.title(f"Average {'adjusted ' if use_adjusted else ''}fitness of species")
+    plt.title(f"Avg. Adjusted Species Fitness ")
     plt.xlabel("Generation")
     plt.ylabel("Fitness")
     plt.savefig(f"{savedir}/avg_species_fitness.pdf")
