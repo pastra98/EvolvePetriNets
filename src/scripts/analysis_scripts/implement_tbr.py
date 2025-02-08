@@ -290,3 +290,19 @@ print(old == new)
 reload(genome)
 reload(fc)
 big_genome.evaluate_fitness(biglog)["metrics"]
+
+#len(biglog["shortened_variants"])
+
+pdc24_gt_log = lg.get_log_from_xes("I:/EvolvePetriNets/pm_data/pdc_logs/2024/Ground Truth Logs/pdc2024_111000.xes")
+pdc24_gt_log["dataframe"]
+print("ground truth", len(pdc24_gt_log["shortened_variants"]))
+
+pdc24_test_log = lg.get_log_from_xes("I:/EvolvePetriNets/pm_data/pdc_logs/2024/Test Logs/pdc2024_111000.xes")
+pdc24_test_log["dataframe"]
+print("test", len(pdc24_test_log["shortened_variants"]))
+
+pdc24_base_log = lg.get_log_from_xes("I:/EvolvePetriNets/pm_data/pdc_logs/2024/Base Logs/pdc2024_111000.xes")
+pdc24_base_log["dataframe"]
+print("base", len(pdc24_base_log["shortened_variants"]))
+
+# pdc22_test_log["shortened_variants"]

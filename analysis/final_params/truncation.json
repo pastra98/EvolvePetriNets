@@ -149,7 +149,7 @@
             ]
         }
     },
-    "use_t_vals": true,
+    "use_t_vals": false,
     "prob_remove_arc": [
         0.1,
         0.4

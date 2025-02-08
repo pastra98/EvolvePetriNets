@@ -217,12 +217,40 @@ def get_mutation_stats_df(pop_df: pl.DataFrame):
     )
 
 # ---------- SERIALIZATION
+running_example_remap = {
+    'check ticket'      : "check t.",
+    'decide'            : "decide",
+    'examine casually'  : "casual ex.",
+    'examine thoroughly': "thorough ex.",
+    'pay compensation'  : "pay comp.",
+    'register request'  : "register r.",
+    'reinitiate request': "reinitiate",
+    'reject request'    : "reject"
+}
+
+def get_readable_digraph(g, fontsize=36, node_labels=running_example_remap):
+    """Plot digraph with custom font size and optional node relabeling"""
+    gviz = g.get_gviz()
+    gviz.graph_attr['fontsize'] = str(fontsize)
+    gviz.node_attr['fontsize'] = str(fontsize)
+    gviz.edge_attr['fontsize'] = str(fontsize)
+    
+    new_body = []
+    for e in gviz.body:
+        new_e = e
+        for old_name, new_name in node_labels.items():
+            if old_name in e:
+                new_e = e.replace(old_name, new_name).replace("fontsize=12", f"fontsize={fontsize}")
+                break
+        new_body.append(new_e)
+    gviz.body = new_body
+    return gviz
 
 def save_genome_gviz(genome: GeneticNet, savedir: str, name_prefix=""):
     """Save gviz render of specified genome
     """
-    with open(f"{savedir}/{name_prefix}_id-{genome.id}.pdf", "wb") as f:
-        f.write(genome.get_gviz().pipe(format="pdf"))
+    with open(f"{savedir}/{name_prefix}_id-{genome.id}.svg", "wb") as f:
+        f.write(get_readable_digraph(genome).pipe(format="svg"))
 
 
 def save_improvements(improvements: str, savedir: str):
@@ -231,6 +259,7 @@ def save_improvements(improvements: str, savedir: str):
     os.makedirs(f"{savedir}/improvements")
     for gen, g in improvements.items():
         save_genome_gviz(g, f"{savedir}/improvements", name_prefix=f"improvement_gen-{gen}")
+        # pickle_object(g, f"improvement_gen-{gen}", f"{savedir}/improvements", True)
 
 
 def save_species_leaders(leaders: list[GeneticNet], savedir: str):

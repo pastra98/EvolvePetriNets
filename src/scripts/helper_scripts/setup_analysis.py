@@ -1128,7 +1128,7 @@ def extract_run_metrics(data_path: str | Path) -> pl.DataFrame:
             
             # Process each run directory in this setup
             for run_dir in setup_dir.iterdir():
-                if run_dir.is_dir():
+                if run_dir.is_dir() and run_dir.name != "aggregated_runs":
                     # Extract run number from directory name
                     run_nr = int(run_dir.name.split("_")[0])
                     
@@ -1209,6 +1209,56 @@ def plot_fitness_components(df: pl.DataFrame):
     return fig
 
 
+def compare_mutation_boxplots(df1, df2, mutation: str, names: tuple, title: str):
+    """
+    Generate boxplots comparing a specific mutation between two dataframes.
+    """
+    fig, ax = plt.subplots(figsize=(5, 5))
+    
+    def get_boxplot_data(df, mutation):
+        row = df.filter(pl.col("my_mutation") == mutation).to_pandas()
+        if len(row) == 0:
+            raise ValueError(f"Mutation {mutation} not found in dataframe")
+        data = {
+            'med': row['median'].iloc[0],
+            'q1': row['25%'].iloc[0],
+            'q3': row['75%'].iloc[0],
+            'whislo': row['min'].iloc[0],
+            'whishi': row['max'].iloc[0],
+            'mean': row['mean'].iloc[0]
+        }
+        print(f"\n5-point summary for {mutation} ({names[0] if df is df1 else names[1]}):")
+        print(f"Min: {data['whislo']:.4f}")
+        print(f"Q1:  {data['q1']:.4f}")
+        print(f"Med: {data['med']:.4f}")
+        print(f"Q3:  {data['q3']:.4f}")
+        print(f"Max: {data['whishi']:.4f}")
+        return [data]
+
+    bp1 = ax.bxp(get_boxplot_data(df1, mutation), positions=[1], 
+                 patch_artist=True, meanline=True, showmeans=True, showfliers=False,
+                 widths=0.5)
+    bp2 = ax.bxp(get_boxplot_data(df2, mutation), positions=[2], 
+                 patch_artist=True, meanline=True, showmeans=True, showfliers=False,
+                 widths=0.5)
+    
+    for bp in [bp1, bp2]:
+        plt.setp(bp['boxes'], color='tab:blue', linewidth=2)
+        plt.setp(bp['means'], color='tab:blue', linewidth=2)
+        plt.setp(bp['medians'], color='tab:blue', linewidth=2)
+        plt.setp(bp['whiskers'], color='tab:blue', linewidth=2)
+        for patch in bp['boxes']:
+            patch.set_facecolor('lightblue')
+    
+    ax.set_ylabel('Fitness Impact Distribution', fontsize=AXLABELFONT)
+    ax.set_title(title, fontsize=TITLEFONT, pad=20)
+    ax.set_xticks([1, 2])
+    ax.set_xticklabels(names, fontsize=TICKFONT)
+    ax.tick_params(axis='y', labelsize=TICKFONT)
+    ax.axhline(y=0, color='lightgray', linestyle='--')
+    
+    plt.tight_layout()
+    return fig, ax
 ################################################################################
 #################### Fitness scatterplot distribution ##########################
 ################################################################################
