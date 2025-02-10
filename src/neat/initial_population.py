@@ -92,7 +92,7 @@ def get_bootstrap_genomes(log, component_tracker):
     return mined_nets
 
 
-def construct_genome_from_mined_net(net, im, fm, tl, ct):
+def construct_genome_from_mined_net(net, im, fm, tl, ct=None, infer_start_end=False):
     g = genome.GeneticNet(dict(), dict(), dict(), task_list=tl, pop_component_tracker=ct)
 
     # different miners call source/sink by different names - this is hacky crap
@@ -100,6 +100,11 @@ def construct_genome_from_mined_net(net, im, fm, tl, ct):
         "source":"start", "start":"start", "source0":"start",
         "sink":"end", "end":"end", "sink0":"end"
         }
+    # infer start and end based on im and fm
+    if infer_start_end:
+        place_dict[list(im.keys())[0].name] = "start"
+        place_dict[list(fm.keys())[0].name] = "end"
+    
     trans_dict = {t:t for t in tl} # map t.label to genome id
     
     for p in net.places:
