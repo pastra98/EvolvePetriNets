@@ -77,12 +77,12 @@
             ]
         },
         "trans_by_tasks": {
-            "weight": 1,
+            "weight": 0.5,
             "raise_by": 1,
             "active_gen": 0,
             "anchor_to": [
-                "",
-                0.0
+                "aggregated_replay_fitness",
+                0.3
             ]
         },
         "precision": {
