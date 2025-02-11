@@ -928,7 +928,7 @@ def run_regression(results_dict: dict, predictors: list, include_species_target=
         p_values = 2 * (1 - scipy.stats.t.cdf(np.abs(t_stat), dof))
         
                 # Format results for this target
-        col_name = "\makecell{\\textbf{"+f"{target.replace("_", "\_")}"+"}\\\ (Adj R² = "+f"{adjusted_r2:.4f})" + "}".replace("_", "\_")
+        col_name = "\makecell{\\textbf{"+f"{target.replace('_', '\_')}"+"}\\\ (Adj R² = "+f"{adjusted_r2:.4f})" + "}".replace("_", "\_")
         columns.append(col_name)
         
         # Format coefficients and p-values
@@ -1698,3 +1698,15 @@ def get_pdc_f_score(genome, pdc_model_code: str, pdc_year: str):
         "recall": recall,
         "f_score": f_score
     }
+
+################################################################################
+#################### LOAD A PNML FILE INTO A GENOME ############################
+################################################################################
+# # %%
+from neat import initial_population
+from pm4py.objects.petri_net.importer.variants.pnml import import_net as import_pnml
+
+def load_genome_from_pnml(pn_fp: str):
+    net, im, fm = import_pnml(pn_fp)
+    tl = [t.label for t in net.transitions]
+    return initial_population.construct_genome_from_mined_net(net, im, fm, tl, infer_start_end=True)
