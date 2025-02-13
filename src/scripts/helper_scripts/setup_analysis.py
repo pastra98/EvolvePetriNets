@@ -1488,7 +1488,7 @@ def merge_two_results_df(df1_path, df2_path, savepath):
     print(f"saved merged df at {savepath}\nlength: {len(df3)}\n", df3)
 
 
-def analyze_best_genome_comps(data: dict):
+def analyze_best_genome_comps(data: dict, compare_re=False):
     """This function takes in the result from the setup crawler (with best genomes loaded)
     It then returns:
         * A component comparison df
@@ -1507,14 +1507,28 @@ def analyze_best_genome_comps(data: dict):
     all_unique_comps = {}
     df_data = []
     next_component_id = 0
+    target_components_simple = {((('pay compensation', 'p'), 1), (('reject request', 'p'), 1)),
+        ((('check ticket', 'p'), 1), (('p', 'decide'), 1)),
+        ((('decide', 'p'), 1), (('p', 'pay compensation'), 1), (('p', 'reinitiate request'), 1), (('p', 'reject request'), 1)),
+        ((('p', 'examine casually'), 1), (('p', 'examine thoroughly'), 1), (('register request', 'p'), 1), (('reinitiate request', 'p'), 1)),
+        ((('p', 'check ticket'), 1), (('register request', 'p'), 1), (('reinitiate request', 'p'), 1)),
+        ((('p', 'register request'), 1),),
+        ((('examine casually', 'p'), 1), (('examine thoroughly', 'p'), 1), (('p', 'decide'), 1))
+        }
 
     for sname, sdata in data["setups"].items():
         setup_all_comps = []
+        setup_fitnesses = []
+        rediscovery = []
         setup_unique_comps = set()
         # iterate all components
         for g in sdata["best_genomes"]:
             cset = g.get_unique_component_set()
+            setup_fitnesses.append(g.fitness)
             g_comp_ids = []
+            if compare_re:
+                if cset == target_components_simple: rediscovery.append(1)
+                else: rediscovery.append(0)
             # if new component, add it to dict and save
             for comp in cset:
                 if comp not in all_unique_comps:
@@ -1536,10 +1550,13 @@ def analyze_best_genome_comps(data: dict):
         comp_delta = total_unique_comps - mean_compcount
         df_data.append({
             "name": sname,
-            "total_unique_comps": total_unique_comps,
-            "mean_compcount": mean_compcount,
-            "comp_delta": comp_delta,
-            "setup_unique_comps": setup_unique_comps
+            "total num components": total_unique_comps,
+            "mean compcount": mean_compcount,
+            "comp delta": comp_delta,
+            "setup unique comps": setup_unique_comps,
+            "mean fitness": mean(setup_fitnesses),
+            "mean discovery score": mean(rediscovery) if compare_re else 0,
+            "eval score": mean(rediscovery) / total_unique_comps * 10
             })
 
     return pl.DataFrame(df_data), all_unique_comps
@@ -1702,7 +1719,6 @@ def get_pdc_f_score(genome, pdc_model_code: str, pdc_year: str):
 ################################################################################
 #################### LOAD A PNML FILE INTO A GENOME ############################
 ################################################################################
-# # %%
 from neat import initial_population
 from pm4py.objects.petri_net.importer.variants.pnml import import_net as import_pnml
 
@@ -1710,3 +1726,211 @@ def load_genome_from_pnml(pn_fp: str):
     net, im, fm = import_pnml(pn_fp)
     tl = [t.label for t in net.transitions]
     return initial_population.construct_genome_from_mined_net(net, im, fm, tl, infer_start_end=True)
+
+
+################################################################################
+#################### PLOT FITNESS METRICS ############################
+################################################################################
+def plot_metrics(df, title="Fitness Metrics", figsize=(5,5)):
+    metrics_to_plot = [
+        "metric_aggregated_replay_fitness",
+        "metric_over_enabled_trans",
+        "metric_num_arcs",
+        "metric_remaining_score",
+        "metric_sink_score"
+    ]
+    
+    fig, ax = plt.subplots(figsize=figsize)
+    
+    for col in metrics_to_plot:
+        label = col.replace('metric_', '').replace('_', ' ')
+        ax.plot(df.to_pandas().index, df[col].to_numpy(), label=label, linewidth=2)
+    
+    ax.grid(True, linestyle='-', alpha=0.7)
+    ax.tick_params(axis='both', labelsize=TICKFONT)
+    
+    ax.set_xlabel('gen', fontsize=AXLABELFONT)
+    ax.set_ylabel('metric value', fontsize=AXLABELFONT)
+    ax.set_title(title, fontsize=TITLEFONT, pad=20, loc="left")
+    
+    ax.legend(bbox_to_anchor=(1.05, 1), 
+             loc='upper left', 
+             fontsize=LEGENDFONT,
+             borderaxespad=0.)
+    
+    plt.tight_layout()
+    
+    return fig
+
+################################################################################
+#################### PLOT FITNESS IMPACTS ############################
+################################################################################
+def calculate_metric_deltas(df):
+    filtered_df = df.filter(pl.col("gen") != 1)
+    metric_cols = [col for col in df.columns if col.startswith("metric_")]
+    
+    result = []
+    for row in filtered_df.iter_rows(named=True):
+        parent = df.filter((pl.col("gen") == row["gen"] - 1) & (pl.col("id") == row["parent_id"]))
+        parent_values = {col: parent.select(col).item() for col in metric_cols}
+        deltas = {f"{col}_delta": row[col] - parent_values[col] for col in metric_cols}
+        result.append({**row, **deltas})
+    
+    return pl.DataFrame(result)
+
+
+def plot_fitness_impacts(df, cols, gens, title="", figsize=(4,4)):
+    filtered_df = df.filter((df["gen"] >= gens[0]) & (df["gen"] <= gens[1]))
+    
+    fig, ax = plt.subplots(figsize=figsize)
+    ax.scatter(filtered_df[cols[0]], filtered_df[cols[1]], alpha=0.1)
+    
+    x_label = cols[0].replace("metric_", "").replace("_", " ")
+    y_label = cols[1].replace("metric_", "").replace("_", " ")
+    
+    ax.axhline(y=0, color='grey', linestyle='--', alpha=0.8)
+    ax.axvline(x=0, color='grey', linestyle='--', alpha=0.8)
+
+    
+    ax.set_xlabel(x_label, fontsize=AXLABELFONT)
+    ax.set_ylabel(y_label, fontsize=AXLABELFONT)
+    ax.set_title(title, fontsize=TITLEFONT, pad=20)
+    ax.tick_params(axis='both', which='major', labelsize=TICKFONT)
+    
+    plt.tight_layout()
+    return fig
+
+
+def compare_impacts(df, cols, gens, title="", figsize=(4, 4)):
+    gen_start, gen_end = gens
+    filtered_df = df.filter(
+        (df['gen'] >= gen_start) & 
+        (df['gen'] <= gen_end)
+    )
+    
+    positive_mask = filtered_df[cols[0]] > 0.05
+    filtered_df = filtered_df.filter(positive_mask)
+    
+    data = [
+        filtered_df[cols[0]].to_numpy(),
+        filtered_df[cols[1]].to_numpy()
+    ]
+    
+    labels = []
+    for col in cols:
+        label = col.replace('metric_', '').replace('_', '\n').rstrip("_delta")
+                    #   f"{'\n' if len(col.split("_")) < 4 else ""}({round(filtered_df[col].mean(), 3)})")
+        label = label + "\n" if label.count("\n") == 2 else label
+        labels.append(label + f"\n({round(filtered_df[col].mean(), 3)})")
+
+    
+    fig, ax = plt.subplots(figsize=figsize)
+    ax.axhline(y=0, color='grey', linestyle='--', alpha=0.8)
+    
+    bp = ax.boxplot(data, labels=labels, patch_artist=True, meanline=True, showmeans=True, showfliers=False, widths=0.4)
+    
+    for box in bp['boxes']:
+        box.set(facecolor='lightblue')
+    # plt.setp(ax.get_xticklabels(), rotation=45, ha='right', fontsize=TICKFONT)
+    
+    ax.tick_params(axis='both', labelsize=TICKFONT)
+    # ax.set_ylabel('Value', fontsize=AXLABELFONT)
+    
+    if title:
+        ax.set_title(title, fontsize=TITLEFONT, pad=20)
+    
+    plt.tight_layout()
+    
+    return fig
+
+
+################################################################################
+#################### COMPONENT STACKPLOT ############################
+################################################################################
+from collections import Counter
+
+
+def get_component_frequencies(pop_df):
+    """
+    Process raw component frequency data from population DataFrame.
+    
+    Args:
+        pop_df (polars.DataFrame): Population dataframe with 'gen' and 'my_components' columns
+    
+    Returns:
+        tuple: (generations, component_names, frequency_matrix)
+        - generations: list of generation numbers
+        - component_names: list of component names
+        - frequency_matrix: numpy array of shape (n_generations, n_components)
+    """
+    # Convert to pandas for easier manipulation
+    df = pop_df.to_pandas()
+    
+    # Get unique generations for x-axis
+    generations = sorted(df['gen'].unique())
+    
+    # Process component frequencies per generation
+    gen_component_counts = {}
+    all_components = set()
+    
+    # Count components for each generation
+    for gen in generations:
+        gen_data = df[df['gen'] == gen]
+        # Flatten list of lists and count components
+        all_gen_components = [comp for row in gen_data['my_components'] for comp in row]
+        counts = Counter(all_gen_components)
+        gen_component_counts[gen] = counts
+        all_components.update(counts.keys())
+    
+    # Convert to frequency matrix
+    all_components = sorted(all_components)
+    frequency_matrix = []
+    
+    for gen in generations:
+        counts = gen_component_counts[gen]
+        row = [counts.get(comp, 0) for comp in all_components]
+        frequency_matrix.append(row)
+    
+    return generations, all_components, np.array(frequency_matrix)
+
+
+def plot_component_stackplot(generations, component_names, frequency_matrix, 
+                           stop_gen=None, min_frequency=None,
+                           figsize=(12, 6), title="Component Frequencies Across Generations"):
+    """
+    Create a stackplot visualization from component frequency data.
+    
+    Args:
+        generations (list): List of generation numbers for x-axis
+        component_names (list): List of component names
+        frequency_matrix (np.ndarray): Matrix of component frequencies (shape: n_generations x n_components)
+        stop_gen (int, optional): Last generation to include
+        min_frequency (int, optional): Minimum frequency threshold for including components
+        figsize (tuple, optional): Figure dimensions (width, height)
+        title (str, optional): Plot title
+    
+    Returns:
+        matplotlib.figure.Figure: The created figure
+    """
+    # Filter by generation if specified
+    if stop_gen is not None:
+        gen_mask = np.array(generations) <= stop_gen
+        generations = np.array(generations)[gen_mask]
+        frequency_matrix = frequency_matrix[gen_mask]
+    
+    # Filter components by minimum frequency if specified
+    if min_frequency is not None:
+        max_frequencies = frequency_matrix.max(axis=0)
+        keep_components = max_frequencies >= min_frequency
+        frequency_matrix = frequency_matrix[:, keep_components]
+        component_names = [comp for comp, keep in zip(component_names, keep_components) if keep]
+    
+    plt.figure(figsize=figsize)
+    plt.stackplot(generations, frequency_matrix.T)
+    
+    plt.xlabel('Generation')
+    plt.ylabel('Component Count')
+    plt.title(title)
+    plt.tight_layout()
+    
+    return plt.gcf()
