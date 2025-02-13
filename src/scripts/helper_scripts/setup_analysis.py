@@ -592,6 +592,9 @@ def create_subplot_grid(num_plots: int) -> tuple[int, int]:
         return 2, 2
 
 
+from matplotlib.colors import LinearSegmentedColormap
+
+
 def generalized_lineplot(
     plt_layout: List[List[str]],
     data_sources: Dict[str, pl.DataFrame],
@@ -602,7 +605,11 @@ def generalized_lineplot(
     figsize: tuple[int, int] = (8, 8),
     legend_loc = "lower right",
     show_all_legends: bool = True,
-    legend_lambda=lambda l: l
+    legend_lambda=lambda l: l,
+    gen_limit=None,
+    use_gradient_colscheme=False,
+    no_legend=False,
+    show_legend_outside=False
     ) -> None:
     """
     Create a dynamic multi-subplot figure with line plots.
@@ -658,6 +665,11 @@ def generalized_lineplot(
     if num_plots > 1:
         axes = np.array(axes)
     
+    if use_gradient_colscheme:
+        colors = plt.cm.coolwarm(np.linspace(1, 0, len(data_sources)))
+    else:
+        colors = [None] * len(data_sources)  # Use default matplotlib colors
+
     # Set main title
     if title is None:
         title = f"{y_ax.replace('_', ' ')} by {x_ax}"
@@ -666,7 +678,7 @@ def generalized_lineplot(
     # Create plots
     for idx, (subplot_data, ax) in enumerate(zip(plt_layout, axes)):
         # Plot each line in the subplot
-        for line_data in subplot_data:
+        for i, line_data in enumerate(subplot_data):
             if line_data not in data_sources:
                 raise ValueError(f"Data source '{line_data}' not found in data_sources")
             
@@ -674,12 +686,15 @@ def generalized_lineplot(
             
             # Sort data by x_ax column
             df = df.sort(x_ax)
+            if gen_limit:
+                df = df.filter(pl.col("gen") < gen_limit)
             
             # Plot the line
             ax.plot(
                 df[x_ax].to_numpy(),
                 df[y_ax].to_numpy(),
                 label=legend_lambda(line_data),
+                color=colors[i] if use_gradient_colscheme else None
             )
         
         # Set subplot title if provided
@@ -695,7 +710,13 @@ def generalized_lineplot(
         ax.set_ylabel(y_ax.replace("_", " "), fontsize=AXLABELFONT)
     
     # Adjust layout to prevent overlap
-    plt.tight_layout()
+    if no_legend:
+        ax.legend().remove()
+    else:
+        if not show_legend_outside:
+            plt.tight_layout()
+        else:
+            ax.legend(bbox_to_anchor=(1.05, 0.5), loc='center left', fontsize=LEGENDFONT)
     return fig
 
 def generalized_barplot(
