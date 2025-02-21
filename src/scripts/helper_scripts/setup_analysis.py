@@ -28,6 +28,12 @@ AXLABELFONT = 18
 TITLEFONT = 24
 SUBPLOTITLEFONT = 20
 LEGENDFONT = 16
+plt.rcParams['font.size'] = TICKFONT  # Base font size
+plt.rcParams['axes.titlesize'] = TITLEFONT
+plt.rcParams['axes.labelsize'] = AXLABELFONT
+plt.rcParams['xtick.labelsize'] = TICKFONT
+plt.rcParams['ytick.labelsize'] = TICKFONT
+plt.rcParams['legend.fontsize'] = LEGENDFONT
 ################################################################################
 
 # -------------------- PICKLED FILES (E.G. COMPONENT DICT)
@@ -263,6 +269,7 @@ def exec_results_crawler(
                             best_genomes = []
                             for run_dir in setup_dir.iterdir():
                                 if run_dir.is_dir() and run_dir.name != "aggregated_runs":
+                                    # print(run_dir.name)
                                     best_g = load_compressed_pickle(run_dir / "best_genome.pkl.gz")
                                     del best_g.pop_component_tracker
                                     best_genomes.append(best_g)
@@ -1681,15 +1688,32 @@ from scripts.analysis_scripts.useful_functions import load_genome
 from pprint import pprint
 reload(log)
 
+
 def get_pdc_f_score(genome, pdc_model_code: str, pdc_year: str):
+    USE_PM4PY_REPLAY = True
 
     def get_replay_scores(log_to_replay):
-        model_eval = genome.build_fc_petri(log_to_replay).evaluate()
-        replay_res = {}
-        for v_id, r in enumerate(model_eval["replay"]):
-            case_id = log_to_replay["case_variant_map"][v_id]
-            replay_res[case_id] = r["fitness"]
-        return replay_res
+        if USE_PM4PY_REPLAY:
+            # horribly ineffecient but idgaf - different order for pm4py thus need to make new map. idk, im tired
+            map_trace_to_case = {}
+            for i, v in enumerate(log_to_replay["variants"]):
+                map_trace_to_case[v] = i
+            #
+            replay_res = {}
+            traces = get_pm4py_quality(genome, log_to_replay)["traces"]
+            for t in traces:
+                transitions = tuple(t["activated_transitions"])
+                i = map_trace_to_case[transitions]
+                case_id = log_to_replay["case_variant_map"][i]
+                replay_res[case_id] = t["trace_fitness"]
+            return replay_res
+        else:
+            model_eval = genome.build_fc_petri(log_to_replay).evaluate()
+            replay_res = {}
+            for v_id, r in enumerate(model_eval["replay"]):
+                case_id = log_to_replay["case_variant_map"][v_id]
+                replay_res[case_id] = r["fitness"]
+            return replay_res
 
     # get the replay for the test log
     test_log = log.get_log_from_xes(f"I:/EvolvePetriNets/pm_data/pdc_logs/{pdc_year}/Test Logs/pdc{pdc_year}_{pdc_model_code}.xes", is_pdc_log=True)
@@ -1721,7 +1745,7 @@ def get_pdc_f_score(genome, pdc_model_code: str, pdc_year: str):
             fp += 1
         elif not my_is_pos and correct_is_pos:
             fn += 1
-    print("missing perc", total_missing / len(gt_map))
+    # print("missing perc", total_missing / len(gt_map))
     
     # Calculate precision, recall, and F-score
     precision = tp / (tp + fp) if (tp + fp) > 0 else 0
@@ -1736,6 +1760,7 @@ def get_pdc_f_score(genome, pdc_model_code: str, pdc_year: str):
         "recall": recall,
         "f_score": f_score
     }
+
 
 ################################################################################
 #################### LOAD A PNML FILE INTO A GENOME ############################
@@ -1955,3 +1980,103 @@ def plot_component_stackplot(generations, component_names, frequency_matrix,
     plt.tight_layout()
     
     return plt.gcf()
+
+def plot_eval_times(df, title="Generation Evaluation Times", figsize=(10, 6)):
+    import matplotlib.pyplot as plt
+    import pandas as pd
+    
+    fig, ax = plt.subplots(figsize=figsize)
+    
+    x = df['gen'].to_numpy()
+    y = df['time_evaluate_curr_generation'].to_numpy()
+    
+    # Plot original data with low alpha
+    ax.plot(x, y, '-', color='#2E86C1', linewidth=1, alpha=0.3)
+    
+    # Calculate and plot smoothed line
+    window = 10  # Adjust window size as needed
+    y_smooth = pd.Series(y).rolling(window=window, center=True).mean()
+    ax.plot(x, y_smooth, '-', color='#2E86C1', linewidth=2)
+    
+    ax.set_xlabel('Generation', fontsize=AXLABELFONT)
+    ax.set_ylabel('Population Eval Time (s)', fontsize=AXLABELFONT)
+    ax.set_title(title, fontsize=TITLEFONT)
+    
+    ax.tick_params(axis='both', which='major', labelsize=TICKFONT)
+    
+    ax.grid(True, linestyle='--', alpha=0.7)
+    
+    plt.tight_layout()
+    
+    return fig
+
+################################################################################
+#################### GET MINED MODELS ############################
+################################################################################
+# literally copied from the initial pop module and modified slightly
+from pm4py.objects.petri_net.obj import PetriNet as pn
+from pm4py.discovery import (
+    discover_petri_net_alpha as alpha,
+    discover_petri_net_alpha_plus as alpha_plus,
+    discover_petri_net_inductive as inductive,
+    discover_petri_net_heuristics as heuristics,
+    discover_petri_net_ilp as ilp
+)
+
+
+def get_pm4py_mined_genomes(log):
+    """Returned genomes are already evaluated
+    """
+    bootstrap_setup = [
+        alpha,
+        inductive,
+        heuristics,
+        ilp
+    ]
+    mined_nets = {}
+    for miner in bootstrap_setup:
+        name = miner.__name__.removeprefix("discover_petri_net_")
+        net, im, fm = miner(log["dataframe"])
+        g = initial_population.construct_genome_from_mined_net(net, im, fm, log["task_list"], None)
+        # evaluate fitness right here
+        g.evaluate_fitness(log)
+        mined_nets[name] = g
+    return mined_nets
+
+################################################################################
+#################### PM4PY FITNESS METRICS #####################################
+################################################################################
+from pm4py.algo.conformance.tokenreplay.variants.token_replay import apply as get_replayed_traces
+from pm4py.algo.evaluation.replay_fitness.variants.token_replay import evaluate as get_fitness_dict
+from pm4py.algo.evaluation.precision.variants.etconformance_token import apply as get_precision
+from pm4py.algo.evaluation.generalization.variants.token_based import get_generalization
+from pm4py.algo.evaluation.simplicity.variants.arc_degree import apply as get_simplicity
+
+def get_pm4py_quality(g, eventlog):
+    eventlog = eventlog["dataframe"]
+    net, im, fm = g.build_petri()
+    # fitness eval
+    # default_params = {"show_progress_bar": False}
+    default_params = {"show_progress_bar": False, "consider_remaining_in_fitness": False, "case_id_key": "concept:name", "return_names": True}
+    aligned_traces = get_replayed_traces(eventlog, net, im, fm, default_params)
+    trace_fitness = get_fitness_dict(aligned_traces)
+    return {
+        "perc_fit_traces" : trace_fitness["perc_fit_traces"] / 100,
+        "average_trace_fitness" : trace_fitness["average_trace_fitness"],
+        "log_fitness" : trace_fitness["log_fitness"],
+        "precision" : get_precision(eventlog, net, im, fm, default_params),
+        "generalization" : get_generalization(net, aligned_traces),
+        "simplicity" : get_simplicity(net),
+        "traces": aligned_traces
+    }
+
+
+def get_log_stats(log):
+    """prints some stats about a log
+    """
+    df = log["dataframe"]
+    return pd.DataFrame([{
+        "tasks": len(df["concept:name"].unique()),
+        "events": len(df),
+        "variants": len(log["variants"])
+    }], index=None).transpose().rename(columns={0: 'count'})
