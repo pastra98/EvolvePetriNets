@@ -105,6 +105,7 @@ def get_bpic_train_logpath(
             "1" if duplicate_tasks else "0",
             "1" if noise else "0"
         ])
+        config = "1211111"
         filename = f"pdc_{year}_{config}.xes" if year < 2021 else f"pdc{year}_{config}.xes"
         # set the isclassified whatever to False
         if year >= 2023:
@@ -126,8 +127,10 @@ print("running example log stats")
 get_log_stats("../pm_data/running_example.xes")
 
 # iterate through different pdc years, using the defaults I set (kind of arbitrary, e.g. using simple loops only)
-for y in [2016, 2017, 2019, 2020, 2021, 2022, 2023, 2024]:
-    fp = get_bpic_train_logpath(y)
+# for y in [2016, 2017, 2019, 2020, 2021, 2022, 2023, 2024]:
+for y in [2022, 2023, 2024]:
+    # fp = get_bpic_train_logpath(y)
+    fp = get_bpic_train_logpath(y, loop_complexity="complex", or_constructs=False)
     print(fp)
     print("\nlog statistics")
     get_log_stats(fp)
@@ -165,8 +168,8 @@ smol:
 I:/EvolvePetriNets/pm_data/running_example.xes
 
 mid:
-I:/EvolvePetriNets/pm_data/pdc_logs/2022/Training Logs/pdc2022_1110000.xes
+I:/EvolvePetriNets/pm_data/pdc_logs/2022/Training Logs/pdc2022_1200000.xes
 
 big:
-I:/EvolvePetriNets/pm_data/pdc_logs/2024/Training Logs/pdc2024_11100000.xes
+I:/EvolvePetriNets/pm_data/pdc_logs/2024/Training Logs/pdc2024_12000000.xes
 """

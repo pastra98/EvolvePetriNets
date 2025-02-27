@@ -1175,15 +1175,31 @@ def extract_run_metrics(data_path: str | Path) -> pl.DataFrame:
                     # Extract num components using regex
                     components_match = re.search(r'Total components discovered:\n(\d+)', report_content)
                     num_components = int(components_match.group(1)) if components_match else None
-                    
+
+                    runtime_match = re.search(r'Duration of run:\n(\d+):(\d+):(\d+\.\d+)', report_content)
+                    if runtime_match:
+                        hours, minutes, seconds_str = runtime_match.groups()
+                        seconds_part, microseconds = seconds_str.split('.')
+                        
+                        # Calculate total seconds directly
+                        runtime_seconds = (int(hours) * 3600 + 
+                                        int(minutes) * 60 + 
+                                        float(f"{seconds_part}.{microseconds}"))
+                    else:
+                        runtime_seconds = None
+
                     # Add data to list
                     extracted_data.append({
                         'setupname': setupname,
                         'run_nr': run_nr,
                         'max_fitness': max_fitness,
                         'num_components': num_components,
+                        'runtime_seconds': runtime_seconds,
                         'Exceptions': False
                     })
+
+
+
     
     # Create DataFrame from extracted data
     if not extracted_data:
@@ -1192,6 +1208,7 @@ def extract_run_metrics(data_path: str | Path) -> pl.DataFrame:
             'run_nr': pl.Int64,
             'max_fitness': pl.Float64,
             'num_components': pl.Int64,
+            'runtime_seconds': pl.Float64,
             'Exceptions': pl.Boolean
         })
     
@@ -1668,11 +1685,16 @@ def plot_digraph(g, fontsize=36, node_labels=running_example_remap):
     new_body = []
     for e in gviz.body:
         new_e = e
-        for old_name, new_name in node_labels.items():
-            if old_name in e:
-                new_e = e.replace(old_name, new_name).replace("fontsize=12", f"fontsize={fontsize}")
-                break
-        new_body.append(new_e)
+        if node_labels:
+            for old_name, new_name in node_labels.items():
+                if old_name in e:
+                    new_e = e.replace(old_name, new_name).replace("fontsize=12", f"fontsize={fontsize}")
+                    break
+            new_body.append(new_e)
+        else:
+            new_e = e.replace("fontsize=12", f"fontsize={fontsize}")
+            new_body.append(new_e)
+
     gviz.body = new_body
 
                 
@@ -1690,9 +1712,11 @@ reload(log)
 
 
 def get_pdc_f_score(genome, pdc_model_code: str, pdc_year: str):
+    total_n_errors = 0
     USE_PM4PY_REPLAY = True
 
     def get_replay_scores(log_to_replay):
+        nonlocal total_n_errors
         if USE_PM4PY_REPLAY:
             # horribly ineffecient but idgaf - different order for pm4py thus need to make new map. idk, im tired
             map_trace_to_case = {}
@@ -1703,7 +1727,11 @@ def get_pdc_f_score(genome, pdc_model_code: str, pdc_year: str):
             traces = get_pm4py_quality(genome, log_to_replay)["traces"]
             for t in traces:
                 transitions = tuple(t["activated_transitions"])
-                i = map_trace_to_case[transitions]
+                try:
+                    i = map_trace_to_case[transitions]
+                except:
+                    total_n_errors += 1
+                    continue
                 case_id = log_to_replay["case_variant_map"][i]
                 replay_res[case_id] = t["trace_fitness"]
             return replay_res
@@ -1751,14 +1779,15 @@ def get_pdc_f_score(genome, pdc_model_code: str, pdc_year: str):
     precision = tp / (tp + fp) if (tp + fp) > 0 else 0
     recall = tp / (tp + fn) if (tp + fn) > 0 else 0
     f_score = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0
+    print("total errors", total_n_errors, pdc_model_code, pdc_year)
     return {
         "tp": tp,
         "tn": tn,
         "fp": fp,
         "fn": fn,
-        "precision": precision,
-        "recall": recall,
-        "f_score": f_score
+        "f-precision": precision,
+        "f-recall": recall,
+        "f-score": f_score
     }
 
 
@@ -2080,3 +2109,123 @@ def get_log_stats(log):
         "events": len(df),
         "variants": len(log["variants"])
     }], index=None).transpose().rename(columns={0: 'count'})
+
+
+################################################################################
+#################### PM4PY FITNESS METRICS #####################################
+################################################################################
+
+def get_barplot_final_results(results, name, showlegend=False):
+
+    def get_capped_error(value, variance):
+        error = np.sqrt(variance)
+        # Cap the upper error bar at 1.0
+        upper_error = min(1.0 - value, error)
+        lower_error = min(value, error)
+        return np.array([[lower_error], [upper_error]])
+
+    # Existing code to prepare data
+    thedict = results[name]
+    renamedict = {"name": "name", "perc fit traces": "replayable traces", "pm4py avg trace fit": "avg. trace fitness", "f-score": "f-score"}
+    comp_df = thedict["comparison df"][list(renamedict.keys())].rename(columns=renamedict)
+    plt_title = name.replace("_", " ").title()
+    
+    # Get variance values for error bars
+    replayable_trace_variance = thedict["gwfm pm4py percfit distribution"]["var"]
+    avg_fitness_variance = thedict["gwfm pm4py fit distribution"]["var"]
+    fscore_variance = thedict["gwfm fscore distribution"]["var"]
+    
+    # Get bootstrap values and variances
+    bsdict = results[name+"_bootstrap"]
+    bs_replayable_trace_variance = bsdict["gwfm pm4py percfit distribution"]["var"]
+    bs_replayble_traces_mean = thedict["gwfm pm4py percfit distribution"]["mean"]
+    bs_avg_fitness_variance = bsdict["gwfm pm4py fit distribution"]["var"]
+    bs_avg_fitness_mean = thedict["gwfm pm4py fit distribution"]["mean"]
+    bs_fscore_variance = bsdict["gwfm fscore distribution"]["var"]
+    bs_fscore_mean = thedict["gwfm fscore distribution"]["mean"]
+    
+    # Reorder dataframe to put GWFM-B after GWFM
+    gwfm_row = comp_df[comp_df['name'] == 'GWFM']
+    other_rows = comp_df[comp_df['name'] != 'GWFM']
+    
+    # Create bootstrap row
+    bootstrap_row = pd.DataFrame({
+        'name': ['GWFM-B'],
+        'replayable traces': [bs_replayble_traces_mean],
+        'avg. trace fitness': [bs_avg_fitness_mean],
+        'f-score': [bs_fscore_mean]
+    })
+    
+    # Concatenate in the desired order
+    comp_df = pd.concat([gwfm_row, bootstrap_row, other_rows], ignore_index=True)
+    
+    # Create the plot
+    fig, ax = plt.subplots(figsize=(8, 8))
+    
+    # Add light gray horizontal grid lines
+    ax.yaxis.grid(True, linestyle='--', which='major', color='gray', linewidth=2)
+    ax.set_axisbelow(True)  # This puts the grid lines behind the bars
+    
+    # Set width of bars and positions of the bars
+    barWidth = 0.25
+    r1 = np.arange(len(comp_df))
+    r2 = [x + barWidth for x in r1]
+    r3 = [x + barWidth for x in r2]
+    
+    # Create bars
+    bars1 = ax.bar(r1, comp_df['replayable traces'], width=barWidth, label='Replayable Traces')
+    bars2 = ax.bar(r2, comp_df['avg. trace fitness'], width=barWidth, label='Avg. Trace Fitness')
+    bars3 = ax.bar(r3, comp_df['f-score'], width=barWidth, label='F-score')
+    
+    # Add error bars for GWFM and GWFM-B
+    for idx, method in enumerate(comp_df['name']):
+        if method == 'GWFM':
+            ax.errorbar(r1[idx], comp_df['replayable traces'].iloc[idx], 
+                       yerr=get_capped_error(comp_df['replayable traces'].iloc[idx], replayable_trace_variance),
+                       fmt='k', capsize=5)
+            ax.errorbar(r2[idx], comp_df['avg. trace fitness'].iloc[idx], 
+                       yerr=get_capped_error(comp_df['avg. trace fitness'].iloc[idx], avg_fitness_variance),
+                       fmt='k', capsize=5)
+            ax.errorbar(r3[idx], comp_df['f-score'].iloc[idx], 
+                       yerr=get_capped_error(comp_df['f-score'].iloc[idx], fscore_variance),
+                       fmt='k', capsize=5)
+        elif method == 'GWFM-B':
+            ax.errorbar(r1[idx], comp_df['replayable traces'].iloc[idx], 
+                       yerr=get_capped_error(comp_df['replayable traces'].iloc[idx], bs_replayable_trace_variance),
+                       fmt='k', capsize=5)
+            ax.errorbar(r2[idx], comp_df['avg. trace fitness'].iloc[idx], 
+                       yerr=get_capped_error(comp_df['avg. trace fitness'].iloc[idx], bs_avg_fitness_variance),
+                       fmt='k', capsize=5)
+            ax.errorbar(r3[idx], comp_df['f-score'].iloc[idx], 
+                       yerr=get_capped_error(comp_df['f-score'].iloc[idx], bs_fscore_variance),
+                       fmt='k', capsize=5)
+
+    
+    # Add labels and title
+    ax.set_ylabel('Score')
+    ax.set_title(plt_title)
+    ax.set_xticks([r + barWidth for r in range(len(comp_df))])
+    ax.set_xticklabels(comp_df['name'], rotation=35)
+    ax.set_yticks(np.arange(0, 1.1, 0.1))
+    
+    # Add legend below the plot
+    if showlegend:
+        ax.legend(bbox_to_anchor=(0.5, -0.15), loc='upper center', ncol=3)
+    
+    # Adjust layout to prevent label cutoff
+    plt.tight_layout()
+    
+    return fig
+
+def get_legend_only():
+    plt.rcParams['axes.prop_cycle'] = plt.cycler(color=['#1f77b4', '#ff7f0e', '#2ca02c'])
+    fig = plt.figure(figsize=(8, 0.3))
+    ax = fig.add_subplot(111)
+    plots = []
+    plots.append(plt.Rectangle((0,0), 1, 1, fc='#1f77b4'))
+    plots.append(plt.Rectangle((0,0), 1, 1, fc='#ff7f0e'))
+    plots.append(plt.Rectangle((0,0), 1, 1, fc='#2ca02c'))
+    ax.legend(plots, ['Replayable Traces', 'Avg. Trace Fitness', 'F-score'], 
+             loc='center', ncol=3, frameon=False)
+    ax.axis('off')
+    return fig

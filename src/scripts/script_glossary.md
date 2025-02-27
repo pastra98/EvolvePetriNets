@@ -121,3 +121,10 @@ src/scripts/analysis_scripts/pkl_analysis.ipynb
 
 **purpose:**
 Serialized genomes are big for some reason. Claude helped me write an analysis tool
+
+### Approximating eval time with scaling log size
+**path:**
+src/scripts/analysis_scripts/eval_time_scaling.py
+
+**purpose:**
+Check how eval time changes for different logs, applies GWFM fitness func for different logs and the models mined by pm4py
