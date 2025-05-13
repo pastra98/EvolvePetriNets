@@ -2,7 +2,7 @@
 # guimaker.bat
 
 # TODO: analysis data will be uploaded as archive later
-configs
+# configs
 tree.svg
 
 # don't save results and pm_data
