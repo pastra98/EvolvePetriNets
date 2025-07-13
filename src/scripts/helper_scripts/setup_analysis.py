@@ -1102,7 +1102,7 @@ def plot_similarities(similarity_dict_collection, title):
 # temporary
 import shutil
 
-def cleanup_runs(root_path: str, keep_first_n=3):
+def cleanup_runs(root_path: str, keep_first_n=1):
     """
     Deletes all files in run directories except for data/gen_info.feather
     
@@ -1114,7 +1114,7 @@ def cleanup_runs(root_path: str, keep_first_n=3):
     
     # Process each setup directory
     for setup_dir in tqdm(execution_data_path.iterdir(), desc="Processing setup directories"):
-        if setup_dir.is_dir() and setup_dir.name.startswith("setup_"):
+        if setup_dir.is_dir():
             print(f"\nCleaning {setup_dir.name}")
             
             # Process each run directory
