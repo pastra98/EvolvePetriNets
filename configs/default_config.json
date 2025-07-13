@@ -1,16 +1,16 @@
 {
-    "name": "test_if_it_runs",
+    "name": "mine_running_example",
     "setups": [
         {
-            "setupname": "speciation",
-            "parampath": "./params/good_speciation.json",
+            "setupname": "default_params",
+            "parampath": "./params/default_params.json",
             "logpath": "pm_data/running_example.xes",
             "stop_cond": {
                 "var": "gen",
-                "val": 500
+                "val": 300
             },
             "n_runs": 1,
-            "send_gen_info_to_console": false,
+            "send_gen_info_to_console": true,
             "is_profiled": false,
             "save_plots": true
         }

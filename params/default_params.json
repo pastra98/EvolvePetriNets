@@ -50,7 +50,7 @@
     "min_tokens_for_replay": 51,
     "metric_dict": {
         "aggregated_replay_fitness": {
-            "weight": 2,
+            "weight": 3,
             "raise_by": 1,
             "active_gen": 0,
             "anchor_to": [
@@ -95,7 +95,7 @@
             ]
         },
         "remaining_score": {
-            "weight": 1,
+            "weight": 0.5,
             "raise_by": 1,
             "active_gen": 0,
             "anchor_to": [
@@ -140,7 +140,7 @@
             ]
         },
         "sink_score": {
-            "weight": 1,
+            "weight": 0.5,
             "raise_by": 1,
             "active_gen": 0,
             "anchor_to": [
