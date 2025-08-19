@@ -1,32 +1,11 @@
-# TODO: analysis data will be uploaded as archive later
-# guimaker.bat
-
-# TODO: analysis data will be uploaded as archive later
 # configs
-tree.svg
 
 # don't save results and pm_data
-results/data
-pm_data/
-results/old_results_used_in_analysis
-results/runs_that_did_it
+results
 
-# commit this later
-analysis/data
-
-# only track configs, params and execution reports in the analysis/data folder
-*.feather
-report.txt
-*spawn_ranks.json
-*.pkl.gz
-best_genome_id-*
-*.log
-*_full_history.json
-spawn_rank_agg.json
 
 # don't save compiled modules
 *.pyc
-
 *.pyc
 *.mps
 *.prof
