@@ -1,6 +1,8 @@
 # configs
+.vscode
 
 # don't save results and pm_data
+pm_data
 results
 
 
