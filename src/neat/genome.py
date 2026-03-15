@@ -13,7 +13,6 @@ from pm4py.algo.evaluation.simplicity.variants.arc_degree import apply as get_si
 from pm4py.algo.analysis.woflan.algorithm import apply as get_soundness
 
 import neatutils.fitnesscalc as fc
-# import neatutils.fitnesscalc_np as fc_np # <- numpy implementation, abandoned POC
 from neat import params
 
 import random as rd
