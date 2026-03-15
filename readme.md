@@ -1,6 +1,6 @@
 # About
-This is the WIP repository in which I implement a genetic process mining algorithm for my Bachelor & Master Thesis.
-The repository is still in active development and is not yet documented.
+This repository contains the code of the *Genetic Workflow Miner (GWFM)* which I implemented for my Master's Thesis at the [Vienna University of Economics and Business](https://www.wu.ac.at/en/) (2025).
+The GWFM is a **genetic process mining algorithm**, implemented in python and this repository contains everything required to execute the algorithm (refer to Section How to build & run).
 
 ## What is a genetic process mining algorithm?
 **Process mining algorithms** seek to discover a model that describes a given process, e.g. processing insurance claims, registering patients in a hospital or handling the cash-to-order process for a webshop.
@@ -26,4 +26,35 @@ These changed process models then form the population next generation, which wil
 In this repository I have implemented three different selection strategies, various mutations, the code necessary to perform conformance checking as well as several metrics that are used to assess the fitness of process models.
 The 'meat' of the algorithm can be found in the `src/neat/ga.py` module.
 
-This readme is also still WIP.
+## How to build & run
+todo
+
+## Navigating this repository
+todo
+
+## Attributions
+### NEAT (NeuroEvolution of Augmenting Topologies)
+The genetic encoding with dynamically growing structures and the speciated selection mechanism implemented in this algorithm are heavily inspired by the NEAT algorithm, originally developed by Kenneth O. Stanley and Risto Miikkulainen. 
+* DOI: https://doi.org/10.1162/106365602320169811
+
+### Libraries and Frameworks
+This project relies on several open-source libraries:
+* **pm4py**: Used for processing XES event logs, generating initial populations via conventional mining algorithms (Alpha, Inductive, Heuristics, ILP), evaluation functionalities as well as general experimentation and visualization. 
+  * Repository: https://github.com/pm4py/pm4py
+  * Paper: *Process Mining for Python (PM4Py): Bridging the Gap Between Process- and Data Science* (Berti et al., 2019).
+* **Data Processing**: 
+  * **Polars** & **Pandas**: Utilized for dataframe processing and fitness evaluations.
+  * **PyArrow**: Used for serializing population data into the Apache Feather format.
+* **Visualization**: 
+  * **Graphviz**: Used for rendering the phenotypes (Petri nets) in combination with pm4py.
+  * **Matplotlib**: Used for plotting fitness progressions and component distributions.
+
+### Running Example Event Log
+The running example event log and model included in this repository (`/pm_data`) are the canonical example of a simple event log from W.M.P. van der Aalsts *Process Mining: Data Science in Action*.
+
+DOI (2nd edition): https://doi.org/10.1007/978-3-662-49851-4_1
+
+The event log is also included in the pm4py repository:
+https://github.com/process-intelligence-solutions/pm4py/blob/release/notebooks/data/running_example.xes
+
+Other event logs used in the Thesis have been taken from Process Discovery Contest (PDC) 2024 (doi: https://doi.org/10.4121/3CFCDBB7-C909-4F60-8BEC-62C780598047.V1) and PDC 2022 (doi: https://doi.org/10.4121/21261402.v2). Cited here are the specific versions used in my Thesis.
