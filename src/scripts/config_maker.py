@@ -1,3 +1,8 @@
+"""
+GUI to select parameters and generate a config with possible permutations of a number of parameters
+Pretty much vibecoded, this could be done in a cleaner way I'm sure.
+"""
+
 import sys
 import json
 import os
