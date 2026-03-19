@@ -1,14 +1,16 @@
-import sys, os, json, datetime
+import argparse
+import datetime
+import json
+import multiprocessing as mp
+import os
+import threading
+from queue import Empty
+
+import pandas as pd
+from tqdm import tqdm
 
 from neatutils import neatlogger as nl
 from neatutils.setuprunner import run_setup
-
-import multiprocessing as mp
-import pandas as pd
-
-import threading
-from queue import Empty
-from tqdm import tqdm
 
 
 class SetupTracker(threading.Thread):
@@ -89,11 +91,27 @@ def main(conf: dict) -> None:
     main_logger.info("Data successfully saved, quitting all processes")
 
 
-if __name__ == "__main__":
-    try:
-        with open(sys.argv[1]) as f:
-            config = json.load(f)
-    except:
-        raise Exception("passed invalid config filepath!")
+def cli():
+    parser = argparse.ArgumentParser(
+        prog="gwfm",
+        description="Genetic Workflow Miner – discover Petri net models from event logs using evolutionary computation",
+    )
+    parser.add_argument(
+        "config",
+        help="path to a JSON configuration file (see configs/default_config.json for an example)",
+    )
+    args = parser.parse_args()
+
+    config_path = args.config
+    if not os.path.isfile(config_path):
+        parser.error(f"config file not found: {config_path}")
+
+    with open(config_path) as f:
+        config = json.load(f)
+
     main(config)
+
+
+if __name__ == "__main__":
+    cli()
     

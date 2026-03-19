@@ -27,10 +27,140 @@ In this repository I have implemented three different selection strategies, vari
 The 'meat' of the algorithm can be found in the `src/neat/ga.py` module.
 
 ## How to build & run
-todo
+
+### Prerequisites
+- **Python ≥ 3.9**
+- **Graphviz** system package (`dot` must be on your PATH for Petri net visualization)
+  - Linux (Debian/Ubuntu): `sudo apt install graphviz`
+  - macOS: `brew install graphviz`
+  - Windows: `winget install graphviz` or download from [graphviz.org](https://graphviz.org/download/)
+
+### Installation
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/pastra98/EvolvePetriNets.git
+   cd EvolvePetriNets
+   ```
+
+2. Create and activate a virtual environment (recommended):
+   ```bash
+   python -m venv .venv
+   # Linux / macOS
+   source .venv/bin/activate
+   # Windows
+   .venv\Scripts\activate
+   ```
+
+3. Install the project — pick **one** of the following:
+
+   ```bash
+   # Option A – pip install (recommended, creates the `gwfm` command)
+   pip install .
+
+   # Option B – requirements.txt only
+   pip install -r requirements.txt
+   ```
+
+   > **Optional extras:**
+   > `pip install ".[gui]"` adds PyQt6 for the config-maker GUI.
+   > `pip install ".[dev]"` adds IPython for interactive exploration.
+
+### Running the algorithm
+
+The algorithm requires a JSON config file that specifies parameter files, the event log, stopping conditions and how many runs to execute. A ready-to-use config that mines the included running example is shipped in the repo:
+
+```bash
+# if installed with pip install .
+gwfm configs/default_config.json
+
+# if installed with pip install -r requirements.txt
+python src/main.py configs/default_config.json
+```
+
+Results are written to `results/data/<config-name>_<timestamp>/`. Each run produces:
+- **Feather files** with population, species and fitness data
+- **SVG renders** of the best discovered Petri nets
+- **Plots** (fitness progression, species evolution, mutation analysis, …) when `save_plots` is enabled
+- A text **execution report** with timing and summary statistics
+
+### Configuration
+
+A config file has this structure (see `configs/default_config.json`):
+
+```json
+{
+    "name": "mine_running_example",
+    "setups": [
+        {
+            "setupname": "default_params",
+            "parampath": "./params/default_params.json",
+            "logpath": "pm_data/running_example.xes",
+            "stop_cond": {"var": "gen", "val": 300},
+            "n_runs": 1,
+            "send_gen_info_to_console": true,
+            "is_profiled": false,
+            "save_plots": true
+        }
+    ]
+}
+```
+
+| Field | Description |
+|---|---|
+| `name` | Name for this execution (used in the results folder name) |
+| `setups` | Array of experiment setups to run |
+| `parampath` | Path to a JSON file with GA parameters (population size, mutation rates, fitness weights, …) |
+| `logpath` | Path to an XES event log |
+| `stop_cond` | Stopping condition — currently `{"var": "gen", "val": N}` to run for N generations |
+| `n_runs` | Number of parallel repetitions for this setup |
+| `send_gen_info_to_console` | Print per-generation stats to the terminal |
+| `is_profiled` | Enable cProfile profiling for performance analysis |
+| `save_plots` | Generate matplotlib plots at the end of a run |
+
+Multiple setups can be listed in one config to compare parameter configurations. All runs across all setups are parallelized using Python multiprocessing.
+
+### Config maker GUI (optional)
+
+A PyQt6-based GUI for constructing configs with parameter sweeps is available:
+
+```bash
+pip install ".[gui]"
+python src/scripts/config_maker.py
+```
 
 ## Navigating this repository
-todo
+
+```
+src/
+├── main.py                      # CLI entry point – config loading, multiprocessing orchestration
+├── neat/                        # Core genetic algorithm
+│   ├── ga.py                    # GeneticAlgorithm class – main evolutionary loop
+│   ├── genome.py                # GeneticNet – Petri net genome with mutations & crossover
+│   ├── species.py               # Species management for NEAT-style speciation
+│   ├── initial_population.py    # Bootstrap population from pm4py miners or random generation
+│   └── params.py                # Parameter loading from JSON
+├── neatutils/                   # Supporting utilities
+│   ├── setuprunner.py           # Per-run orchestration (logging, profiling, report saving)
+│   ├── fitnesscalc.py           # Token replay engine & fitness metrics (11 metrics)
+│   ├── endreports.py            # Result serialization (Feather) & plot generation (16+ plots)
+│   ├── log.py                   # XES event log loading & prefix optimization
+│   ├── neatlogger.py            # Logger setup
+│   └── timer.py                 # Execution time profiling
+└── scripts/
+    └── config_maker.py          # PyQt6 config generator GUI
+
+configs/                         # Example configuration files
+params/                          # Example GA parameter files
+pm_data/                         # Sample event logs and Petri net models
+```
+
+The core algorithm lives in `src/neat/ga.py`. It implements three selection strategies:
+1. **Speciation** (default) – NEAT-inspired species-based selection with fitness sharing
+2. **Roulette** – fitness-proportionate selection
+3. **Truncation** – only the top fraction of the population breeds
+
+Fitness evaluation happens in `src/neatutils/fitnesscalc.py`, which implements a custom token-replay engine with prefix optimization and 11 configurable fitness metrics.
 
 ## Attributions
 ### NEAT (NeuroEvolution of Augmenting Topologies)
