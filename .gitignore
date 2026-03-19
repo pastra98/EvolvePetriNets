@@ -1,17 +1,30 @@
-# configs
+# IDE / editor
 .vscode
+*.code-workspace
 
 # don't save results and pm_data
-pm_data
-results
+pm_data/
+results/
 
+# but do include the bundled running example
+!pm_data/running_example.xes
+!pm_data/petri_models/
+!pm_data/petri_models/running_example.pnml
 
-# don't save compiled modules
+# compiled / cached modules
+__pycache__/
 *.pyc
-*.pyc
+
+# profiling & solver artifacts
 *.mps
 *.prof
 *.sol
-*.code-workspace
+
+# packaging artifacts
+*.egg-info/
+dist/
+build/
+
+# misc
 *nohup.out
-.tar.gz
+*.tar.gz
