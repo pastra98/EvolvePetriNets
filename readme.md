@@ -124,6 +124,8 @@ A config file has this structure (see `configs/default_config.json`):
 
 Multiple setups can be listed in one config to compare parameter configurations. All runs across all setups are parallelized using Python multiprocessing.
 
+The default parameter configuration should yield the target process model for the running example log (i.e. the model that was used to generate the execution log). My thesis provides a detailed explanation of the parameters and how the current set of parameters was determined.
+
 ### Config maker GUI (optional)
 
 A PyQt6-based GUI for constructing configs with parameter sweeps is available:
