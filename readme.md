@@ -38,13 +38,7 @@ The 'meat' of the algorithm can be found in the `src/neat/ga.py` module.
 
 ### Installation
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/pastra98/EvolvePetriNets.git
-   cd EvolvePetriNets
-   ```
-
-2. Create and activate a virtual environment (recommended):
+1. Create and activate a virtual environment (recommended):
    ```bash
    python -m venv .venv
    # Linux / macOS
@@ -61,7 +55,7 @@ The 'meat' of the algorithm can be found in the `src/neat/ga.py` module.
    > Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
    > ```
 
-3. Install the project — pick **one** of the following:
+2. Install the project — pick **one** of the following:
 
    ```bash
    # Option A – pip install (recommended, creates the `gwfm` command)
