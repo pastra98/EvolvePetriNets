@@ -1,3 +1,4 @@
+from __future__ import annotations # apparently Python 3.14 PEP 649 added lazy loading for annotations so I need to do this
 import json
 from typing import Dict, List, Union, TypedDict
 
