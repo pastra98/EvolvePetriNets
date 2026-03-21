@@ -88,6 +88,8 @@ Results are written to `results/data/<config-name>_<timestamp>/`. Each run produ
 - **Plots** (fitness progression, species evolution, mutation analysis, …) when `save_plots` is enabled
 - A text **execution report** with timing and summary statistics
 
+**NOTE:** By default the program is quite chatty because it prints the evaluation results of every generation. This behavior can be disabled by setting `send_gen_info_to_console": true`.
+
 ### Configuration
 
 A config file has this structure (see `configs/default_config.json`):
