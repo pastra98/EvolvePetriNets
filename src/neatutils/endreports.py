@@ -8,6 +8,8 @@ import gc
 import pickle
 import gzip
 import os
+import platform
+import shutil
 
 import polars as pl
 import pandas as pd
@@ -17,6 +19,18 @@ from collections import defaultdict
 from neat.genome import GeneticNet
 
 FSIZE = (10, 5)
+
+def _graphviz_install_hint() -> str:
+    system = platform.system()
+    if system == "Windows":
+        return "Install Graphviz: winget install graphviz (or direct install if winget not available)"
+    elif system == "Darwin":
+        return "Install Graphviz: brew install graphviz"
+    else:
+        return "Install Graphviz: sudo apt install graphviz (Debian/Ubuntu) or sudo dnf install graphviz (Fedora)"
+
+def _check_graphviz_available() -> bool:
+    return shutil.which("dot") is not None
 
 # global plotting params - not importing those from sa cuz reasons
 TICKFONT = 16
@@ -54,8 +68,7 @@ def save_report(ga_info: dict, savedir: str, save_plots: bool) -> None:
     gen_info_df.write_ipc(f"{savedir}/data/gen_info.feather")
     mutation_stats_df = get_mutation_stats_df(pop_df)
     mutation_stats_df.write_ipc(f"{savedir}/data/mutation_stats_df.feather")
-    # save species leader gviz
-    save_genome_gviz(ga_info["best_genome"], savedir, name_prefix="best_genome")
+    # pickle best genome (always, does not need graphviz)
     pickle_object(ga_info["best_genome"], "best_genome", savedir, True)
     # check if there are species, if yes - save the species df
     use_species = "species" in full_history[1]
@@ -75,8 +88,12 @@ def save_report(ga_info: dict, savedir: str, save_plots: bool) -> None:
 
     # -------- saving plots
     if save_plots:
-        # save the improvements
-        save_improvements(ga_info["improvements"], savedir)
+        # save graphviz SVGs if dot binary is available
+        if _check_graphviz_available():
+            save_genome_gviz(ga_info["best_genome"], savedir, name_prefix="best_genome")
+            save_improvements(ga_info["improvements"], savedir)
+        else:
+            print(f"\n\nWARNING: Graphviz 'dot' not found, skipping SVG exports. {_graphviz_install_hint()}\n")
         # other plots
         time_stackplot(gen_info_df, savedir)
         fitness_plot(gen_info_df, use_species, savedir)
@@ -90,8 +107,9 @@ def save_report(ga_info: dict, savedir: str, save_plots: bool) -> None:
         best_genome_mutation_analysis(best_genomes, savedir)
         # species plots if use_species
         if use_species:
-            # save species leaders
-            save_species_leaders(ga_info["species_leaders"], savedir)
+            # save species leaders (needs graphviz)
+            if _check_graphviz_available():
+                save_species_leaders(ga_info["species_leaders"], savedir)
             # save other plots
             species_cmap = get_species_color_map(species_df)
             species_stackplot(species_df, species_cmap, savedir)
@@ -249,8 +267,11 @@ def get_readable_digraph(g, fontsize=36, node_labels=running_example_remap):
 def save_genome_gviz(genome: GeneticNet, savedir: str, name_prefix=""):
     """Save gviz render of specified genome
     """
-    with open(f"{savedir}/{name_prefix}_id-{genome.id}.svg", "wb") as f:
-        f.write(get_readable_digraph(genome).pipe(format="svg"))
+    try:
+        with open(f"{savedir}/{name_prefix}_id-{genome.id}.svg", "wb") as f:
+            f.write(get_readable_digraph(genome).pipe(format="svg"))
+    except Exception as e:
+        print(f"WARNING: Could not render genome SVG: {e}")
 
 
 def save_improvements(improvements: str, savedir: str):

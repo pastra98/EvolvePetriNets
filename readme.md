@@ -33,7 +33,8 @@ The 'meat' of the algorithm can be found in the `src/neat/ga.py` module.
 - **Graphviz** system package (`dot` must be on your PATH for Petri net visualization)
   - Linux (Debian/Ubuntu): `sudo apt install graphviz`
   - macOS: `brew install graphviz`
-  - Windows: `winget install graphviz` or download from [graphviz.org](https://graphviz.org/download/)
+  - Windows: `winget install graphviz --interactive` or download from [graphviz.org](https://graphviz.org/download/)
+    - **NOTE:** by default winget does not add graphviz to the PATH, therefore it is recommended to  install using the interactive mode and checking the option to add gviz to the PATH. If gviz is already installed, then ensure the /bin folder is added to the PATH. Restart your terminal session for the changes to take effect.
 
 ### Installation
 
@@ -48,14 +49,23 @@ The 'meat' of the algorithm can be found in the `src/neat/ga.py` module.
    python -m venv .venv
    # Linux / macOS
    source .venv/bin/activate
-   # Windows
+   # Windows (PowerShell)
    .venv\Scripts\activate
+   # Windows (cmd)
+   .venv\Scripts\activate.bat
    ```
+
+   > **Windows note:** If PowerShell gives you an `UnauthorizedAccess` error, its execution
+   > policy is blocking the activation script. Run this once to fix it permanently for your user:
+   > ```powershell
+   > Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+   > ```
 
 3. Install the project — pick **one** of the following:
 
    ```bash
    # Option A – pip install (recommended, creates the `gwfm` command)
+   # Hint: if you want to change the code, use pip install -e .
    pip install .
 
    # Option B – requirements.txt only
